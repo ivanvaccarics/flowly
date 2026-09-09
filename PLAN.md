@@ -8,11 +8,14 @@ Flowly is a local-first personal finance application for:
 - Android
 - macOS
 - Windows
-- Web/PWA
+- A self-hosted web deployment on a Raspberry Pi, accessed from browsers on the
+  local network
 
-Each installation is an independent source of truth. There is no automatic
-cross-device synchronization. Users move data between devices through a
-versioned CSV export/import workflow.
+Each installed application is an independent source of truth. The Raspberry Pi
+deployment owns one vault shared by its browser sessions; browsers are clients
+of that vault and do not persist independent copies. There is no automatic
+synchronization between the Raspberry Pi and installed applications. Users move
+data between independent vaults through a versioned export/import workflow.
 
 The MVP includes:
 
@@ -27,14 +30,15 @@ The MVP includes:
 - Full data export and import
 - Local passphrase protection with optional biometric unlock
 
-Username/password authentication, cloud accounts, and cross-device
+Username/password accounts, Flowly-operated cloud services, and cross-device
 synchronization are explicitly out of scope.
 
 ## 2. Current Repository Assessment
 
 The repository is an early prototype rather than an application:
 
-- `README.md` only contains the project name.
+- `README.md` describes the intended product and roadmap but no application has
+  been implemented yet.
 - `.python-version` selects Python 3.14.
 - `enable_banking.py` is a standalone Enable Banking exploration script.
 - There is no dependency manifest, application structure, schema migration
@@ -59,12 +63,14 @@ hardened.
 |---|---|
 | Mobile targets | iOS and Android |
 | Desktop targets | macOS and Windows |
-| Browser target | Installable offline-capable PWA |
+| Browser target | React web UI served by a self-hosted Raspberry Pi service on the LAN |
 | Distribution | App stores for mobile; direct signed downloads for desktop |
 | Account meaning | Financial account, not a Flowly user identity |
 | Local unlock | Mandatory local passphrase; optional biometric convenience unlock |
-| Device relationship | No synchronization; each device owns an independent vault |
+| Device relationship | Installed apps own independent vaults; browser sessions share the Raspberry Pi vault |
 | Data transfer | Explicit export/import performed by the user |
+| Web ownership | Single owner, one vault, multiple concurrent browser sessions |
+| Web deployment | Docker Compose on Linux ARM64 with persistent storage and LAN-only HTTPS |
 | Future bank integration | A separate trusted backend/connector is allowed |
 | Additional MVP scope | Dashboard, advanced search, multi-currency, budgets, recurring transactions |
 
@@ -72,29 +78,35 @@ hardened.
 
 | Option | Advantages | Disadvantages | Decision |
 |---|---|---|---|
-| Flutter for every client | One Dart UI codebase; mature mobile and desktop support; web target available | Web/PWA ergonomics and browser storage integration are less natural; secure storage plugins differ by platform; future backend uses another ecosystem | Not selected |
+| Flutter for every client | One Dart UI codebase; mature mobile and desktop support; web target available | Does not provide the desired central Raspberry Pi vault and multi-PC browser access without adding a server anyway | Not selected |
 | Tauri 2 for desktop and mobile plus web | Small binaries; Rust security boundary; high code sharing | Mobile ecosystem and security/database plugins are newer; increases risk for biometric and encrypted database support | Reserve as a future simplification option |
-| React/TypeScript PWA + Flutter installed clients | Web is first-class; Flutter has mature mobile and desktop support; one native codebase covers four installed targets; native encrypted storage and biometric support have a clearer implementation path | React and Flutter cannot share runtime UI/domain code; business rules must be implemented in TypeScript and Dart; parity requires strict contracts and conformance tests | **Recommended** |
-| React/TypeScript + Capacitor mobile + Tauri desktop + direct PWA | Maximum JavaScript/TypeScript sharing and one UI implementation | Two native shells; mobile Tauri is newer; browser-style UI and plugin boundaries remain on installed clients | Valid fallback if minimizing duplicate product code becomes the primary constraint |
+| React UI + local TypeScript service on Raspberry Pi + Flutter installed clients | One Raspberry Pi vault is shared safely by multiple PCs; browser storage is not a source of truth; Flutter retains mature native storage and biometrics | Requires LAN HTTPS, server sessions, concurrency handling, ARM64 packaging, and an always-available Raspberry Pi | **Recommended** |
+| Encrypted browser PWA + Raspberry Pi file storage | The Raspberry Pi never handles plaintext domain data | Each browser still owns a divergent vault; conflict resolution, querying, and multi-PC consistency become substantially more complex | Rejected |
+| React/TypeScript + Capacitor mobile + Tauri desktop + local service | High TypeScript sharing | Two native shells; mobile Tauri is newer; native security and biometric integrations carry more risk | Valid fallback if minimizing duplicate product code becomes the primary constraint |
 | Fully separate native applications | Maximum platform-specific control | Excessive duplication across five targets | Rejected |
 
 ### Recommendation
 
-Use a polyglot monorepo with two client implementations:
+Use a polyglot monorepo with two application implementations:
 
-- **Web/PWA:** React, TypeScript, Vite, and a service worker.
+- **Self-hosted web:** a React and TypeScript frontend plus a TypeScript service
+  deployed together on a Raspberry Pi. The service owns the encrypted vault,
+  domain operations, sessions, and import/export. Browsers are presentation
+  clients and persist no financial records.
 - **Installed application:** one Flutter/Dart codebase compiled for iOS,
   Android, macOS, and Windows.
 - **Future connector:** a separate TypeScript service that owns Enable Banking
   credentials and API sessions.
 
-This hybrid approach is preferable when native platform maturity, encrypted
-SQLite support, biometric integration, and consistent installed-app behavior
-are more important than maximum source-code sharing. It also avoids forcing a
-browser-oriented shell onto mobile and desktop.
+This hybrid approach is preferable when a single self-hosted LAN vault,
+encrypted SQLite, native platform maturity, biometric integration, and
+consistent installed-app behavior are more important than maximum source-code
+sharing. It also avoids forcing a browser-oriented shell onto mobile and
+desktop.
 
-The trade-off must be accepted explicitly: React and Flutter will have separate
-UI and application/domain implementations. They share specifications rather
+The trade-off must be accepted explicitly: the TypeScript service and Flutter
+will have separate application/domain implementations, while React remains a
+thin client of the service. TypeScript and Dart share specifications rather
 than runtime libraries. Product parity is enforced through:
 
 - Versioned JSON Schema contracts
@@ -102,7 +114,7 @@ than runtime libraries. Product parity is enforced through:
 - One canonical CSV/archive specification
 - Shared golden fixtures and expected calculation results
 - Cross-client import/export round-trip tests
-- One acceptance-test catalogue executed by both clients
+- One acceptance-test catalogue executed by both application implementations
 
 Do not attempt to share business logic through WebViews, embedded JavaScript, or
 Flutter platform channels. That would add runtime complexity without removing
@@ -113,12 +125,14 @@ the need for platform-specific testing.
 ```text
 flowly/
   apps/
-    web/                         # React/TypeScript Vite PWA
+    web/                         # React/TypeScript browser UI; no vault storage
+      src/
+        ui/
+    server/                      # Raspberry Pi API, domain, sessions, storage
       src/
         domain/
         application/
         infrastructure/
-        ui/
     native/                      # Flutter app for iOS/Android/macOS/Windows
       lib/
         domain/
@@ -144,6 +158,8 @@ flowly/
   docs/
     adr/
     security/
+  deployment/
+    raspberry-pi/               # Docker Compose, HTTPS proxy, ARM64 packaging
   prototypes/
     enable-banking/              # Temporary, sanitized prototype only
 ```
@@ -169,20 +185,22 @@ Melos only if multiple Dart packages make it worthwhile.
 - Cryptographic envelope metadata and known-answer vectors
 
 Breaking contract changes require a new schema/export version and migrations in
-both clients. Generated types do not replace runtime validation or domain
-invariants.
+the server and native application. Generated types do not replace runtime
+validation or domain invariants.
 
-### 6.2 Client domain and application layers
+### 6.2 Domain and application layers
 
-Implement the same clean boundaries independently in TypeScript and Dart:
+Implement the same clean boundaries independently in the TypeScript service and
+the Dart application:
 
-- The web domain imports no React, browser, IndexedDB, or network APIs.
+- The server domain imports no React, HTTP framework, SQL, filesystem, or
+  network APIs.
 - The native domain imports no Flutter widgets, SQL, platform channels, or
   network APIs.
 - Application services depend on repositories and platform-service interfaces.
-- UI code never queries storage directly.
+- React and Flutter UI code never query storage directly.
 
-Both implementations own the same behavior:
+The server and native implementations own the same behavior:
 
 - Financial account lifecycle
 - Money and currency invariants
@@ -218,9 +236,16 @@ Use-case services coordinate domain rules through interfaces:
 Every write spanning multiple entities must run in an atomic storage
 transaction.
 
+Mutable records exposed by the server API include an opaque revision. Updates
+use optimistic concurrency: a stale revision returns an explicit conflict and
+never silently overwrites a newer edit from another browser session.
+
 ### 6.4 Infrastructure adapters
 
-- Web adapters use browser APIs and Web Workers.
+- Server adapters use HTTP, SQLCipher/SQLite, filesystem streams, session
+  storage, and the Raspberry Pi persistent volume.
+- The React frontend communicates only with the same-origin API and does not
+  persist financial records in browser storage or service-worker caches.
 - Flutter adapters use Drift/SQLite, SQLCipher libraries, platform secure
   storage, `local_auth`, filesystem APIs, and platform-specific backup controls.
 - Native plugins must be wrapped behind application-owned interfaces so plugin
@@ -231,7 +256,8 @@ transaction.
 The two UIs follow one product design specification but are implemented with
 their platform-native toolkit:
 
-- React provides a responsive PWA with browser accessibility semantics.
+- React provides a responsive LAN web interface with browser accessibility
+  semantics.
 - Flutter provides adaptive mobile and desktop layouts from one Dart widget
   codebase.
 - Mobile uses bottom navigation where appropriate.
@@ -293,6 +319,9 @@ Optional interoperability fields:
 - `providerTransactionId`
 - `importFingerprint`
 - `recurringRuleId`
+
+`Enable Banking` is reserved for forward-compatible contracts and becomes an
+active source only when the post-MVP connector is implemented.
 
 The provider description and user note are separate so a future refresh never
 overwrites user content.
@@ -368,30 +397,37 @@ Required behavior:
 - Mobile backup exclusion flags are configured where available.
 - Desktop database files use restrictive filesystem permissions.
 
-### 8.2 Web/PWA
+### 8.2 Raspberry Pi web service
 
-Do not pretend browser storage has native database security. Use IndexedDB as an
-opaque ciphertext store:
+The Raspberry Pi is the source of truth for all of its browser sessions. Use
+SQLCipher-backed SQLite if the feasibility spike proves a maintained TypeScript
+binding and reliable Linux ARM64 packaging. Otherwise use audited authenticated
+record encryption over SQLite behind the same repository interfaces.
 
-- Each persisted domain record is encrypted before it reaches IndexedDB.
-- Decryption occurs after vault unlock, preferably in a dedicated Web Worker.
-- Search and dashboard indexes are rebuilt in memory after unlock.
-- The service worker caches application assets, never decrypted financial data.
-- The application must continue to work offline after its first successful
-  load.
-- Browser storage eviction risk is communicated to users, and the UI recommends
-  regular exports.
+- Store the database, journal, and migration state in a persistent Docker
+  volume with restrictive host permissions.
+- Encrypt journals, temporary database files, and migration snapshots or ensure
+  they never contain plaintext.
+- Run one service instance as the sole database owner; serialize migrations and
+  use database transactions for multi-record writes.
+- Serve the React UI and API from one origin behind an HTTPS reverse proxy.
+- Bind only to the explicitly configured LAN interface. Do not configure port
+  forwarding, public ingress, or an Internet-facing default.
+- Do not persist financial records, passphrases, session tokens, or decrypted
+  API responses in browser storage, Cache Storage, or service workers.
+- Start locked after every service restart. Keep unwrapped keys in server memory
+  only while at least one authorized session remains active.
+- Require a persistent-volume backup or encrypted rollback snapshot before
+  applying a database migration.
 
-This design intentionally uses a different persistence implementation behind
-equivalent language-specific repository contracts. A SQLCipher/WASM
-implementation may replace it only if the feasibility spike proves equivalent
-security, browser support, and operational reliability.
+The web interface requires connectivity to the Raspberry Pi but no Internet
+connection or third-party service.
 
 ### 8.3 Storage contract tests
 
 Define one language-neutral behavioral specification and fixture set. Implement
-equivalent suites in TypeScript and Dart against their storage adapters. CI must
-compare canonical outputs. The suites verify:
+equivalent suites in TypeScript and Dart against the server and native storage
+adapters. CI must compare canonical outputs. The suites verify:
 
 - CRUD behavior
 - Transactions and rollback
@@ -426,8 +462,8 @@ Biometrics are a convenience mechanism, not the only recovery mechanism:
 - iOS/macOS: Keychain protected by the system biometric policy
 - Android: Keystore key gated by `BiometricPrompt`
 - Windows: DPAPI and, where practical, Windows Hello-backed protection
-- Web: WebAuthn-based convenience unlock only when required capabilities are
-  available and tested; the passphrase remains supported
+- Raspberry Pi web: passphrase unlock only in the MVP; WebAuthn convenience
+  unlock is deferred
 
 The platform store contains only a device-bound wrapping key or wrapped DEK,
 never the user's passphrase.
@@ -441,11 +477,21 @@ never the user's passphrase.
 - Prevent sensitive screenshots/app-switcher previews where supported.
 - Require re-authentication before exporting all data or changing the
   passphrase.
+- On the web, `Lock this device` revokes only the current server session.
+- On the web, `Lock all devices` revokes every session, closes database
+  connections, and removes unwrapped keys from server memory as far as the
+  runtime permits.
+- A web session expires independently after inactivity. The server vault closes
+  when no authorized sessions remain.
+- Use random `HttpOnly`, `Secure`, `SameSite=Strict` cookies. Never store the
+  passphrase or bearer session credentials in browser storage.
+- Apply unlock rate limits, CSRF protection, strict origin checks, and explicit
+  session revocation.
 
 ### 9.4 Passphrase change and loss
 
 - Changing the passphrase re-wraps the DEK; it does not rewrite the database.
-- There is no server-side recovery because there is no user account or cloud
+- There is no recovery service because there is no user account or cloud key
   escrow.
 - The UI must clearly warn that losing the passphrase and all unlocked devices
   means permanent data loss.
@@ -459,10 +505,10 @@ Provide two workflows:
 
 1. **Transaction CSV:** one human-readable RFC 4180-compatible CSV for analysis
    in spreadsheet tools.
-2. **Complete portable export:** a versioned archive containing CSV files for
-   accounts, transactions, tags, transaction-tag links, budgets, recurring
-   rules, and preferences, plus a small manifest containing format and checksum
-   metadata.
+2. **Complete portable export:** a password-encrypted, versioned archive
+  containing CSV files for accounts, transactions, tags, transaction-tag
+  links, budgets, recurring rules, and preferences, plus a small manifest
+  containing format and checksum metadata.
 
 The complete export is the supported device-to-device transfer format. The
 archive contents remain CSV-oriented while preserving normalized relationships.
@@ -488,8 +534,8 @@ Plain CSV is not encrypted. The product must:
 - Stream the export to the selected destination without leaving unmanaged
   temporary plaintext files.
 - Avoid including internal cryptographic metadata.
-- Offer a password-encrypted portable archive as the recommended transfer
-  option while retaining plaintext CSV for interoperability.
+- Require password encryption for every complete portable archive while
+  retaining plaintext transaction CSV for interoperability.
 - Never upload exports automatically.
 
 ### 10.4 Import workflow
@@ -502,12 +548,19 @@ Import is a staged, transactional operation:
 4. Validate headers, types, dates, amounts, currencies, references, file size,
    and row count.
 5. Show a preview with errors and duplicate counts.
-6. Choose merge or replace.
+6. For a transaction CSV, preview and merge valid rows. For a complete portable
+  archive, confirm replacement of the entire current vault.
 7. Write atomically.
 8. Show a durable import report.
 
-`Replace` requires explicit destructive confirmation and creates a local
-encrypted safety snapshot first where the platform allows it.
+Importing a complete portable archive always uses `Replace`. It requires
+explicit destructive confirmation and creates a local encrypted safety
+snapshot first. The archive is fully decrypted, authenticated, and validated
+before the current vault is changed. Any validation or write failure leaves the
+previous vault intact.
+
+Transaction CSV import is additive and uses deduplication. It never represents
+or replaces a complete vault.
 
 Deduplication order:
 
@@ -544,7 +597,7 @@ Support combinations of:
 - Source
 - Payee/description/user-note text
 
-Search semantics must match across native and web adapters.
+Search semantics must match across native and server adapters.
 
 ### 11.3 Multi-currency
 
@@ -639,7 +692,9 @@ Before reusing any logic from `enable_banking.py`:
 | Threat | Required controls |
 |---|---|
 | Stolen device or copied database | SQLCipher or authenticated record encryption; OS secure key storage; auto-lock |
-| Browser origin compromise or XSS | Strict CSP, no inline/eval code, Trusted Types where supported, output encoding, dependency review |
+| Browser origin compromise or XSS | Strict CSP, no inline/eval code, Trusted Types where supported, output encoding, dependency review, no browser-side vault persistence |
+| LAN interception or session theft | Mandatory HTTPS, secure same-origin cookies, CSRF protection, origin validation, short idle expiry, session revocation |
+| Compromised Raspberry Pi while unlocked | Minimize unlocked lifetime, keep keys only in memory, restrictive service account and filesystem permissions, documented residual risk |
 | Malicious CSV | Size/row limits, streaming parser, strict schema, formula neutralization, no HTML execution, atomic rollback |
 | Weak passphrase attacks | Argon2id, per-vault salt, calibrated parameters, strength guidance, no recovery hints |
 | Plaintext leakage in logs/crash reports | Structured redaction, no payload logging, production source-map policy, sanitized crash reports |
@@ -656,7 +711,8 @@ Before reusing any logic from `enable_banking.py`:
 - Request the minimum Flutter platform permissions and audit every native
   plugin and platform channel.
 - Disable unnecessary network access in installed clients for the MVP.
-- Use HTTPS and a restrictive `connect-src` policy for the hosted PWA.
+- Use HTTPS and a restrictive same-origin `connect-src` policy for the
+  Raspberry Pi web service.
 - Pin allowed navigation and deep-link origins.
 - Protect release signing keys outside CI job logs and artifacts.
 - Provide a data deletion action that erases the local vault and wrapped keys.
@@ -669,7 +725,9 @@ Before reusing any logic from `enable_banking.py`:
 - No analytics or telemetry in the MVP by default.
 - No third-party advertising or tracking SDKs.
 - No automatic cloud backup or upload.
-- No network dependency for core usage after PWA installation.
+- Native applications have no network dependency for core usage. The web UI
+  depends only on LAN access to the user's Raspberry Pi and never on Internet
+  access or a Flowly-operated service.
 - Collect only data entered/imported by the user.
 - Provide explicit local data deletion and export controls.
 - Future connector retention and deletion policies must be documented before
@@ -691,7 +749,8 @@ Before reusing any logic from `enable_banking.py`:
   profiling.
 - Common filtered views and dashboard summaries should remain interactive on
   supported hardware.
-- Web decryption and CSV parsing must run outside the main UI thread.
+- Server-side decryption, queries, and CSV parsing must not block HTTP request
+  handling or the browser UI.
 - Large exports/imports are streamed where APIs allow.
 
 ### Accessibility
@@ -710,9 +769,9 @@ Before reusing any logic from `enable_banking.py`:
 ### Compatibility
 
 - Define and publish a supported OS/browser matrix before release.
-- The PWA baseline should include current stable Safari, Chromium, and Firefox
-  capabilities, with explicit fallback behavior for unsupported WebAuthn or
-  storage APIs.
+- The web baseline should include current stable Safari, Chromium, and Firefox,
+  plus a documented HTTPS certificate-enrollment flow for supported desktop
+  operating systems.
 
 ## 16. Testing and Quality Strategy
 
@@ -723,13 +782,14 @@ Before reusing any logic from `enable_banking.py`:
 - Property-based tests in both languages for money, CSV round trips, and
   recurrence
 - Golden-vector conformance tests comparing both implementations
-- Storage contract tests against web and Flutter adapters
+- Storage contract tests against server and Flutter adapters
 - Migration tests from every released schema
 - Cross-language crypto envelope known-answer and tamper tests
 - React and Flutter component/accessibility tests
-- PWA offline and update tests
-- End-to-end workflows for create, lock, unlock, export, import, merge, replace,
-  and delete
+- Raspberry Pi container, HTTPS, session, restart, concurrent-edit, and update
+  tests on Linux ARM64
+- End-to-end workflows for create, lock-current, lock-all, unlock, CSV merge,
+  complete-vault replace, export, and delete
 - Platform smoke tests on iOS, Android, macOS, and Windows
 - Connector contract tests using sanitized Enable Banking fixtures when that
   phase starts
@@ -755,17 +815,18 @@ Before reusing any logic from `enable_banking.py`:
     Android, macOS, and Windows
   - Flutter secure storage and `local_auth` behavior on every installed target
   - Passphrase-derived key wrapping in TypeScript and Dart with common vectors
-  - Encrypted IndexedDB records in a Web Worker
-  - PWA offline startup and storage persistence behavior
+  - SQLCipher or authenticated record encryption from TypeScript on Linux ARM64
+  - LAN-only HTTPS, session revocation, auto-lock, and concurrent browser access
   - Equivalent TypeScript and Dart repository contract suites
   - Cross-client CSV and encrypted portable-archive round trips
 - Record selected libraries, licenses, maintenance health, supported versions,
   binary size, and failure behavior.
 - Test wrong-key, corrupted-data, interrupted-write, and lost-biometric cases.
 
-**Exit criteria:** every target can create, lock, reopen, migrate, and delete an
-encrypted vault without plaintext artifacts. If a required library fails, revise
-the wrapper choice before building product features.
+**Exit criteria:** every native target and the Raspberry Pi service can create,
+lock, reopen, migrate, and delete an encrypted vault without plaintext
+artifacts. If a required library fails, revise the wrapper choice before
+building product features.
 
 ### Phase 1 - Foundation
 
@@ -773,8 +834,8 @@ the wrapper choice before building product features.
 
 - Create the polyglot repository boundaries and root command surface.
 - Configure strict TypeScript and Dart analysis, formatting, testing, and CI.
-- Scaffold the React/Vite PWA and Flutter targets for iOS, Android, macOS, and
-  Windows.
+- Scaffold the React/Vite web UI, TypeScript Raspberry Pi service, Docker
+  Compose deployment, and Flutter targets for iOS, Android, macOS, and Windows.
 - Add contract generation from canonical schemas to TypeScript and Dart.
 - Add environment validation and prohibit secrets in client build variables.
 
@@ -784,21 +845,24 @@ the wrapper choice before building product features.
   versioning conventions.
 - Implement equivalent TypeScript and Dart money, currency, account,
   transaction, tag, budget, and recurrence models and invariants.
-- Define matching repository and platform-service interfaces in both clients.
+- Define matching repository and platform-service interfaces in the server and
+  native application.
 - Add golden expected results for every cross-client business rule.
 
 **Exit criteria:** both domain suites run without UI/platform dependencies,
-produce the same canonical results, and both clients render a locked-vault
-shell.
+produce the same canonical results, and the React and Flutter UIs render a
+locked-vault shell.
 
 ### Phase 2 - Vault and persistence
 
 #### Task `implement-vault-crypto`
 
-- Implement equivalent web and Flutter vault creation, passphrase derivation,
-  DEK wrapping, unlock, passphrase change, auto-lock, and local deletion.
+- Implement equivalent server and Flutter vault creation, passphrase
+  derivation, DEK wrapping, unlock, passphrase change, auto-lock, and local
+  deletion.
 - Add Flutter OS secure-store and optional biometric adapters.
-- Add web passphrase unlock and capability-gated WebAuthn convenience unlock.
+- Add server-side passphrase unlock, secure browser sessions, lock-current,
+  lock-all, and inactivity expiry.
 - Add redaction and sensitive-memory lifecycle rules.
 
 #### Task `implement-native-storage`
@@ -809,11 +873,12 @@ shell.
   filesystem handling.
 - Run the shared storage contract suite.
 
-#### Task `implement-web-storage`
+#### Task `implement-server-storage`
 
-- Implement authenticated record encryption over IndexedDB.
-- Move unlock-time decryption, indexes, and heavy queries to a Web Worker.
-- Add storage persistence detection, eviction messaging, and offline behavior.
+- Implement the selected encrypted SQLite storage adapter on Linux ARM64.
+- Add persistent-volume handling, migrations, indexes, transactional
+  repositories, encrypted rollback snapshots, and restrictive permissions.
+- Add same-origin API adapters and conflict detection for concurrent edits.
 - Run the shared storage contract suite.
 
 **Exit criteria:** the same fixture vault behaves identically on all target
@@ -832,8 +897,8 @@ adapters, and tampering or wrong keys fail closed.
 
 - Define and document export format version 1.
 - Implement transaction CSV and complete portable export in TypeScript and Dart.
-- Implement preview, validation, deduplication, merge, replace, rollback, and
-  import reports in both clients.
+- Implement preview, validation, CSV merge, complete-vault replace, rollback,
+  and import reports in the server and native clients.
 - Add malicious/large/corrupt file tests and spreadsheet formula protection.
 
 **Exit criteria:** a vault exported from each platform imports into every other
@@ -846,13 +911,14 @@ platform without changing IDs, amounts, dates, relationships, or notes.
 - Add equivalent React and Flutter dashboard summaries, date ranges,
   account/tag filters, and text search.
 - Add performance indexes/caches without weakening encryption boundaries.
-- Verify native/web result equivalence on the reference data set.
+- Verify native/server result equivalence on the reference data set.
 
 #### Task `implement-budgets-recurring`
 
-- Implement budget periods, filters, and consumption in both clients.
-- Implement recurrence rules and calendar-safe occurrence generation in both
-  clients.
+- Implement budget periods, filters, and consumption in the server and native
+  application.
+- Implement recurrence rules and calendar-safe occurrence generation in the
+  server and native application.
 - Add multi-currency exclusion/conversion rules.
 
 **Exit criteria:** calculations are deterministic across locale, time zone, and
@@ -866,7 +932,8 @@ platform.
   privacy, and store metadata.
 - Complete Flutter desktop signing, installers, file dialogs, single-instance
   behavior, keyboard behavior, and update verification.
-- Complete PWA install, offline, CSP, update, and storage-eviction UX.
+- Complete the Raspberry Pi LAN binding, HTTPS setup, session UX, Docker volume,
+  health check, and update/rollback behavior.
 
 #### Task `harden-and-validate`
 
@@ -880,7 +947,8 @@ platform.
 - Create reproducible CI builds.
 - Separate development, test, and production signing.
 - Sign and verify desktop/mobile artifacts.
-- Publish the static PWA with immutable assets and safe service-worker rollout.
+- Publish reproducible Linux ARM64 container images and a versioned Docker
+  Compose deployment with verified migration and rollback behavior.
 
 **Exit criteria:** signed release candidates pass the complete cross-platform
 acceptance suite and do not require network access for core workflows.
@@ -907,6 +975,21 @@ acceptance suite and do not require network access for core workflows.
 transactions without receiving Enable Banking application secrets and without
 turning the connector into cross-device synchronization.
 
+### Phase 7 - Future automatic backups
+
+#### Task `implement-automatic-backups`
+
+- Add opt-in backup scheduling for the Raspberry Pi vault.
+- Encrypt every backup before it leaves the service process.
+- Add retention, rotation, restore verification, destination health, and
+  failure notifications.
+- Support user-controlled local or remote destinations without introducing a
+  Flowly-operated cloud dependency.
+
+**Exit criteria:** scheduled backups can be restored on a clean supported
+deployment, failures are visible, and retention never deletes the last verified
+recovery point.
+
 ## 18. Task Dependencies
 
 | Task | Depends on |
@@ -915,8 +998,8 @@ turning the connector into cross-device synchronization.
 | `define-domain-model` | `architecture-spike` |
 | `implement-vault-crypto` | `scaffold-monorepo`, `define-domain-model` |
 | `implement-native-storage` | `implement-vault-crypto` |
-| `implement-web-storage` | `implement-vault-crypto` |
-| `implement-core-finance` | `implement-native-storage`, `implement-web-storage` |
+| `implement-server-storage` | `implement-vault-crypto` |
+| `implement-core-finance` | `implement-native-storage`, `implement-server-storage` |
 | `implement-csv-transfer` | `implement-core-finance` |
 | `implement-dashboard-search` | `implement-core-finance` |
 | `implement-budgets-recurring` | `implement-core-finance` |
@@ -925,8 +1008,9 @@ turning the connector into cross-device synchronization.
 | `build-release-pipelines` | `integrate-platform-shells` |
 | `design-banking-connector` | `define-domain-model`, `implement-csv-transfer` |
 | `implement-banking-connector` | `design-banking-connector` |
+| `implement-automatic-backups` | `harden-and-validate`, `build-release-pipelines` |
 
-`implement-native-storage` and `implement-web-storage` can proceed in parallel.
+`implement-native-storage` and `implement-server-storage` can proceed in parallel.
 After the contracts are stable, React and Flutter work on each product feature
 can also proceed in parallel, but the task is complete only when both
 implementations pass the same acceptance fixtures.
@@ -935,15 +1019,18 @@ implementations pass the same acceptance fixtures.
 
 The MVP is complete only when:
 
-- Users can create and unlock an encrypted vault on every target.
+- Users can create and unlock encrypted native vaults and one shared Raspberry
+  Pi vault.
 - Optional biometric unlock never removes passphrase recovery.
 - Accounts, transactions, notes, tags, budgets, and recurring rules work
-  offline.
+  offline in native apps and without Internet access through the Raspberry Pi
+  web deployment.
 - Multi-currency values are represented without floating-point errors or
   misleading aggregation.
 - Dashboard and filters return equivalent results on every platform.
 - Full exports round-trip between every platform.
-- Invalid imports fail visibly and atomically.
+- Invalid imports fail visibly and atomically; complete portable imports always
+  replace the destination vault after explicit confirmation.
 - No client artifact contains provider keys, test secrets, or sensitive fixture
   data.
 - Locked local storage, journals, caches, logs, and crash reports contain no
@@ -958,7 +1045,10 @@ The MVP is complete only when:
 - Flowly cloud account or username/password authentication
 - Automatic cross-device synchronization
 - Shared household vaults
-- Server-side canonical transaction storage
+- Flowly-operated or Internet-hosted canonical transaction storage
+- Multi-user or role-based access to the Raspberry Pi vault
+- Browser-side offline vaults or installable PWA behavior
+- Automatic or scheduled backups in the MVP
 - Automatic exchange-rate retrieval
 - Investment portfolio pricing
 - Receipt/image attachment storage
@@ -971,7 +1061,9 @@ The MVP is complete only when:
 | Risk | Mitigation |
 |---|---|
 | SQLCipher wrapper incompatibility across targets | Mandatory Phase 0 proof-of-concept and contract suite |
-| Browser storage is weaker and may be evicted | Encrypted records, mandatory passphrase, persistence detection, export reminders |
+| Raspberry Pi is unavailable or its storage fails | Manual encrypted exports in the MVP, migration snapshots, visible health status, and automatic backups in a future phase |
+| Local HTTPS setup is difficult | Versioned reverse-proxy configuration, guided local certificate enrollment, and an explicit supported-browser matrix |
+| Encrypted SQLite binding fails on Linux ARM64 | Mandatory Phase 0 spike and authenticated record-encryption fallback behind the repository interface |
 | React and Flutter duplicate UI and domain behavior | Canonical schemas, generated models, shared design tokens, golden vectors, parity gates, and synchronized acceptance criteria |
 | Product behavior drifts between TypeScript and Dart | Cross-client conformance CI blocks releases when canonical outputs differ |
 | CSV is plaintext and easy to leak | Clear warning, streaming generation, encrypted archive recommended |
@@ -996,7 +1088,7 @@ The MVP is complete only when:
 - JSON Schema: <https://json-schema.org/>
 - Capacitor: <https://capacitorjs.com/docs>
 - Tauri 2: <https://v2.tauri.app/>
-- Vite PWA guidance: <https://vite-pwa-org.netlify.app/>
+- Docker Compose: <https://docs.docker.com/compose/>
 - SQLCipher: <https://www.zetetic.net/sqlcipher/>
 - OWASP Mobile Application Security: <https://mas.owasp.org/>
 - OWASP Application Security Verification Standard:
@@ -1008,9 +1100,7 @@ The MVP is complete only when:
   <https://developer.android.com/privacy-and-security/keystore>
 - Windows Data Protection API:
   <https://learn.microsoft.com/windows/win32/secauthn/data-protection>
-- Web Crypto API:
-  <https://developer.mozilla.org/docs/Web/API/Web_Crypto_API>
-- IndexedDB:
-  <https://developer.mozilla.org/docs/Web/API/IndexedDB_API>
+- OWASP Session Management Cheat Sheet:
+  <https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html>
 - Enable Banking API reference:
   <https://enablebanking.com/docs/api/reference/>

@@ -1,304 +1,218 @@
-# Flowly
+# 💸 Flowly
 
-**Local-first personal finance. Your money, your device, your keys.**
+### Your money. Your device. Your keys.
 
-Flowly is a personal finance application for iOS, Android, macOS, Windows, and
-the web. Every installation is an independent, encrypted vault — there is no
-Flowly account, no cloud database, and no automatic synchronization. Data moves
-between your devices only when *you* export and import it.
+**A local-first personal finance app for iOS, Android, macOS, Windows and a
+self-hosted Raspberry Pi web deployment.**
+No account. No cloud. No tracking. Ever.
 
-> **Project status: pre-implementation.**
-> The architecture, security model, and delivery plan are complete and reviewed
-> (see [PLAN.md](PLAN.md)). No application code has been written yet. The only
-> code in the repository is an isolated Enable Banking exploration prototype
-> that is **not** production material.
+![Status](https://img.shields.io/badge/status-early%20development-orange)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
+![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Web-8A2BE2)
+![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
----
-
-## Why Flowly
-
-| Most finance apps | Flowly |
-|---|---|
-| Require an account and a password | No registration, no identity, no server |
-| Store your transactions on their servers | Your data never leaves your device |
-| Sync silently in the background | You decide what moves, and when |
-| Monetize telemetry and analytics | Zero telemetry, zero trackers, zero ads |
-| Break without a network connection | Fully offline by design |
-| Own your encryption keys | The key is derived from *your* passphrase |
-
-Flowly is built on one uncompromising rule: **if the vault is locked, there is
-nothing readable on disk — not in the database, not in journals, not in caches,
-not in logs.**
+</div>
 
 ---
 
-## Features
+## 🌱 The idea
 
-### Core finance
+Most finance apps ask you to hand over the most sensitive data you own — every
+coffee, every salary, every mistake — in exchange for a dashboard.
 
-- **Financial accounts** — checking, savings, credit cards, cash, wallets,
-  investment, and custom types, each with its own default currency and optional
-  institution and opening balance.
-- **Transactions** — signed amounts (inflow/outflow), booking and value dates,
-  payee, provider description, pending/booked status, and provenance tracking
-  (manual, CSV import, recurring rule, or bank connector).
-- **User notes kept separate from imported descriptions** — a future bank
-  refresh can never overwrite something you wrote.
-- **Tags** — Unicode-normalized, case-insensitive matching with preserved
-  display casing and optional colors.
-- **Archive-safe deletion** — accounts referenced by transactions cannot be
-  silently destroyed; deletion is either an archive or an explicit, confirmed
-  cascade.
+Flowly asks for nothing.
 
-### Money done correctly
+Everything lives in an **encrypted vault on hardware you control**, unlocked by
+a passphrase only you know. Native apps keep independent local vaults; the web
+version keeps one shared vault on your Raspberry Pi for all of your LAN browser
+sessions. There is no Flowly cloud account or analytics pipeline quietly
+watching. If you want data in another independent vault, you export it and
+import it. That's it. 🔐
 
-- **No binary floating point, anywhere.** Every amount is a signed integer in
-  minor units plus an ISO 4217 currency code.
-- **Multi-currency without lies.** Each transaction keeps its original currency;
-  totals are computed per currency. Flowly will never merge unlike currencies
-  into a single misleading number without an explicit exchange rate and
-  valuation date.
-- **Versioned currency metadata** — because not every currency has two decimal
-  places.
+| 🙃 Most finance apps | 🚀 Flowly |
+| --- | --- |
+| Sign up with email & password | No registration, no identity |
+| Your data on their servers | Your data stays on your device or Raspberry Pi |
+| Silent background sync | You decide what moves, and when |
+| Telemetry & ads pay the bills | Zero telemetry, zero trackers, zero ads |
+| Useless without the Internet | Native apps work offline; web needs only your LAN |
+| They hold the keys | Your passphrase unlocks your encryption key |
 
-### Analysis
-
-- **Dashboard** — balance by account, net cash flow for a period, income and
-  expense totals, spending by tag, budget consumption, and upcoming recurring
-  transactions.
-- **Advanced search and filters** — date range, account, tag, amount range,
-  currency, pending/booked status, source, and free-text over payee,
-  description, and notes — with identical semantics on every platform.
-
-### Planning
-
-- **Budgets** — weekly, monthly, quarterly, yearly, or custom periods, with
-  optional account and tag scoping and an explicit rollover policy.
-- **Recurring transactions** — calendar-aware recurrence (real month and year
-  arithmetic, not fixed day counts), with pause/resume and local occurrence
-  generation. No cloud scheduler required.
-
-### Security
-
-- **Mandatory local passphrase.** A random 256-bit data-encryption key is
-  wrapped by a key derived with Argon2id, using a per-vault salt and
-  platform-calibrated parameters.
-- **Optional biometric unlock** — Face ID / Touch ID, Android BiometricPrompt,
-  Windows Hello, and capability-gated WebAuthn. Biometrics are a *convenience*;
-  the passphrase always remains the root of recovery, and the OS store never
-  holds your passphrase.
-- **Encrypted at rest, everywhere** — SQLCipher-backed SQLite on installed
-  clients; authenticated per-record encryption over IndexedDB on the web, with
-  decryption confined to a Web Worker.
-- **Auto-lock** on inactivity and backgrounding, with decrypted caches and
-  sensitive form state cleared on lock.
-- **Fail closed** — wrong keys, tampered ciphertext, and corrupt data produce
-  actionable errors, never a silently empty vault.
-- **No cloud backup leakage** — database files are excluded from OS backups
-  unless explicitly approved and encrypted.
-
-### Data portability
-
-- **Transaction CSV** — RFC 4180, UTF-8, ISO 8601 dates, canonical decimal
-  amounts, ready for any spreadsheet.
-- **Complete portable export** — a versioned archive covering accounts,
-  transactions, tags, links, budgets, recurring rules, and preferences, with a
-  checksum manifest. This is the supported device-to-device transfer format,
-  and a password-encrypted variant is the recommended option.
-- **Spreadsheet formula-injection protection** on every exported text field.
-- **Staged, transactional import** — detect, parse off the main thread,
-  validate, preview with duplicate and error counts, choose merge or replace,
-  write atomically, and keep a durable import report.
-- **Three-tier deduplication** — stable Flowly UUID, then provider transaction
-  identity, then a deterministic fingerprint over normalized account, date,
-  amount, currency, and description. No row is ever silently dropped.
-
-### Privacy
-
-- No account registration.
-- No analytics or telemetry in the MVP.
-- No advertising or tracking SDKs.
-- No automatic upload or cloud backup.
-- No network dependency for core usage.
-- One-action local data deletion that destroys the vault and its wrapped keys.
+> 🧭 **One rule we never break:** when the vault is locked, there is nothing
+> readable on disk. Not in the database, not in journals, not in caches, not in
+> logs.
 
 ---
 
-## Architecture
+## ✨ What Flowly does
 
-Flowly is a polyglot monorepo with two client implementations sharing one
-language-neutral contract layer.
+### 🏦 Accounts & transactions
+Checking, savings, credit cards, cash, wallets, investments — each with its own
+currency. Add transactions with payee, dates, status and tags. Your personal
+notes stay **separate** from imported bank descriptions, so nothing you write
+ever gets overwritten. 📝
 
-```text
-flowly/
-  apps/
-    web/                  # React + TypeScript + Vite PWA
-    native/               # Flutter app: iOS, Android, macOS, Windows
-    banking-connector/    # Future server-side TypeScript connector
-  contracts/
-    schemas/              # Canonical JSON Schemas — the source of truth
-    csv/                  # CSV/archive schemas and version history
-    fixtures/             # Sanitized cross-client golden fixtures
-    expected-results/     # Canonical calculation and dedup outcomes
-  packages/               # Generated TS types + test support
-  native-packages/        # Generated Dart models + test support
-  tooling/                # Scripts, lint, formatting, codegen
-  docs/adr/ docs/security/
-```
+### 🏷️ Tags that behave
+Unicode-aware, case-insensitive matching with the casing you typed preserved.
+Add colors, filter by them, live with them.
 
-**Why two clients?** Because a browser shell forced onto mobile and desktop is a
-worse product than a native one. Flutter gives mature encrypted SQLite,
-biometrics, and installers across four installed targets; React gives a
-first-class, accessible, installable PWA. The cost — duplicated domain logic in
-TypeScript and Dart — is paid deliberately and controlled by contracts, not by
-hope:
+### 🌍 Multi-currency, honestly
+Every amount is stored as an **integer in minor units** — no floating-point
+rounding drama. Each transaction keeps its original currency, and Flowly refuses
+to blend unlike currencies into one fake number without a real exchange rate.
 
-- Versioned JSON Schemas generate both TypeScript and Dart types.
-- One canonical CSV/archive specification.
-- Shared golden fixtures with expected results for every business rule.
-- Cross-client import/export round-trip tests.
-- A single acceptance catalogue executed by both clients, gating releases in CI.
+### 📊 A dashboard worth opening
+Balances per account, net cash flow, income vs. expenses, spending by tag,
+budget consumption and upcoming recurring transactions — all computed on your
+native device or Raspberry Pi, without an Internet dependency.
 
-Every client follows the same clean layering — `domain` (no framework, no I/O),
-`application` (use cases over repository and platform interfaces),
-`infrastructure` (storage, crypto, platform services), and `ui`. The UI never
-touches storage directly, and every multi-entity write is atomic.
+### 🔎 Search that actually finds it
+Filter by date range, account, tag, amount, currency, status or source — and
+free-text search across payee, description and your notes.
 
----
+### 🎯 Budgets
+Weekly, monthly, quarterly, yearly or custom periods. Scope them to accounts or
+tags. Turn rollover on or off. Watch the bar fill up (or not 😅).
 
-## Platform support
+### 🔁 Recurring transactions
+Real calendar arithmetic — not "every 30 days". Rent on the 31st behaves the way
+you'd expect in February. Pause and resume any time, no cloud scheduler needed.
 
-| Target | Runtime | Storage | Unlock |
-|---|---|---|---|
-| iOS | Flutter | Drift + SQLCipher | Passphrase + Face ID / Touch ID |
-| Android | Flutter | Drift + SQLCipher | Passphrase + BiometricPrompt |
-| macOS | Flutter | Drift + SQLCipher | Passphrase + Touch ID |
-| Windows | Flutter | Drift + SQLCipher | Passphrase + DPAPI / Windows Hello |
-| Web / PWA | React + TS | Encrypted IndexedDB records | Passphrase + optional WebAuthn |
+### 🔐 Security you can explain to a friend
+- A **mandatory passphrase** protects a randomly generated encryption key,
+  derived with Argon2id and a per-vault salt.
+- **Optional biometrics** — Face ID, Touch ID, Android BiometricPrompt and
+  Windows Hello — as a shortcut in installed apps, never as a replacement for
+  your passphrase.
+- **Encrypted at rest everywhere**: SQLCipher on installed apps and encrypted
+  SQLite on the Raspberry Pi.
+- **Auto-lock** on inactivity and when the app goes to the background.
+- **Fails closed**: wrong key or tampered data raises a clear error, never a
+  silently empty vault.
 
-Distribution: app stores for mobile, signed direct downloads for desktop, and a
-static, offline-capable PWA for the web.
+### 📦 Your data, portable
+- 📄 **Transaction CSV** — clean, standard, spreadsheet-ready.
+- 🗃️ **Complete portable export** — a password-encrypted, versioned archive
+  with everything
+  (accounts, transactions, tags, budgets, recurring rules, preferences) and a
+  checksum manifest. This is the supported way to move a complete vault between
+  the Raspberry Pi and installed apps.
+- 🛡️ Spreadsheet formula-injection protection on export.
+- ✅ Import with a **preview first**: transaction CSVs merge after duplicate
+  checks; complete portable archives always replace the destination vault after
+  explicit confirmation. Every import is atomic and nothing is silently
+  dropped.
+- 🧬 Smart deduplication via stable IDs, provider IDs, then a deterministic
+  fingerprint.
 
----
-
-## Roadmap
-
-### What exists today
-
-- Apache 2.0 license.
-- A complete architecture, security, and delivery plan ([PLAN.md](PLAN.md)).
-- An isolated Enable Banking exploration prototype (`enable_banking.py`,
-  untracked). It prints tokens and reads a private key from disk — it is a
-  research artifact and must be sanitized and moved under `prototypes/` before
-  any reuse.
-
-### What comes next
-
-| Phase | Task | Status |
-|---|---|---|
-| **0 — Feasibility** | `architecture-spike` — prove SQLCipher, secure storage, biometrics, encrypted IndexedDB, PWA offline, and cross-language crypto vectors on all five targets | Not started |
-| **1 — Foundation** | `scaffold-monorepo` — repo boundaries, strict TS/Dart analysis, CI, contract codegen | Not started |
-| | `define-domain-model` — canonical schemas plus equivalent TS/Dart money, account, transaction, tag, budget, and recurrence models | Not started |
-| **2 — Vault** | `implement-vault-crypto` — Argon2id derivation, DEK wrapping, unlock, passphrase change, auto-lock, secure deletion | Not started |
-| | `implement-native-storage` — Drift/SQLCipher schema, migrations, backup exclusion | Not started |
-| | `implement-web-storage` — authenticated record encryption over IndexedDB in a Web Worker | Not started |
-| **3 — Core finance** | `implement-core-finance` — accounts, transactions, tags, notes, adaptive navigation, accessible forms | Not started |
-| | `implement-csv-transfer` — export format v1, portable archive, preview, dedup, merge/replace, rollback | Not started |
-| **4 — Analysis** | `implement-dashboard-search` — summaries, filters, text search, performance indexes | Not started |
-| | `implement-budgets-recurring` — budget periods and consumption, calendar-safe recurrence | Not started |
-| **5 — Hardening** | `integrate-platform-shells` — permissions, deep links, installers, signing, PWA install and update UX | Not started |
-| | `harden-and-validate` — accessibility, performance, migration, recovery, threat model, SBOM, independent crypto review | Not started |
-| | `build-release-pipelines` — reproducible builds, separated signing, verified artifacts | Not started |
-| **6 — Banking** | `design-banking-connector` / `implement-banking-connector` — a **server-side** Enable Banking connector, post-MVP | Not started |
-
-Phase dependencies and parallelization rules are documented in
-[PLAN.md](PLAN.md).
-
-### Future: bank connectivity, done safely
-
-Enable Banking application private keys and JWT signing will **never** ship
-inside a distributed client. When bank import arrives, it will be a separate
-connector service that holds credentials in a managed secret store, issues
-short-lived signed JWTs, normalizes provider data, and delivers a batch once to
-an unlocked client. It is an *ingestion channel*, not a sync service, and not a
-canonical database. Your local vault always remains the source of truth.
+### 🕵️ Privacy, by construction
+No registration · No telemetry · No ad SDKs · No automatic upload · No Internet
+dependency · One-tap local data deletion.
 
 ---
 
-## Definition of done for the MVP
+## 🧱 How it's built
 
-Flowly 1.0 ships only when all of the following hold:
+Two application implementations, one shared contract layer:
 
-- A vault can be created and unlocked on every target.
-- Biometric unlock never removes passphrase recovery.
-- Accounts, transactions, notes, tags, budgets, and recurring rules work fully
-  offline.
-- Multi-currency values carry no floating-point error and no misleading
-  aggregation.
-- Dashboards and filters return equivalent results on every platform.
-- Full exports round-trip between every platform with identical IDs, amounts,
-  dates, relationships, and notes.
-- Invalid imports fail visibly and atomically.
-- No shipped artifact contains provider keys, test secrets, or real fixture
-  data.
-- A locked vault leaves no plaintext in storage, journals, caches, logs, or
-  crash reports.
-- Accessibility (WCAG 2.2 AA on web), security, migration, recovery, and
-  release checks all pass.
+- 🌐 **Self-hosted web** — React UI plus a TypeScript service running on your
+  Raspberry Pi, shared by browsers on the LAN over required HTTPS
+- 📱🖥️ **Installed apps** — a single Flutter codebase for iOS, Android, macOS
+  and Windows
+- 🔗 **Shared contracts** — versioned JSON Schemas, one canonical CSV/archive
+  spec, and golden fixtures that both clients must satisfy in CI
 
----
+| Platform | Runtime | Storage | Unlock |
+| --- | --- | --- | --- |
+| 🍎 iOS | Flutter | SQLCipher + Drift | Passphrase + Face/Touch ID |
+| 🤖 Android | Flutter | SQLCipher + Drift | Passphrase + BiometricPrompt |
+| 💻 macOS | Flutter | SQLCipher + Drift | Passphrase + Touch ID |
+| 🪟 Windows | Flutter | SQLCipher + Drift | Passphrase + Windows Hello |
+| 🌐 Raspberry Pi web | React + TS service | Encrypted SQLite | Passphrase + secure session |
 
-## Explicitly out of scope
-
-Flowly says no on purpose. Not in the MVP, and in most cases not ever:
-
-- A Flowly cloud account or username/password login
-- Automatic cross-device synchronization
-- Shared household vaults
-- Server-side canonical transaction storage
-- Automatic exchange-rate retrieval
-- Investment portfolio pricing
-- Receipt and image attachments
-- Payment initiation
-- Background server scheduling for recurring transactions
+Why two clients instead of one? Because a browser shell bolted onto a phone is a
+worse product than a native app. Flutter brings mature encrypted storage,
+biometrics and installers; React provides an accessible interface to the vault
+hosted on your Raspberry Pi. The duplication is deliberate, and shared
+contracts plus cross-client tests keep the two honest. 🤝
 
 ---
 
-## Important warnings
+## 🚦 Where we are
 
-- **There is no passphrase recovery.** There is no account, no server, and no
-  key escrow. If you lose your passphrase and every unlocked device, your data
-  is gone permanently. Recovery is possible only from an export whose password
-  you know.
-- **There is no synchronization.** Two devices are two independent vaults.
-- **Plain CSV exports are not encrypted.** Prefer the password-protected
-  portable archive for transfers.
-- **Browser storage can be evicted.** The PWA requests persistent storage and
-  will remind you to export regularly.
+Flowly is **in early development**. The architecture and security model are
+designed and reviewed; the app itself is being built in the open, and there is
+no release yet.
 
----
+| | Milestone | Status |
+| --- | --- | --- |
+| 0️⃣ | Encrypted storage on Raspberry Pi ARM64 and native targets | 🔜 Up next |
+| 1️⃣ | Monorepo scaffolding, shared contracts & domain model | ⏳ Planned |
+| 2️⃣ | Vaults: native storage, Raspberry service, sessions and auto-lock | ⏳ Planned |
+| 3️⃣ | Accounts, transactions, tags, notes + CSV import/export | ⏳ Planned |
+| 4️⃣ | Dashboard, search, budgets, recurring transactions | ⏳ Planned |
+| 5️⃣ | Platform polish, accessibility, security review, releases | ⏳ Planned |
+| 6️⃣ | Optional bank import via a separate connector service | 🔮 Post-MVP |
+| 7️⃣ | Opt-in automatic encrypted backups | 🔮 Post-MVP |
 
-## Contributing
+⭐ **Star the repo** to follow along — that's the easiest way to see it grow.
 
-The project is in the architecture phase. Before writing feature code, Phase 0
-(`architecture-spike`) must prove the encrypted-storage, secure-key, and
-biometric stack on every target — if a library fails there, the wrapper choice
-changes before any product work begins.
+### 🏦 About bank connections
 
-Repository conventions live in [AGENTS.md](AGENTS.md):
-
-- One commit per logically complete change, in Conventional Commits format.
-- Review `git diff` and run the relevant tests and checks before committing.
-- Never commit secrets, real financial data, or temporary files.
-- Keep [PLAN.md](PLAN.md) and this README consistent with the actual behavior of
-  the code in the same commit as the change.
-
-Security-relevant work additionally requires: parameterized SQL only, runtime
-schema validation at every trust boundary, structured log redaction, and no
-hand-rolled cryptographic primitives.
+Bank import is a post-MVP goal, and it will be done the safe way: provider
+credentials and signing keys will **never** ship inside the app. A separate
+service will fetch and normalize data, hand a batch to your unlocked vault once,
+and forget it. It's an import channel — not a sync service, and never the source
+of truth. The destination vault stays canonical. 🏠
 
 ---
 
-## License
+## 🙅 What Flowly will never do
 
-[Apache License 2.0](LICENSE)
+- ☁️ Create a Flowly cloud account for you
+- 🔄 Sync your devices automatically behind your back
+- 🗄️ Store your transactions in a Flowly-operated cloud
+- 📈 Guess exchange rates or portfolio prices for you
+- 💳 Move money on your behalf
+- 👀 Ship analytics, ads or trackers
+
+---
+
+## ⚠️ Please read this before trusting it with your data
+
+- 🔑 **There is no passphrase recovery.** No account, Flowly service or key
+  escrow exists. Lose your passphrase and every unlocked vault, and the data is
+  gone forever. Your only safety net is an export whose password you know.
+- 🔁 **There is no sync between vaults.** Browsers connected to one Raspberry
+  Pi share its vault; native apps and other deployments remain independent.
+- 📄 **Plain CSV exports are not encrypted.** Use the password-protected archive
+  to move data around.
+- 💾 **The Raspberry Pi is not a backup.** Manual encrypted exports are required
+  in the MVP; optional automatic backups are planned as a future evolution.
+
+---
+
+## 💛 Get involved
+
+Flowly is open source and built in the open — early is the best time to shape
+it.
+
+- 💬 **Open an issue** to share an idea, report a bug or challenge a design
+  decision
+- 🧪 **Try the spikes** and tell us where encrypted storage or biometrics break
+  on your device
+- 🌍 **Translate** — all UI text is externalized from day one
+- ♿ **Accessibility feedback** is especially welcome; we target WCAG 2.2 AA
+- 📣 **Tell a friend** who's tired of handing their bank history to a startup
+
+Good first areas: shared schemas & fixtures, CSV edge cases, recurrence calendar
+tests, and design tokens.
+
+We follow [Conventional Commits](https://www.conventionalcommits.org/), and we
+ask one thing above all: **never commit secrets or real financial data.** 🔒
+
+---
+
+## 📜 License
+
+Released under the [Apache License 2.0](LICENSE). Use it, fork it, audit it. 🔍
