@@ -1,0 +1,31 @@
+{
+	# Local, private-network deployment: no ACME, no outbound call. Certificates
+	# come from Caddy's local CA and are stored in the caddy-data volume.
+	auto_https disable_redirects
+	# Browsers that connect by IP send no SNI; fall back to the localhost
+	# certificate so direct IP access still completes the handshake.
+	default_sni localhost
+}
+
+{$FLOWLY_SITE_ADDRESS:flowly.local}, localhost, 127.0.0.1 {
+	tls internal
+
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	# The server sets its own CSP and security headers for the app it serves.
+	reverse_proxy server:8787 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

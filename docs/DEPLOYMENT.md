@@ -1,0 +1,151 @@
+# Deploying Flowly
+
+How to install, upgrade, roll back and back up a self-hosted Flowly server. The
+short version: it runs on your hardware, on a private network, with no Flowly
+service involved.
+
+## Supported hosts
+
+| Host | Status |
+| --- | --- |
+| Linux `amd64` (Docker Engine + Compose v2) | Supported |
+| Linux `arm64` (Docker Engine + Compose v2) | Supported |
+| Docker Desktop on macOS (Apple Silicon, Intel) | Supported |
+| Docker Desktop on Windows (WSL 2 backend) | Supported |
+| Anything requiring public Internet exposure | **Not supported** |
+
+The image is built for `linux/amd64` and `linux/arm64` and is published by CI as
+a multi-architecture image with SBOM and provenance attestations.
+
+## Install
+
+```bash
+git clone <your fork or checkout>
+cd flowly
+cp .env.example .env          # optional: adjust ports, lifetimes, log level
+docker compose -f deployment/self-hosted/compose.yaml up --build -d
+```
+
+Two containers start:
+
+- `server` — the TypeScript service, listening on port 8787 **inside** the
+  Compose network, with the vault in the `vault-data` volume.
+- `proxy` — Caddy terminating HTTPS on `127.0.0.1:8443` and forwarding to the
+  server. Only HTTPS is exposed; plain HTTP is not published, so there is no
+  half-configured redirect to work around.
+
+Only the proxy publishes ports, and only on the loopback interface. To reach the
+server from another device on your private LAN or VPN, change the published
+address to that interface (for example `192.168.1.20:8443:443`) and add the
+hostname you use to `FLOWLY_SITE_ADDRESS`.
+
+Check it:
+
+```bash
+curl -k https://127.0.0.1:8443/api/health
+curl -k https://127.0.0.1:8443/            # the web client
+docker compose -f deployment/self-hosted/compose.yaml ps
+```
+
+## Certificates
+
+Caddy issues certificates from its own local CA. Browsers will warn until you
+trust that CA — this is the "guided local certificate enrollment" step:
+
+```bash
+docker compose -f deployment/self-hosted/compose.yaml \
+  exec proxy cat /data/caddy/pki/authorities/local/root.crt > flowly-local-ca.crt
+
+# macOS
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain flowly-local-ca.crt
+
+# Linux (Debian/Ubuntu)
+sudo cp flowly-local-ca.crt /usr/local/share/ca-certificates/flowly-local-ca.crt
+sudo update-ca-certificates
+```
+
+Then open `https://flowly.local:8443` (or whatever `FLOWLY_SITE_ADDRESS` says).
+Delete `flowly-local-ca.crt` from where you exported it once it is installed.
+
+Direct IP access works too: Caddy falls back to the `localhost` certificate when
+the client sends no SNI (`default_sni localhost`), so `https://192.168.1.20:8443`
+completes the handshake — you will still want the CA trusted to avoid warnings.
+
+## HTTPS in the application
+
+The proxy adds `X-Forwarded-Proto`, and the server runs with
+`FLOWLY_TRUST_PROXY=true`, so session cookies are marked `Secure` and HSTS is
+sent. The server also sets `Content-Security-Policy`, `X-Content-Type-Options`,
+`Referrer-Policy`, `X-Frame-Options`, `Cross-Origin-Opener-Policy` and
+`Permissions-Policy` on every response.
+
+## Backup and restore
+
+Manual exports are the supported backup in the MVP (automatic encrypted backups
+are Phase 12):
+
+1. Open the app, unlock the vault, go to **Import & export**.
+2. **Export complete archive** and store the file where you keep backups.
+3. Keep the archive password somewhere separate; without it the file is
+   unreadable, by design.
+
+To restore, start a fresh deployment with an empty `vault-data` volume, create a
+vault with any passphrase you will remember, unlock it and import the archive
+over it; the import validates the checksums and replaces the vault atomically.
+
+The named volume `vault-data` holds the encrypted database and snapshots. Copying
+the volume with the container running is **not** a supported backup: the
+checkpoint files may be inconsistent. Use the archive export.
+
+## Upgrade
+
+```bash
+docker compose -f deployment/self-hosted/compose.yaml down
+git pull                     # or check out the new tag
+docker compose -f deployment/self-hosted/compose.yaml up --build -d
+```
+
+On startup the server applies pending migrations. Every migration runs in a
+transaction, and any failure rolls back to the previous schema, so an
+interrupted upgrade never leaves a half-migrated vault. Before a schema change,
+take an archive export.
+
+Check the result:
+
+```bash
+curl -k https://127.0.0.1:8443/api/system/info
+# { "version": "...", "schemaVersion": 2, ... }
+```
+
+## Rollback
+
+1. Stop the stack: `docker compose ... down`.
+2. Take the archive export from **before** the upgrade, or the `vault-data`
+   snapshot the upgrade created under `snapshots/`.
+3. Start the previous image tag (`docker compose ... up -d` with that tag, or
+   rebuild from the previous commit).
+4. If the newer schema had been applied and you need the old one, restore from
+   the pre-upgrade archive export: create a fresh vault and import it.
+
+The vault never migrates backwards on its own; restoring the pre-upgrade data is
+an explicit, user-driven action.
+
+## Health, monitoring and logs
+
+- `GET /api/health` — liveness, no vault access, safe for Docker health checks.
+- `GET /api/system/info` — version, schema version, engine, uptime.
+- `docker compose ... logs -f server` — request logs; never passphrases,
+  financial payloads or keys.
+
+## Hardening checklist
+
+- Keep the published ports bound to loopback or to a private LAN/VPN interface.
+- Never forward these ports from your router, and never put the stack on a
+  public host.
+- `FLOWLY_ALLOW_PUBLIC_BIND=true` only exists for containers whose port mapping
+  stays private; there is no reason to set it on a bare host.
+- Review `docs/security/threat-model.md` before exposing the server to a shared
+  network.
+- Regenerate `docs/security/sbom.json` with `pnpm release:report` on every
+  dependency change; CI fails on denied licenses.

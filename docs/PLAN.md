@@ -1199,6 +1199,33 @@ cached in memory.
 
 ### Phase 5 - Server hardening and release
 
+Status: **complete for its engineering scope** (2026-09-11). `pnpm verify` runs
+146 tests (contracts 12, server 126, web 8). Two verification items cannot be
+finished by writing code in this repository — an independent cryptographic
+review and a full assistive-technology accessibility audit — and are tracked as
+open in `docs/security/verification.md`. Decisions are recorded in
+`docs/adr/0009-deployment-transport-and-release.md`.
+
+Delivered:
+
+- The server serves the built React client on the same origin with an SPA
+  fallback, sets CSP and the other security headers, and exposes
+  `/api/system/info` for operations.
+- `deployment/self-hosted/compose.yaml` runs the server behind a Caddy reverse
+  proxy that terminates HTTPS with a local CA, keeps both published ports on the
+  loopback interface, and health-checks both containers.
+- The image pins the Node base by its multi-architecture digest, carries OCI
+  labels, builds the web client, and is produced for `linux/amd64` and
+  `linux/arm64` with SBOM and provenance attestations in CI.
+- `pnpm release:report` generates `docs/security/sbom.json` (CycloneDX 1.5) and
+  the third-party license inventory; `pnpm release:check` fails on denied
+  licenses, and CI keeps the artefacts fresh.
+- Documentation: `docs/DEPLOYMENT.md` (install, certificates, upgrade,
+  rollback, backup, hardening), `docs/security/threat-model.md`,
+  `privacy.md`, `data-loss.md`, `support-matrix.md` and `verification.md`.
+- Structural accessibility tests for the unlock screen and the workspace, plus
+  the automated migration, recovery, concurrency and deployment suites.
+
 #### Task `integrate-server-deployment`
 
 - Complete private-network binding, HTTPS setup, session UX, persistent-volume
@@ -1224,6 +1251,12 @@ cached in memory.
 
 **Exit criteria:** the **Flowly Server MVP** passes its acceptance suite and
 requires neither Internet access nor any Flowly-operated service for core use.
+
+Met: the acceptance suite is `pnpm verify` plus `pnpm build` (146 tests), the
+container runs with no outbound network dependency and no Flowly-operated
+service, and the deployment, backup and threat-model documentation ships with
+the repository. The independent cryptographic review and the assistive-technology
+audit remain open and are listed in `docs/security/verification.md`.
 
 ### Phase 6 - Enable Banking for Server
 

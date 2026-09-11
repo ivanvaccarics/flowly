@@ -14,6 +14,7 @@ import { generateId } from "../domain/ids.js";
 import { isIsoDate } from "../domain/values.js";
 import { ArchiveIntegrityError, ArchivePasswordError, ImportError } from "../portability/errors.js";
 import { AttemptLimiter, SessionStore, type Session } from "../session/session-store.js";
+import { SCHEMA_VERSION } from "../storage/migrations.js";
 import {
   ConflictError,
   RecordExistsError,
@@ -24,6 +25,7 @@ import type { Repository, RepositoryEntity } from "../storage/repositories.js";
 import { Vault, VaultExistsError, VaultLockedError, VaultNotFoundError } from "../vault/vault.js";
 import { AccountInUseError, AccountNotFoundError, TagInUseError } from "../vault/vault.js";
 import { EXPORT_FORMAT_VERSION, SERVER_VERSION, VAULT_FORMAT_VERSION } from "../version.js";
+import { registerStaticApp } from "./static-app.js";
 
 const COOKIE_NAME = "flowly_sid";
 
@@ -70,6 +72,30 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   const state: AppState = { vault: () => vault, sessions, limiter };
   app.decorate("flowlyState", state);
+  const servingWeb = registerStaticApp(app, config);
+
+  // Security headers for every response; the CSP matters for the served app.
+  app.addHook("onSend", async (request, reply, payload) => {
+    reply.header("x-content-type-options", "nosniff");
+    reply.header("referrer-policy", "no-referrer");
+    reply.header("x-frame-options", "DENY");
+    reply.header("cross-origin-opener-policy", "same-origin");
+    reply.header(
+      "permissions-policy",
+      "geolocation=(), camera=(), microphone=(), payment=(), usb=()",
+    );
+    if (String(reply.getHeader("content-type") ?? "").includes("text/html")) {
+      reply.header(
+        "content-security-policy",
+        "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; " +
+          "img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'",
+      );
+    }
+    if (config.trustProxy && request.protocol === "https") {
+      reply.header("strict-transport-security", "max-age=31536000; includeSubDomains");
+    }
+    return payload;
+  });
 
   const requireSession = (request: FastifyRequest, reply: FastifyReply): Session | undefined => {
     const session = sessions.touch(readCookie(request, COOKIE_NAME) ?? "");
@@ -108,6 +134,17 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     if (!vault) return lockedStatus(config.storageEngine);
     return vault.status();
   });
+
+  app.get("/api/system/info", async () => ({
+    version: SERVER_VERSION,
+    node: process.versions.node,
+    platform: process.platform,
+    storageEngine: config.storageEngine,
+    schemaVersion: SCHEMA_VERSION,
+    vaultFormatVersion: VAULT_FORMAT_VERSION,
+    exportFormatVersion: EXPORT_FORMAT_VERSION,
+    uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
+  }));
 
   app.post("/api/vault/create", async (request, reply) => {
     if (!originAllowed(request, config)) {
@@ -435,7 +472,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     }
   });
 
-  app.setNotFoundHandler(async (_request, reply) => {
+  app.setNotFoundHandler(async (request, reply) => {
+    if (!request.url.startsWith("/api/") && servingWeb) {
+      return reply.sendFile("index.html");
+    }
     reply.code(404);
     return { error: "not_found" };
   });

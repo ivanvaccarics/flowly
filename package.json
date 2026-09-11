@@ -20,6 +20,8 @@
     "contracts:generate": "pnpm --filter @flowly/web-contracts generate",
     "contracts:check": "pnpm contracts:generate && git diff --exit-code -- packages/web-contracts/src/generated",
     "check:frontend-secrets": "node tooling/scripts/check-frontend-secrets.mjs",
+    "release:report": "node tooling/scripts/release-report.mjs",
+    "release:check": "node tooling/scripts/release-report.mjs --check",
     "verify": "pnpm format:check && pnpm lint && pnpm check:frontend-secrets && pnpm typecheck && pnpm test",
     "docker:build": "docker buildx build --platform linux/amd64,linux/arm64 -f apps/server/Dockerfile ."
   },

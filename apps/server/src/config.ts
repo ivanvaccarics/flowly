@@ -25,6 +25,7 @@ export interface ServerConfig {
   autoLockMs: number;
   unlockAttemptsPerMinute: number;
   trustProxy: boolean;
+  webDir: string;
 }
 
 const SECRET_PATTERN = /(SECRET|TOKEN|PASSWORD|PASSPHRASE|PRIVATE|CREDENTIAL|API_?KEY)/i;
@@ -45,6 +46,7 @@ const envSchema = z.object({
   FLOWLY_AUTO_LOCK_MINUTES: z.coerce.number().int().min(1).max(1440).default(5),
   FLOWLY_UNLOCK_ATTEMPTS_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(5),
   FLOWLY_TRUST_PROXY: z.coerce.boolean().default(false),
+  FLOWLY_WEB_DIR: z.string().min(1).default("apps/web/dist"),
 });
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
@@ -71,6 +73,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     autoLockMs: parsed.data.FLOWLY_AUTO_LOCK_MINUTES * 60_000,
     unlockAttemptsPerMinute: parsed.data.FLOWLY_UNLOCK_ATTEMPTS_PER_MINUTE,
     trustProxy: parsed.data.FLOWLY_TRUST_PROXY,
+    webDir: parsed.data.FLOWLY_WEB_DIR,
   };
 }
 

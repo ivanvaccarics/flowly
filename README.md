@@ -202,10 +202,14 @@ interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
 
 - [docs/RUNNING.md](docs/RUNNING.md) — how to run Flowly locally, self-host it,
   use it from a phone today, and what the planned mobile/desktop apps will need.
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — install on Docker Compose, trust the
+  local certificate authority, upgrade, roll back and back up.
 - [docs/PLAN.md](docs/PLAN.md) — architecture, security requirements, data
   model and the phase-by-phase delivery plan.
 - [docs/adr/](docs/adr/) — the decisions behind the storage engine, key
   hierarchy, sessions, portability, toolchain, concurrency and cascades.
+- [docs/security/](docs/security/) — threat model, privacy notice, data-loss
+  warning, support matrix, verification status, SBOM and license inventory.
 - [contracts/README.md](contracts/README.md) — the canonical schemas, fixtures
   and golden vectors that both clients must satisfy.
 
@@ -219,8 +223,11 @@ feasibility, Phase 1 stands up the real workspace with canonical contracts, and
 Phase 2 delivers the encrypted vault itself: Argon2id unlock, SQLCipher storage,
 browser sessions with auto-lock and revision-checked writes, and Phase 3 adds the
 daily finance flows with tagging rules and file-based portability. Phase 4 adds
-the dashboard, server-side search and budgets. The app itself is being built in
-the open and there is no release yet.
+the dashboard, server-side search and budgets, and Phase 5 hardens the
+deployment: HTTPS with a local certificate authority, upgrade and rollback
+documentation, an SBOM and license inventory, and a threat model. The app is
+still pre-release: an independent cryptographic review and a full
+assistive-technology audit remain open.
 
 | | Milestone | Status |
 | --- | --- | --- |
@@ -229,7 +236,7 @@ the open and there is no release yet.
 | 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ✅ Complete |
 | 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ✅ Complete |
 | 4️⃣ | Server dashboard, search and budgets | ✅ Complete |
-| 5️⃣ | Server hardening and release | ⏳ Planned |
+| 5️⃣ | Server hardening and release | ✅ Complete |
 | 6️⃣ | Enable Banking for Server | 🔮 Post-MVP |
 | 7️⃣ | Recurring transactions — the next feature after banking | 🔮 Post-MVP |
 | 8️⃣ | Flutter foundation and encrypted native vaults | 🔮 Post-MVP |

@@ -57,17 +57,22 @@ the full list (`FLOWLY_HOST`, `FLOWLY_PORT`, `FLOWLY_VAULT_DIR`,
 docker compose -f deployment/self-hosted/compose.yaml up --build
 ```
 
-The Compose file publishes the port on `127.0.0.1` only and stores the vault in
-the `vault-data` volume. The server refuses to bind a public interface unless
+Two containers start: the server (vault in the `vault-data` volume) and a Caddy
+reverse proxy that terminates HTTPS on `127.0.0.1:8443` with a certificate from
+its own local CA. Only the proxy publishes a port, and only on the loopback
+interface. The server refuses to bind a public interface unless
 `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose — that flag is for containers
 where the port mapping itself stays private.
 
+Open <https://localhost:8443> and trust the local CA once if the browser warns:
+the exact commands, plus upgrade, rollback and backup procedures, are in
+[DEPLOYMENT.md](./DEPLOYMENT.md).
+
 To reach it from other devices:
 
-1. Bind the server to your private LAN address (or keep the Compose mapping and
-   join the host network over VPN).
-2. Put an HTTPS reverse proxy with a certificate you trust in front of it, and
-   set `FLOWLY_TRUST_PROXY=true` so session cookies are marked `Secure`.
+1. Publish `8443` on your private LAN address instead of loopback, and set
+   `FLOWLY_SITE_ADDRESS` to the hostname you will use.
+2. Trust the Caddy local CA on the devices you use.
 3. Never forward the port on your router. Flowly is a private-network service.
 
 Backups are manual in the MVP: **Import & export → Export complete archive**

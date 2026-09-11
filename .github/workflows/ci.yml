@@ -27,10 +27,24 @@ jobs:
           git diff --exit-code -- packages/web-contracts/src/generated
       - run: pnpm verify
       - run: pnpm build
+      - name: Third-party license policy
+        run: pnpm release:check
+      - name: Generate the release SBOM
+        run: pnpm release:report
+      - name: SBOM and license inventory are up to date
+        run: git diff --exit-code -- docs/security
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            docs/security/sbom.json
+            docs/security/third-party-licenses.md
 
   containers:
     name: Build container images
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
@@ -41,3 +55,6 @@ jobs:
           file: apps/server/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
+          # Supply-chain evidence travels with the image.
+          provenance: true
+          sbom: true

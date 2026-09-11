@@ -1,5 +1,7 @@
-# Flowly server image: TypeScript service, generated contracts and SQLCipher.
-FROM node:22-alpine AS build
+# Flowly server image: TypeScript service, generated contracts, SQLCipher and the
+# built React client served on the same origin. The base image is pinned by its
+# multi-architecture index digest so every build resolves the same Node release.
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS build
 
 RUN apk add --no-cache python3 make g++ linux-headers openssl-dev
 RUN corepack enable
@@ -7,10 +9,18 @@ WORKDIR /repo
 
 COPY . .
 RUN pnpm install --frozen-lockfile --filter "@flowly/server..."
+RUN pnpm install --frozen-lockfile --filter "@flowly/web..."
 RUN pnpm --filter @flowly/web-contracts build \
-    && pnpm --filter @flowly/server build
+    && pnpm --filter @flowly/server build \
+    && pnpm --filter @flowly/web build
 
-FROM node:22-alpine AS runtime
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS runtime
+
+LABEL org.opencontainers.image.title="Flowly server" \
+      org.opencontainers.image.description="Self-hosted Flowly server: encrypted vault, API and web client" \
+      org.opencontainers.image.source="https://github.com/flowly/flowly" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.documentation="docs/RUNNING.md"
 
 RUN apk add --no-cache libstdc++ libcrypto3
 RUN corepack enable
@@ -25,13 +35,15 @@ COPY --from=build /repo/apps/server/dist ./apps/server/dist
 COPY --from=build /repo/packages/web-contracts/package.json ./packages/web-contracts/package.json
 COPY --from=build /repo/packages/web-contracts/node_modules ./packages/web-contracts/node_modules
 COPY --from=build /repo/packages/web-contracts/dist ./packages/web-contracts/dist
+COPY --from=build /repo/apps/web/dist ./apps/web/dist
 
 # Inside the container the service must accept connections from the published
 # port; the supported deployment publishes it on a private interface only.
 ENV FLOWLY_HOST=0.0.0.0 \
     FLOWLY_ALLOW_PUBLIC_BIND=true \
     FLOWLY_PORT=8787 \
-    FLOWLY_VAULT_DIR=/vault
+    FLOWLY_VAULT_DIR=/vault \
+    FLOWLY_WEB_DIR=/repo/apps/web/dist
 
 RUN mkdir -p /vault && chown -R node:node /vault /repo
 USER node
