@@ -61,8 +61,8 @@ foundation:
   the workspace, lint and formatting surface.
 - CI (`.github/workflows/ci.yml`) verifies formatting, lint, types, tests,
   contract freshness, builds, and both container architectures.
-- The vault itself is not implemented yet: Phase 2 adds unlock, sessions and
-  encrypted storage, and the API currently serves a locked-vault shell only.
+- The vault is implemented and encrypted at rest; the browser UI still shows a
+  locked shell with a disabled unlock form because Phase 3 owns the vault UX.
 - `.python-version` selects Python 3.14, and `enable_banking.py` is a standalone
   Enable Banking exploration script.
 - Local `data/`, `secrets/`, `.venv/`, and `node_modules/` paths are ignored.
@@ -165,7 +165,11 @@ flowly/
       src/
         api/                     # Fastify routes and contract validation
         application/             # Repository and platform-service interfaces
+        crypto/                  # Argon2id KDF, DEK envelope, record encryption
         domain/                  # Money, accounts, transactions, tags, rules
+        session/                 # Browser sessions and unlock rate limiting
+        storage/                 # SQLCipher adapter, migrations, repositories
+        vault/                   # Vault lifecycle service
       tests/                     # Vitest suites, including golden vectors
       Dockerfile                 # Multi-arch server image
     web/                         # React/Vite browser UI; no vault storage
@@ -1026,6 +1030,29 @@ the Phase 5 deployment work.
 
 ### Phase 2 - Server vault and persistence
 
+Status: **complete** (2026-09-11). `pnpm verify` runs 101 tests (contracts 11,
+server 88, web 2), including the storage contract suite executed against both
+engines. The container smoke test created a vault, restarted the container, and
+proved the service comes back locked and can be unlocked again. Decisions are
+recorded in `docs/adr/0006-vault-sessions-and-optimistic-concurrency.md`.
+
+Delivered:
+
+- Vault lifecycle: create, Argon2id passphrase derivation, DEK wrapping with
+  AES-256-GCM bound to the vault id, unlock, passphrase change without
+  re-encrypting data, lock, lock-current, lock-all, encrypted snapshots and
+  deletion, with key material zeroized on lock.
+- Encrypted storage: SQLCipher 4 behind the adapter from ADR 0001, plus the
+  `node:sqlite` + AES-256-GCM fallback, versioned transactional migrations with
+  crash injection, indexed reference columns, and 0600 file permissions.
+- Repositories for accounts, transactions, tags, tagging rules, budgets and
+  recurring rules, every write guarded by an integer revision; a stale revision
+  returns an explicit conflict instead of overwriting.
+- Browser sessions with `HttpOnly; SameSite=Strict` cookies, idle and absolute
+  expiry, per-session CSRF tokens, origin validation, unlock rate limiting,
+  auto-lock when no session remains, and an explicit 423 when a valid session
+  meets a locked vault.
+
 #### Task `implement-server-vault`
 
 - Implement vault creation, Argon2id passphrase derivation, DEK wrapping,
@@ -1044,6 +1071,11 @@ the Phase 5 deployment work.
 
 **Exit criteria:** tampering and wrong keys fail closed, restarts return to a
 locked state, and concurrent browser edits never overwrite silently.
+
+Met, and covered by tests: a tampered wrapped key or a wrong passphrase is
+rejected with an authentication error, a new process (and a new container)
+starts locked against the same volume, and a write carrying a stale revision
+returns `409 revision_conflict` with the current revision.
 
 ### Phase 3 - Server core finance and portability
 

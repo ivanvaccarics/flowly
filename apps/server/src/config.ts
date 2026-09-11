@@ -20,6 +20,11 @@ export interface ServerConfig {
   storageEngine: StorageEngine;
   allowedOrigin: string;
   logLevel: "fatal" | "error" | "warn" | "info" | "debug" | "trace" | "silent";
+  sessionIdleMs: number;
+  sessionAbsoluteMs: number;
+  autoLockMs: number;
+  unlockAttemptsPerMinute: number;
+  trustProxy: boolean;
 }
 
 const SECRET_PATTERN = /(SECRET|TOKEN|PASSWORD|PASSPHRASE|PRIVATE|CREDENTIAL|API_?KEY)/i;
@@ -35,6 +40,11 @@ const envSchema = z.object({
   FLOWLY_LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
+  FLOWLY_SESSION_IDLE_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+  FLOWLY_SESSION_ABSOLUTE_HOURS: z.coerce.number().int().min(1).max(720).default(12),
+  FLOWLY_AUTO_LOCK_MINUTES: z.coerce.number().int().min(1).max(1440).default(5),
+  FLOWLY_UNLOCK_ATTEMPTS_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(5),
+  FLOWLY_TRUST_PROXY: z.coerce.boolean().default(false),
 });
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
@@ -56,6 +66,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     storageEngine: parsed.data.FLOWLY_STORAGE_ENGINE,
     allowedOrigin: parsed.data.FLOWLY_ALLOWED_ORIGIN,
     logLevel: parsed.data.FLOWLY_LOG_LEVEL,
+    sessionIdleMs: parsed.data.FLOWLY_SESSION_IDLE_MINUTES * 60_000,
+    sessionAbsoluteMs: parsed.data.FLOWLY_SESSION_ABSOLUTE_HOURS * 3_600_000,
+    autoLockMs: parsed.data.FLOWLY_AUTO_LOCK_MINUTES * 60_000,
+    unlockAttemptsPerMinute: parsed.data.FLOWLY_UNLOCK_ATTEMPTS_PER_MINUTE,
+    trustProxy: parsed.data.FLOWLY_TRUST_PROXY,
   };
 }
 

@@ -5,9 +5,18 @@
   "description": "Tags match case-insensitively; `name` preserves the casing the user typed.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["formatVersion", "id", "name", "normalizedName", "createdAt", "updatedAt"],
+  "required": [
+    "formatVersion",
+    "revision",
+    "id",
+    "name",
+    "normalizedName",
+    "createdAt",
+    "updatedAt"
+  ],
   "properties": {
     "formatVersion": { "const": 1 },
+    "revision": { "type": "integer", "minimum": 1 },
     "id": { "type": "string", "format": "uuid" },
     "name": { "type": "string", "minLength": 1, "maxLength": 40 },
     "normalizedName": { "type": "string", "minLength": 1, "maxLength": 40 },

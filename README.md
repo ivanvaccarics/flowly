@@ -175,11 +175,20 @@ pnpm build              # compile the server and bundle the UI
 docker compose -f deployment/self-hosted/compose.yaml up --build
 ```
 
-The vault is still locked at this stage: the API answers
-`/api/vault/status`, `/api/health` and `/api/contracts`, and unlock returns an
-explicit "not implemented" until Phase 2 lands. The Compose file publishes the
-port on `127.0.0.1` only, and the server refuses to bind a public interface
-unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
+The vault is real now. `POST /api/vault/create` builds an encrypted vault,
+`/api/vault/unlock` opens it, and `/api/vault/lock` closes the current session or
+every session. Sessions live in an `HttpOnly` cookie with a CSRF token, expire
+after an idle window, and the vault locks itself when the last session goes
+away. Writes carry the revision they read, so two browsers can never overwrite
+each other silently: a stale write gets `409 revision_conflict`. The browser UI
+still shows the locked shell with a disabled form, because the vault screens
+arrive in Phase 3.
+
+You can drive the whole lifecycle against a running server with
+`node tooling/scripts/vault-smoke.mjs create` and then
+`node tooling/scripts/vault-smoke.mjs verify` after a restart. The Compose file
+publishes the port on `127.0.0.1` only, and the server refuses to bind a public
+interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
 
 ---
 
@@ -187,15 +196,16 @@ unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
 
 Flowly is **in early development**. The architecture and security model are
 designed and reviewed, Phase 0 proved the encrypted storage and session
-feasibility, and Phase 1 stands up the real workspace: TypeScript service,
-React client, canonical contracts and CI. The app itself is being built in the
-open and there is no release yet.
+feasibility, Phase 1 stands up the real workspace with canonical contracts, and
+Phase 2 delivers the encrypted vault itself: Argon2id unlock, SQLCipher storage,
+browser sessions with auto-lock and revision-checked writes. The app itself is
+being built in the open and there is no release yet.
 
 | | Milestone | Status |
 | --- | --- | --- |
 | 0️⃣ | Server storage, Docker and private-network security feasibility | ✅ Complete |
 | 1️⃣ | Server foundation, contracts and TypeScript domain | ✅ Complete |
-| 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ⏳ Planned |
+| 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ✅ Complete |
 | 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ⏳ Planned |
 | 4️⃣ | Server dashboard, search and budgets | ⏳ Planned |
 | 5️⃣ | Server hardening and release | ⏳ Planned |

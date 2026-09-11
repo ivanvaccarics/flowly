@@ -1,11 +1,18 @@
 import { DomainError } from "./errors.js";
-import { assertIsoDateTime, assertText, assertUuid, normalizeTagName } from "./values.js";
+import {
+  assertIsoDateTime,
+  assertRevision,
+  assertText,
+  assertUuid,
+  normalizeTagName,
+} from "./values.js";
 
 export const TAG_NAME_MAX = 40;
 const COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 export interface Tag {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   normalizedName: string;
@@ -23,6 +30,7 @@ export function validateTag(tag: Tag): void {
       formatVersion: tag.formatVersion,
     });
   }
+  assertRevision(tag.revision, "tag.revision");
   assertUuid(tag.id, "tag.id");
   assertText(tag.name, "tag.name", { max: TAG_NAME_MAX });
   assertText(tag.normalizedName, "tag.normalizedName", { max: TAG_NAME_MAX });
@@ -49,6 +57,7 @@ export interface NewTag {
 export function createTag(input: NewTag, deps: { id: string; now: string }): Tag {
   const tag: Tag = {
     formatVersion: 1,
+    revision: 1,
     id: deps.id,
     name: input.name.trim(),
     normalizedName: normalizeTagName(input.name),

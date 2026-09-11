@@ -1,7 +1,7 @@
-# Phase 1 image: TypeScript server plus generated contracts.
-# Phase 2 adds the SQLCipher build toolchain documented in ADR 0001.
+# Flowly server image: TypeScript service, generated contracts and SQLCipher.
 FROM node:22-alpine AS build
 
+RUN apk add --no-cache python3 make g++ linux-headers openssl-dev
 RUN corepack enable
 WORKDIR /repo
 
@@ -12,6 +12,7 @@ RUN pnpm --filter @flowly/web-contracts build \
 
 FROM node:22-alpine AS runtime
 
+RUN apk add --no-cache libstdc++ libcrypto3
 RUN corepack enable
 WORKDIR /repo
 ENV NODE_ENV=production

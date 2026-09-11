@@ -5,6 +5,7 @@ import {
   assertCurrencyCode,
   assertIsoDate,
   assertIsoDateTime,
+  assertRevision,
   assertText,
   assertUuid,
   assertUuidList,
@@ -30,6 +31,7 @@ export const TRANSACTION_SOURCES: readonly TransactionSource[] = [
 
 export interface Transaction {
   formatVersion: 1;
+  revision: number;
   id: string;
   accountId: string;
   bookingDate: string;
@@ -57,6 +59,7 @@ export function validateTransaction(transaction: Transaction): void {
   if (transaction.formatVersion !== 1) {
     throw new DomainError("invalid-transaction", "transaction formatVersion must be 1");
   }
+  assertRevision(transaction.revision, "transaction.revision");
   assertUuid(transaction.id, "transaction.id");
   assertUuid(transaction.accountId, "transaction.accountId");
   assertIsoDate(transaction.bookingDate, "transaction.bookingDate");
@@ -137,6 +140,7 @@ export function createTransaction(
 ): Transaction {
   const transaction: Transaction = {
     formatVersion: 1,
+    revision: 1,
     id: deps.id,
     accountId: input.accountId,
     bookingDate: input.bookingDate,

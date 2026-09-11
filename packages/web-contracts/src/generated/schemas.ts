@@ -15,6 +15,7 @@ export const schemas = {
     "additionalProperties": false,
     "required": [
       "formatVersion",
+      "revision",
       "id",
       "name",
       "type",
@@ -25,6 +26,10 @@ export const schemas = {
     "properties": {
       "formatVersion": {
         "const": 1
+      },
+      "revision": {
+        "type": "integer",
+        "minimum": 1
       },
       "id": {
         "type": "string",
@@ -80,6 +85,7 @@ export const schemas = {
     "additionalProperties": false,
     "required": [
       "formatVersion",
+      "revision",
       "id",
       "name",
       "amountMinor",
@@ -94,6 +100,10 @@ export const schemas = {
     "properties": {
       "formatVersion": {
         "const": 1
+      },
+      "revision": {
+        "type": "integer",
+        "minimum": 1
       },
       "id": {
         "type": "string",
@@ -170,6 +180,7 @@ export const schemas = {
     "additionalProperties": false,
     "required": [
       "formatVersion",
+      "revision",
       "id",
       "name",
       "template",
@@ -183,6 +194,10 @@ export const schemas = {
     "properties": {
       "formatVersion": {
         "const": 1
+      },
+      "revision": {
+        "type": "integer",
+        "minimum": 1
       },
       "id": {
         "type": "string",
@@ -278,6 +293,7 @@ export const schemas = {
     "additionalProperties": false,
     "required": [
       "formatVersion",
+      "revision",
       "id",
       "name",
       "normalizedName",
@@ -287,6 +303,10 @@ export const schemas = {
     "properties": {
       "formatVersion": {
         "const": 1
+      },
+      "revision": {
+        "type": "integer",
+        "minimum": 1
       },
       "id": {
         "type": "string",
@@ -325,6 +345,7 @@ export const schemas = {
     "additionalProperties": false,
     "required": [
       "formatVersion",
+      "revision",
       "id",
       "name",
       "enabled",
@@ -337,6 +358,10 @@ export const schemas = {
     "properties": {
       "formatVersion": {
         "const": 1
+      },
+      "revision": {
+        "type": "integer",
+        "minimum": 1
       },
       "id": {
         "type": "string",
@@ -516,6 +541,7 @@ export const schemas = {
     "additionalProperties": false,
     "required": [
       "formatVersion",
+      "revision",
       "id",
       "accountId",
       "bookingDate",
@@ -530,6 +556,10 @@ export const schemas = {
     "properties": {
       "formatVersion": {
         "const": 1
+      },
+      "revision": {
+        "type": "integer",
+        "minimum": 1
       },
       "id": {
         "type": "string",

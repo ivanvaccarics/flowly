@@ -40,6 +40,7 @@ const golden = readGolden<TaggingGolden>("tagging-rule-evaluation");
 function toRule(partial: GoldenCase["rules"][number], index: number): TaggingRule {
   return {
     formatVersion: 1,
+    revision: 1,
     id: `018f2c1e-6d5b-7c3a-9f2e-9a2b3c4d5e${(60 + index).toString().padStart(2, "0")}`,
     name: `Rule ${index + 1}`,
     enabled: partial.enabled,
@@ -77,6 +78,7 @@ describe("tagging rule evaluation", () => {
 describe("tagging rule invariants", () => {
   const base: TaggingRule = {
     formatVersion: 1,
+    revision: 1,
     id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
     name: "Coffee",
     enabled: true,

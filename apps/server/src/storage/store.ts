@@ -1,0 +1,72 @@
+import type { MigrationHooks } from "./migrations.js";
+import { RecordEncryptionStore } from "./record-store.js";
+import { SqlcipherStore } from "./sqlcipher-store.js";
+
+export type StorageEngine = "sqlcipher" | "record-encryption";
+
+export type VaultTable =
+  | "accounts"
+  | "transactions"
+  | "tags"
+  | "tagging_rules"
+  | "budgets"
+  | "recurring_rules"
+  | "settings";
+
+export const VAULT_TABLES: readonly VaultTable[] = [
+  "accounts",
+  "transactions",
+  "tags",
+  "tagging_rules",
+  "budgets",
+  "recurring_rules",
+  "settings",
+];
+
+export interface StoredRefs {
+  refA?: string | null;
+  refB?: string | null;
+}
+
+export interface ListOptions {
+  /** Filters on the non-sensitive `ref_a` index column. */
+  refA?: string;
+  limit?: number;
+}
+
+export interface VaultStore {
+  readonly engine: StorageEngine;
+  readonly details: Readonly<Record<string, string>>;
+
+  migrate(hooks?: MigrationHooks): Promise<number[]>;
+  appliedMigrations(): Promise<number[]>;
+
+  insert(table: VaultTable, id: string, value: unknown, refs?: StoredRefs): Promise<void>;
+  read<T>(table: VaultTable, id: string): Promise<T | undefined>;
+  list<T>(table: VaultTable, options?: ListOptions): Promise<T[]>;
+  /** Writes with optimistic concurrency; returns the new revision. */
+  replace(
+    table: VaultTable,
+    id: string,
+    value: unknown,
+    expectedRevision: number,
+    refs?: StoredRefs,
+  ): Promise<number>;
+  remove(table: VaultTable, id: string, expectedRevision: number): Promise<void>;
+  count(table: VaultTable): Promise<number>;
+
+  transaction<T>(work: () => Promise<T>): Promise<T>;
+  bytesOnDisk(): number;
+  checkpoint(): Promise<void>;
+  close(): Promise<void>;
+}
+
+export async function openStore(
+  engine: StorageEngine,
+  file: string,
+  dek: Buffer,
+): Promise<VaultStore> {
+  return engine === "sqlcipher"
+    ? SqlcipherStore.open(file, dek)
+    : RecordEncryptionStore.open(file, dek);
+}

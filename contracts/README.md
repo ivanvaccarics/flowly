@@ -30,6 +30,8 @@ storage engine, a framework or a language runtime.
 ## Conventions
 
 - Identifiers are UUIDv7 strings generated locally.
+- Mutable records carry an integer `revision` starting at `1`. Updates send the
+  revision they read; a stale revision is rejected instead of overwriting.
 - Timestamps are ISO 8601 UTC strings; transaction dates are ISO 8601 calendar
   dates (`YYYY-MM-DD`).
 - Money is a signed integer count of minor units plus an ISO 4217 currency

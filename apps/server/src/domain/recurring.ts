@@ -4,6 +4,7 @@ import {
   assertCurrencyCode,
   assertIsoDate,
   assertIsoDateTime,
+  assertRevision,
   assertText,
   assertUuid,
   assertUuidList,
@@ -36,6 +37,7 @@ export interface RecurringTemplate {
  */
 export interface RecurringRule {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   template: RecurringTemplate;
@@ -53,6 +55,7 @@ export function validateRecurringRule(rule: RecurringRule): void {
   if (rule.formatVersion !== 1) {
     throw new DomainError("invalid-recurring-rule", "recurring rule formatVersion must be 1");
   }
+  assertRevision(rule.revision, "recurringRule.revision");
   assertUuid(rule.id, "recurringRule.id");
   assertText(rule.name, "recurringRule.name", { max: RECURRING_NAME_MAX });
   if (!RECURRENCE_FREQUENCIES.includes(rule.frequency)) {

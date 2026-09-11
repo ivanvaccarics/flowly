@@ -114,3 +114,13 @@ export function assertUuidList(
     seen.add(entry);
   }
 }
+
+/** Mutable records carry a revision starting at 1; the storage layer enforces it. */
+export function assertRevision(value: unknown, field = "revision"): asserts value is number {
+  if (!Number.isSafeInteger(value) || (value as number) < 1) {
+    throw new DomainError("invalid-value", `${field} must be an integer of at least 1`, {
+      field,
+      value,
+    });
+  }
+}

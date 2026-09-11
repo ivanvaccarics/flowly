@@ -1,6 +1,12 @@
 import { DomainError } from "./errors.js";
 import { currencyInfo, isSupportedCurrency } from "./money.js";
-import { assertIsoDateTime, assertText, assertUuid, isCurrencyCode } from "./values.js";
+import {
+  assertIsoDateTime,
+  assertRevision,
+  assertText,
+  assertUuid,
+  isCurrencyCode,
+} from "./values.js";
 
 export const ACCOUNT_NAME_MAX = 80;
 export const INSTITUTION_NAME_MAX = 120;
@@ -20,6 +26,7 @@ export const ACCOUNT_TYPES: readonly AccountType[] = [
 
 export interface Account {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   type: AccountType;
@@ -35,6 +42,7 @@ export function validateAccount(account: Account): void {
   if (account.formatVersion !== 1) {
     throw new DomainError("invalid-account", "account formatVersion must be 1");
   }
+  assertRevision(account.revision, "account.revision");
   assertUuid(account.id, "account.id");
   assertText(account.name, "account.name", { max: ACCOUNT_NAME_MAX });
   if (!ACCOUNT_TYPES.includes(account.type)) {
@@ -79,6 +87,7 @@ export interface NewAccount {
 export function createAccount(input: NewAccount, deps: { id: string; now: string }): Account {
   const account: Account = {
     formatVersion: 1,
+    revision: 1,
     id: deps.id,
     name: input.name.trim(),
     type: input.type,

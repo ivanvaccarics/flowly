@@ -10,6 +10,7 @@
  */
 export interface Account {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   type: "checking" | "savings" | "credit-card" | "cash" | "wallet" | "investment" | "other";
@@ -23,6 +24,7 @@ export interface Account {
 
 export interface Budget {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   amountMinor: number;
@@ -43,6 +45,7 @@ export interface Budget {
  */
 export interface RecurringRule {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   template: {
@@ -68,6 +71,7 @@ export interface RecurringRule {
  */
 export interface Tag {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   normalizedName: string;
@@ -125,6 +129,7 @@ export type Condition1 =
  */
 export interface TaggingRule {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   enabled: boolean;
@@ -148,6 +153,7 @@ export interface TaggingRule {
  */
 export interface Transaction {
   formatVersion: 1;
+  revision: number;
   id: string;
   accountId: string;
   bookingDate: string;

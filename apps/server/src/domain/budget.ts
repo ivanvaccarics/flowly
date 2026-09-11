@@ -4,6 +4,7 @@ import {
   assertCurrencyCode,
   assertIsoDate,
   assertIsoDateTime,
+  assertRevision,
   assertText,
   assertUuid,
   assertUuidList,
@@ -22,6 +23,7 @@ export const BUDGET_PERIODS: readonly BudgetPeriod[] = [
 
 export interface Budget {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   amountMinor: number;
@@ -41,6 +43,7 @@ export function validateBudget(budget: Budget): void {
   if (budget.formatVersion !== 1) {
     throw new DomainError("invalid-budget", "budget formatVersion must be 1");
   }
+  assertRevision(budget.revision, "budget.revision");
   assertUuid(budget.id, "budget.id");
   assertText(budget.name, "budget.name", { max: BUDGET_NAME_MAX });
   assertMinorAmount(budget.amountMinor);

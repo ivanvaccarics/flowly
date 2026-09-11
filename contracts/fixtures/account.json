@@ -1,5 +1,6 @@
 {
   "formatVersion": 1,
+  "revision": 1,
   "id": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
   "name": "Acme Corp Checking",
   "type": "checking",

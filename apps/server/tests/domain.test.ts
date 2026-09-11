@@ -110,6 +110,7 @@ describe("transactions", () => {
 describe("budgets", () => {
   const budget: Budget = {
     formatVersion: 1,
+    revision: 1,
     id: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7081",
     name: "Groceries",
     amountMinor: 40000,
@@ -167,6 +168,7 @@ describe("budgets", () => {
 describe("recurring rules", () => {
   const rule: RecurringRule = {
     formatVersion: 1,
+    revision: 1,
     id: "018f2c1e-6d5b-7c3a-9f2e-6c4d5e6f7081",
     name: "Rent",
     template: { accountId: ACCOUNT_ID, amountMinor: -95000, currency: "EUR", payee: "Landlord" },

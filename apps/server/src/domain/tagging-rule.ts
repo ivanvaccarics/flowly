@@ -2,6 +2,7 @@ import { DomainError } from "./errors.js";
 import type { Transaction } from "./transaction.js";
 import {
   assertIsoDateTime,
+  assertRevision,
   assertText,
   assertUuid,
   assertUuidList,
@@ -24,6 +25,7 @@ export interface RuleCondition {
 
 export interface TaggingRule {
   formatVersion: 1;
+  revision: number;
   id: string;
   name: string;
   enabled: boolean;
@@ -50,6 +52,7 @@ export function validateTaggingRule(rule: TaggingRule): void {
       formatVersion: rule.formatVersion,
     });
   }
+  assertRevision(rule.revision, "rule.revision");
   assertUuid(rule.id, "rule.id");
   assertText(rule.name, "rule.name", { max: RULE_NAME_MAX });
   if (typeof rule.enabled !== "boolean") {

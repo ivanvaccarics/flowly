@@ -5,9 +5,19 @@
   "description": "A financial account. Format version 1 of the Server MVP.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["formatVersion", "id", "name", "type", "defaultCurrency", "createdAt", "updatedAt"],
+  "required": [
+    "formatVersion",
+    "revision",
+    "id",
+    "name",
+    "type",
+    "defaultCurrency",
+    "createdAt",
+    "updatedAt"
+  ],
   "properties": {
     "formatVersion": { "const": 1 },
+    "revision": { "type": "integer", "minimum": 1 },
     "id": { "type": "string", "format": "uuid" },
     "name": { "type": "string", "minLength": 1, "maxLength": 80 },
     "type": {
