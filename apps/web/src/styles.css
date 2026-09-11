@@ -614,7 +614,8 @@ button {
   width: 100%;
 }
 
-label {
+label,
+.field {
   display: grid;
   gap: 0.3rem;
   font-size: 0.75rem;
@@ -692,10 +693,6 @@ input[type="checkbox"] {
   accent-color: var(--primary);
 }
 
-input[type="color"] {
-  padding: 0.25rem;
-}
-
 .fieldset {
   border: 0;
   border-radius: var(--radius-lg);
@@ -731,6 +728,45 @@ input[type="color"] {
   text-transform: uppercase;
   color: var(--text-muted);
   padding: 0 0.25rem;
+}
+
+.swatch-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.swatch-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(19, 27, 46, 0.1);
+  transition:
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.swatch-choice:hover {
+  transform: scale(1.08);
+}
+
+.swatch-choice.selected {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 0 2px var(--primary);
+}
+
+.hex-field {
+  width: 128px;
+  font-family: var(--font-mono);
+  text-transform: lowercase;
 }
 
 .checkline {
