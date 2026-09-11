@@ -19,6 +19,7 @@ open before a public release.
 | Dashboard, search and budgets | `apps/server/tests/analytics.test.ts`, `search.test.ts` |
 | API surface and deployment behaviour | `apps/server/tests/api-phase3.test.ts`, `api-phase4.test.ts`, `api-phase5.test.ts` |
 | UI behaviour and accessibility structure | `apps/web/src/**/*.test.tsx` |
+| End-to-end acceptance run | `tooling/scripts/acceptance.mjs` (16 checks against a running server) |
 | License policy and SBOM generation | `pnpm release:check`, `pnpm release:report` |
 | Container build on both architectures | `.github/workflows/ci.yml` |
 

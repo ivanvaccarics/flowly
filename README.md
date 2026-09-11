@@ -204,6 +204,8 @@ interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
   use it from a phone today, and what the planned mobile/desktop apps will need.
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — install on Docker Compose, trust the
   local certificate authority, upgrade, roll back and back up.
+- [docs/TESTING.md](docs/TESTING.md) — the acceptance script and the manual test
+  plan, with what a pass looks like for every screen.
 - [docs/PLAN.md](docs/PLAN.md) — architecture, security requirements, data
   model and the phase-by-phase delivery plan.
 - [docs/adr/](docs/adr/) — the decisions behind the storage engine, key

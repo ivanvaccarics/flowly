@@ -41,11 +41,15 @@ Useful commands:
 ```bash
 pnpm verify        # formatting, lint, secret scan, types, tests
 pnpm build         # compile the server, bundle the UI
+pnpm acceptance    # end-to-end run against a server that is already running
 pnpm --filter @flowly/server test
 pnpm --filter @flowly/web test
 node tooling/scripts/vault-smoke.mjs create   # against a running server
 node tooling/scripts/vault-smoke.mjs verify   # asserts it starts locked
 ```
+
+Ready to try the whole product? [TESTING.md](./TESTING.md) has the acceptance
+command and a screen-by-screen manual test plan.
 
 Configuration is environment based; see [`.env.example`](../.env.example) for
 the full list (`FLOWLY_HOST`, `FLOWLY_PORT`, `FLOWLY_VAULT_DIR`,

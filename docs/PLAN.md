@@ -1223,6 +1223,9 @@ Delivered:
 - Documentation: `docs/DEPLOYMENT.md` (install, certificates, upgrade,
   rollback, backup, hardening), `docs/security/threat-model.md`,
   `privacy.md`, `data-loss.md`, `support-matrix.md` and `verification.md`.
+- `tooling/scripts/acceptance.mjs` runs the MVP end to end against a live server
+  (16 checks), and `docs/TESTING.md` turns it into a manual test plan a person
+  can follow screen by screen.
 - Structural accessibility tests for the unlock screen and the workspace, plus
   the automated migration, recovery, concurrency and deployment suites.
 
