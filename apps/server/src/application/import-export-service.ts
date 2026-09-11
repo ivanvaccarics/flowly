@@ -53,7 +53,6 @@ export interface ArchiveImportReport {
   transactions: number;
   tags: number;
   taggingRules: number;
-  budgets: number;
   recurringRules: number;
   snapshot: string;
   manifest: ArchiveManifest;
@@ -92,12 +91,11 @@ export class ImportExportService {
     destination: string,
     password: string,
   ): Promise<{ bytes: number; manifest: ArchiveManifest }> {
-    const [accounts, transactions, tags, rules, budgets, recurringRules] = await Promise.all([
+    const [accounts, transactions, tags, rules, recurringRules] = await Promise.all([
       this.vault.accounts.list(),
       this.vault.transactions.list(),
       this.vault.tags.list(),
       this.vault.taggingRules.list(),
-      this.vault.budgets.list(),
       this.vault.recurringRules.list(),
     ]);
     return writeArchive(
@@ -115,7 +113,6 @@ export class ImportExportService {
           name: "tagging_rules.json",
           content: Buffer.from(JSON.stringify(rules, null, 2), "utf8"),
         },
-        { name: "budgets.csv", content: Buffer.from(JSON.stringify(budgets, null, 2), "utf8") },
         {
           name: "recurring_rules.csv",
           content: Buffer.from(JSON.stringify(recurringRules, null, 2), "utf8"),
@@ -304,7 +301,6 @@ export class ImportExportService {
       tagNames,
     );
     const taggingRules = parseJsonArray(files.get("tagging_rules.json"), "tagging_rules.json");
-    const budgets = parseJsonArray(files.get("budgets.csv"), "budgets.csv");
     const recurringRules = parseJsonArray(files.get("recurring_rules.csv"), "recurring_rules.csv");
 
     if (manifest.vaultId === this.vault.header.vaultId) {
@@ -336,7 +332,6 @@ export class ImportExportService {
         transactions,
         tags,
         taggingRules: taggingRules as never,
-        budgets: budgets as never,
         recurringRules: recurringRules as never,
       });
     } catch (error) {
@@ -351,7 +346,6 @@ export class ImportExportService {
       transactions: transactions.length,
       tags: tags.length,
       taggingRules: taggingRules.length,
-      budgets: budgets.length,
       recurringRules: recurringRules.length,
       snapshot,
       manifest,

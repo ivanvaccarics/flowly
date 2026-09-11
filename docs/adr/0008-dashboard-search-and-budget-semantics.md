@@ -2,6 +2,10 @@
 
 Status: Accepted (Phase 4)
 
+> **Superseded in part by [ADR 0010](./0010-remove-budgets.md).** Budgets were
+> removed from the product; the dashboard, cash-flow, spending and search parts
+> of this record still apply.
+
 ## Context
 
 Phase 4 turns stored transactions into answers: what is my balance, where did the

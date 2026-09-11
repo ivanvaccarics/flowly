@@ -15,7 +15,7 @@ Nothing, unless you export it yourself:
 ## What is stored
 
 - An encrypted vault file on your server's volume, containing your accounts,
-  transactions, notes, tags, rules and budgets.
+  transactions, notes, tags and rules.
 - A vault header with the Argon2id parameters, the salt and the wrapped data key.
   It contains no secrets in the clear.
 - Encrypted snapshots created before imports or migrations.

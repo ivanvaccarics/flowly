@@ -34,7 +34,7 @@ docker compose -f deployment/self-hosted/compose.yaml up -d
 ## 2. Automated acceptance run
 
 One command exercises the whole MVP against a running server — vault lifecycle,
-tagging rules, search, dashboard, budgets, concurrency, exports, lock/unlock and
+tagging rules, search, dashboard, concurrency, exports, lock/unlock and
 rate limiting:
 
 ```bash
@@ -126,16 +126,13 @@ you should see.
 | Pause a rule, then add a matching transaction | No tag is added |
 | Press **Apply rules to existing transactions** | A report shows how many transactions were evaluated and tagged; running it again reports zero changes |
 
-### Dashboard, search and budgets
+### Dashboard and search
 
 | Do this | Expect |
 | --- | --- |
 | Open Dashboard and change the period | Balances, cash flow and spending recompute; pending transactions are excluded |
 | Look at the per-currency cards | Each currency has its own totals; nothing is converted or blended |
-| Add a monthly budget scoped to a tag | It appears with a progress percentage and an on-track/warning/over status |
-| Add a transaction in another currency to the same budget | It is counted as *skipped*, not converted |
-| Add an explicitly converted amount (`originalCurrency`/`originalAmountMinor` via import) | The converted amount is counted |
-| Enable rollover on a budget with previous-period surplus | The limit grows by the previous surplus |
+| Look at the spending-by-tag list | Booked outflows are grouped by tag and currency |
 
 ### Import and export
 
@@ -166,7 +163,7 @@ you should see.
 - **No automatic backups.** Export archives manually; Phase 12 adds scheduling.
 - **No multi-user or sharing.** One owner, one vault.
 - **No mobile app.** The phone client is the browser (Phases 8-11 add Flutter).
-- **Pending transactions** do not move balances or budget consumption.
+- **Pending transactions** do not move balances or cash flow.
 - **No implicit currency conversion**, anywhere.
 
 ## 5. Reporting something broken

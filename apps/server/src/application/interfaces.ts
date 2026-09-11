@@ -1,5 +1,4 @@
 import type { Account } from "../domain/account.js";
-import type { Budget } from "../domain/budget.js";
 import type { Clock } from "../domain/clock.js";
 import type { RecurringRule } from "../domain/recurring.js";
 import type { Tag } from "../domain/tag.js";
@@ -28,8 +27,6 @@ export interface TagRepository extends Repository<Tag> {
 export interface TaggingRuleRepository extends Repository<TaggingRule> {
   listOrdered(): Promise<TaggingRule[]>;
 }
-
-export type BudgetRepository = Repository<Budget>;
 
 export type RecurringRuleRepository = Repository<RecurringRule>;
 
@@ -82,7 +79,6 @@ export interface ServerServices {
   transactions: TransactionRepository;
   tags: TagRepository;
   taggingRules: TaggingRuleRepository;
-  budgets: BudgetRepository;
   recurringRules: RecurringRuleRepository;
   unitOfWork: UnitOfWork;
 }

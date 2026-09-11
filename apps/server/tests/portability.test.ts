@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ImportExportService } from "../src/application/import-export-service.js";
+import { readArchive, writeArchive } from "../src/portability/archive.js";
 import { TaggingRuleService } from "../src/application/tagging-rule-service.js";
 import { createAccount } from "../src/domain/account.js";
 import { generateId } from "../src/domain/ids.js";
@@ -185,6 +186,39 @@ describe("transaction CSV", () => {
 });
 
 describe("complete portable archive", () => {
+  it("still imports an archive exported before budgets were removed", async () => {
+    const source = await setupVault("flowly-archive-legacy-");
+    const target = await setupVault("flowly-archive-legacy-target-");
+    const archivePath = join(source.dir, "legacy.flowly");
+    try {
+      await seed(source.service, source.vault);
+      await source.service.exportArchive(archivePath, ARCHIVE_PASSWORD);
+
+      // Rebuild the archive with the extra entry old exports carried.
+      const { files, manifest } = await readArchive(archivePath, ARCHIVE_PASSWORD);
+      await writeArchive(
+        archivePath,
+        ARCHIVE_PASSWORD,
+        manifest.vaultId,
+        [
+          ...[...files.entries()].map(([name, content]) => ({ name, content })),
+          { name: "budgets.csv", content: Buffer.from("[]", "utf8") },
+        ],
+        TEST_KDF,
+      );
+
+      const report = await target.service.importArchive(archivePath, ARCHIVE_PASSWORD);
+      expect(report.accounts).toBe(1);
+      expect(report.transactions).toBe(1);
+      expect(report.taggingRules).toBe(1);
+    } finally {
+      await source.vault.lock();
+      await target.vault.lock();
+      cleanup(source.dir);
+      cleanup(target.dir);
+    }
+  });
+
   it("round-trips a whole vault and replaces the destination atomically", async () => {
     const source = await setupVault("flowly-archive-");
     const target = await setupVault("flowly-archive-target-");

@@ -32,7 +32,6 @@ The first release is the **Flowly Server MVP**. It includes:
 - Multi-currency support
 - Search and advanced filters
 - Dashboard and summaries
-- Budgets
 - Full data export and import
 - Server-side passphrase protection and secure browser sessions
 
@@ -108,7 +107,7 @@ hardened.
 | Contract tooling | JSON Schema 2020-12 as the source of truth, generated TypeScript types, and Ajv runtime validation that always accompanies them |
 | Delivery order | Release the server, then Enable Banking for Server, then recurring transactions, then Flutter |
 | Future bank integration | A separate trusted backend/connector is allowed |
-| Additional MVP scope | Dashboard, advanced search, multi-currency, budgets, manual tagging rules |
+| Additional MVP scope | Dashboard, advanced search, multi-currency, manual tagging rules |
 | Auto-tagging rules | Server MVP, Phase 3: one AND/OR condition group over note, description, payee, amount, or account, adding one or more tags; tags are only added, provenance is not tracked, and editing a transaction does not re-run rules |
 | Next feature after the MVP | Recurring transactions in Phase 7, delivered after Enable Banking for Server and before Flutter |
 
@@ -226,7 +225,7 @@ monorepo tool such as Melos only if multiple Dart packages make it worthwhile.
 - CSV/archive versions
 - Validation examples
 - Import deduplication fixtures
-- Money, budget, recurrence, and dashboard expected results
+- Money, recurrence, and dashboard expected results
 - Cryptographic envelope metadata and known-answer vectors
 
 Breaking contract changes require a new schema/export version and migrations in
@@ -252,7 +251,6 @@ The server and native implementations own the same behavior:
 - Transaction validation
 - Tags
 - Tagging rule evaluation
-- Budgets and budget consumption
 - Recurrence rules and occurrence generation
 - Dashboard calculations
 - Import deduplication policies
@@ -272,7 +270,6 @@ Use-case services coordinate domain rules through interfaces:
 - `TagRepository`
 - `TaggingRuleRepository`
 - `TaggingRuleService`
-- `BudgetRepository`
 - `RecurringRuleRepository`
 - `ImportExportService`
 - `Clock`
@@ -427,22 +424,7 @@ Rules only add tags. They never remove tags or modify other fields, and Flowly
 does not track which rule added which tag: editing or deleting a rule leaves
 previously applied tags in place.
 
-### 7.5 Budgets
-
-- `id`
-- `name`
-- `amountMinor`
-- `currency`
-- `period`: weekly, monthly, quarterly, yearly, or custom
-- `startDate`
-- Optional account and tag filters
-- Rollover policy, defaulting to disabled
-- Active/archived state
-
-Budget totals include booked outflows by default. Pending transactions and
-transfers are independently configurable.
-
-### 7.6 Recurring rules
+### 7.5 Recurring rules
 
 Delivered in Phase 7, after Enable Banking for Server and before Flutter. The
 Server MVP ships without recurring rules.
@@ -458,7 +440,7 @@ Server MVP ships without recurring rules.
 Generation produces local transaction occurrences when the app is opened. It
 does not require a background cloud scheduler.
 
-### 7.7 Operational metadata
+### 7.6 Operational metadata
 
 Persist:
 
@@ -612,7 +594,7 @@ Provide two workflows:
    in spreadsheet tools.
 2. **Complete portable export:** a password-encrypted, versioned archive
    containing CSV files for accounts, transactions, tags, transaction-tag
-   links, tagging rules, budgets, and preferences, plus a small manifest
+   links, tagging rules, and preferences, plus a small manifest
    containing format and checksum metadata.
 
 The complete export is the supported device-to-device transfer format. The
@@ -680,7 +662,7 @@ Deduplication order:
 
 An import must never silently discard an invalid or conflicting row.
 
-## 11. Dashboard, Search, Multi-Currency, Budgets, Recurrence, and Tagging Rules
+## 11. Dashboard, Search, Multi-Currency, Recurrence, and Tagging Rules
 
 ### 11.1 Dashboard
 
@@ -690,7 +672,6 @@ The initial dashboard includes:
 - Net cash flow for a selected period
 - Income and expense totals
 - Spending by tag
-- Budget consumption
 - Upcoming recurring transactions (added with the recurring phase, Phase 7)
 
 ### 11.2 Search and filters
@@ -720,13 +701,7 @@ The MVP:
 
 Automatic foreign-exchange rate retrieval is out of scope.
 
-### 11.4 Budgets
-
-Budgets are denominated in one currency. Transactions in another currency are
-excluded unless they contain an explicit converted amount in the budget
-currency.
-
-### 11.5 Recurrence
+### 11.4 Recurrence
 
 Delivered in Phase 7, after Enable Banking for Server and before Flutter.
 
@@ -909,8 +884,8 @@ Before reusing any logic from `enable_banking.py`:
 
 ### Automated tests
 
-- TypeScript domain and property-based tests for money, budgets, deduplication,
-  and CSV round trips during Server MVP development
+- TypeScript domain and property-based tests for money, deduplication, and CSV
+  round trips during Server MVP development
 - Workspace gate on every change: Prettier, ESLint, the frontend secret scan,
   TypeScript across all packages, Vitest suites, and a contract-regeneration
   diff that fails when generated code drifts from `contracts/`
@@ -997,7 +972,7 @@ Delivered:
   produces TypeScript types and Ajv validators, and CI fails when the generated
   output drifts from the schemas.
 - Domain invariants for money and currency, accounts, transactions, tags,
-  tagging rules, budgets and recurring-rule shapes, with UUIDv7 identifiers and
+  tagging rules, and recurring-rule shapes, with UUIDv7 identifiers and
   the versioned import fingerprint.
 - A Fastify same-origin API serving `/api/health`, a contract-validated
   `/api/vault/status`, `/api/contracts`, and an explicit `501` for unlock until
@@ -1021,7 +996,7 @@ Delivered:
 - Define canonical JSON schemas, CSV/archive schemas, fixture formats, and
   versioning conventions without coupling them to TypeScript storage details.
 - Implement TypeScript money, currency, account, transaction, tag, tagging-rule,
-  budget, and recurrence models and invariants.
+  and recurrence models and invariants.
 - Define server repository and platform-service interfaces.
 - Add golden expected results, including tagging-rule evaluation vectors, that
   the later Dart implementation must consume unchanged.
@@ -1051,8 +1026,8 @@ Delivered:
 - Encrypted storage: SQLCipher 4 behind the adapter from ADR 0001, plus the
   `node:sqlite` + AES-256-GCM fallback, versioned transactional migrations with
   crash injection, indexed reference columns, and 0600 file permissions.
-- Repositories for accounts, transactions, tags, tagging rules, budgets and
-  recurring rules, every write guarded by an integer revision; a stale revision
+- Repositories for accounts, transactions, tags, tagging rules and recurring
+  rules, every write guarded by an integer revision; a stale revision
   returns an explicit conflict instead of overwriting.
 - Browser sessions with `HttpOnly; SameSite=Strict` cookies, idle and absolute
   expiry, per-session CSRF tokens, origin validation, unlock rate limiting,
@@ -1150,22 +1125,18 @@ notes, tag links and tagging rules across vaults; a failed or inconsistent
 archive leaves the destination vault untouched, and a successful one replaces
 it inside a single transaction after writing an encrypted snapshot.
 
-### Phase 4 - Server analysis and budgeting features
+### Phase 4 - Server analysis features
 
 Status: **complete** (2026-09-11). `pnpm verify` runs 140 tests (contracts 12,
 server 123, web 5), including the analytics and search suites. Decisions are
-recorded in `docs/adr/0008-dashboard-search-and-budget-semantics.md`.
+recorded in `docs/adr/0008-dashboard-search-and-budget-semantics.md`; its budget
+parts are superseded by `docs/adr/0010-remove-budgets.md`.
 
 Delivered:
 
 - Dashboard aggregates computed from signed minor units and ISO calendar dates:
-  balances per account and currency, cash flow per currency, spending by tag,
-  and budget progress. Booked transactions only; currencies are never blended.
-- Budget consumption with calendar-aware periods, account and tag filters, a
-  rollover carry from the previous period, warning/over thresholds, and an
-  explicit count of skipped transactions in other currencies. An explicit
-  converted amount in the budget currency is counted; implicit conversion never
-  happens.
+  balances per account and currency, cash flow per currency and spending by tag.
+  Booked transactions only; currencies are never blended.
 - Server-side transaction search: date range, account, tag, currency, status,
   source, amount range, free text across payee/description/notes, pagination and
   a total. The SQL layer narrows on the indexed columns and the rest is filtered
@@ -1175,25 +1146,19 @@ Delivered:
   dashboard reads fast without persisting anything derived from decrypted data.
 - `dashboard.schema.json` joins the contracts, so the dashboard response is
   validated at runtime and the shape is shared with the future Dart client.
-- React dashboard and budgets screens, plus server-side filters in the
-  transactions screen.
+- React dashboard screen plus server-side filters in the transactions screen.
 
 #### Task `implement-server-dashboard-search`
 
 - Add dashboard summaries, date ranges, account/tag filters, and text search.
 - Add performance indexes and caches without weakening encryption boundaries.
 
-#### Task `implement-server-budgets`
-
-- Implement budget periods, filters, and consumption.
-- Add multi-currency exclusion and explicit-conversion rules.
-
 **Exit criteria:** calculations are deterministic across locale and time zone,
 and the reference data set remains interactive on supported hosts.
 
 Met: every calculation uses integer minor units and ISO dates with no locale or
 local-time formatting, the analytics suite asserts exact values for balances,
-cash flow, spending and budgets, and the reference data set stays interactive
+cash flow and spending, and the reference data set stays interactive
 because ranges are narrowed on indexed columns and repeated aggregates are
 cached in memory.
 
@@ -1358,7 +1323,7 @@ closed on tampering, and matches the server domain and crypto vectors.
 
 #### Task `implement-native-analysis`
 
-- Implement dashboard, search, budgets, recurrence, and multi-currency rules.
+- Implement dashboard, search, recurrence, and multi-currency rules.
 - Run the shared acceptance fixtures against Dart and TypeScript.
 
 **Exit criteria:** native results and portable exports conform to the released
@@ -1425,14 +1390,13 @@ recovery point.
 | `implement-server-auto-tagging` | `implement-server-core-finance` |
 | `implement-server-csv-transfer` | `implement-server-auto-tagging` |
 | `implement-server-dashboard-search` | `implement-server-core-finance` |
-| `implement-server-budgets` | `implement-server-core-finance` |
-| `integrate-server-deployment` | `implement-server-csv-transfer`, `implement-server-dashboard-search`, `implement-server-budgets` |
+| `integrate-server-deployment` | `implement-server-csv-transfer`, `implement-server-dashboard-search` |
 | `harden-server` | `integrate-server-deployment` |
 | `build-server-release-pipeline` | `integrate-server-deployment`, `harden-server` |
 | `design-banking-connector` | `build-server-release-pipeline` |
 | `implement-server-banking-import` | `design-banking-connector` |
 | `define-recurring-contracts` | `implement-server-banking-import`, `define-contracts-and-server-domain` |
-| `implement-server-recurring` | `define-recurring-contracts`, `implement-server-dashboard-search`, `implement-server-budgets` |
+| `implement-server-recurring` | `define-recurring-contracts`, `implement-server-dashboard-search` |
 | `native-architecture-spike` | `implement-server-recurring`, `build-server-release-pipeline` |
 | `scaffold-native` | `native-architecture-spike`, `define-contracts-and-server-domain` |
 | `implement-native-vault-storage` | `scaffold-native` |
@@ -1456,8 +1420,8 @@ The first MVP is complete at the end of Phase 5 only when:
 - Users can deploy with Docker Compose on every supported host platform.
 - A single owner can create and unlock one encrypted server vault shared by
   concurrent browser sessions on a private network.
-- Accounts, transactions, notes, tags, budgets, search, and dashboards work
-  without Internet access.
+- Accounts, transactions, notes, tags, search, and dashboards work without
+  Internet access.
 - Tagging rules apply to new and imported transactions, backfill is idempotent,
   and rules round-trip in the complete portable export.
 - Multi-currency values are represented without floating-point errors or

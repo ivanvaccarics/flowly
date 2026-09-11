@@ -30,7 +30,7 @@ moves a whole vault between independent deployments.
 The archive is the supported way to move a complete vault. Layout:
 
 1. A gzipped tar containing `manifest.json`, `accounts.csv`, `transactions.csv`,
-   `tags.csv`, `tagging_rules.json`, `budgets.csv` and `recurring_rules.csv`.
+   `tags.csv`, `tagging_rules.json` and `recurring_rules.csv`.
 2. `manifest.json` lists every entry with its byte length and SHA-256 digest,
    plus `formatVersion`, `createdAt` and the Flowly vault id.
 3. The tar is encrypted with AES-256-GCM under a key derived from the archive

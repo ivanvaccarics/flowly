@@ -124,25 +124,6 @@ export function DashboardPanel() {
               ))}
             </ul>
           )}
-
-          <h3>Budgets</h3>
-          {dashboard.budgets.length === 0 ? (
-            <p className="muted">No active budgets yet.</p>
-          ) : (
-            <ul className="list">
-              {dashboard.budgets.map((budget) => (
-                <li key={budget.budgetId}>
-                  <span>
-                    <strong>{budget.name}</strong> · {budget.periodStart} → {budget.periodEnd}
-                  </span>
-                  <span className={`amount budget-${budget.status}`}>
-                    {formatMoney(budget.spentMinor, budget.currency)} /{" "}
-                    {formatMoney(budget.limitMinor, budget.currency)} ({budget.percentUsed}%)
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
         </>
       ) : null}
     </section>

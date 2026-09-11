@@ -5,20 +5,13 @@ import { SqlcipherStore } from "./sqlcipher-store.js";
 export type StorageEngine = "sqlcipher" | "record-encryption";
 
 export type VaultTable =
-  | "accounts"
-  | "transactions"
-  | "tags"
-  | "tagging_rules"
-  | "budgets"
-  | "recurring_rules"
-  | "settings";
+  "accounts" | "transactions" | "tags" | "tagging_rules" | "recurring_rules" | "settings";
 
 export const VAULT_TABLES: readonly VaultTable[] = [
   "accounts",
   "transactions",
   "tags",
   "tagging_rules",
-  "budgets",
   "recurring_rules",
   "settings",
 ];

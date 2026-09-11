@@ -114,5 +114,4 @@ const emptyDashboard = {
   balances: [],
   cashFlow: [],
   spendingByTag: [],
-  budgets: [],
 };

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { createAccount, validateAccount } from "../src/domain/account.js";
-import { budgetPeriodRange, validateBudget, type Budget } from "../src/domain/budget.js";
 import { DomainError } from "../src/domain/errors.js";
 import { generateId, isGeneratedId } from "../src/domain/ids.js";
 import { validateRecurringRule, type RecurringRule } from "../src/domain/recurring.js";
@@ -104,64 +103,6 @@ describe("transactions", () => {
     expect(importFingerprint({ ...input, description: "card purchase" })).toBe(fingerprint);
     expect(importFingerprint({ ...input, amountMinor: -1231 })).not.toBe(fingerprint);
     expect(importFingerprint({ ...input, description: "OTHER" })).not.toBe(fingerprint);
-  });
-});
-
-describe("budgets", () => {
-  const budget: Budget = {
-    formatVersion: 1,
-    revision: 1,
-    id: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7081",
-    name: "Groceries",
-    amountMinor: 40000,
-    currency: "EUR",
-    period: "monthly",
-    startDate: "2026-01-31",
-    rollover: false,
-    active: true,
-    createdAt: NOW,
-    updatedAt: NOW,
-  };
-
-  it("validates budgets and requires an end date for custom periods", () => {
-    expect(() => validateBudget(budget)).not.toThrow();
-    expect(() => validateBudget({ ...budget, period: "custom" })).toThrow(DomainError);
-    expect(() => validateBudget({ ...budget, amountMinor: 0 })).toThrow(DomainError);
-  });
-
-  it("clamps calendar periods to shorter months", () => {
-    expect(budgetPeriodRange(budget, "2026-02-10")).toEqual({
-      startDate: "2026-02-28",
-      endDate: "2026-03-30",
-    });
-    expect(budgetPeriodRange(budget, "2026-01-31")).toEqual({
-      startDate: "2026-01-31",
-      endDate: "2026-02-27",
-    });
-  });
-
-  it("computes weekly and quarterly ranges", () => {
-    const weekly: Budget = { ...budget, period: "weekly", startDate: "2026-09-01" };
-    expect(budgetPeriodRange(weekly, "2026-09-15")).toEqual({
-      startDate: "2026-09-15",
-      endDate: "2026-09-21",
-    });
-    const quarterly: Budget = { ...budget, period: "quarterly", startDate: "2026-01-01" };
-    expect(budgetPeriodRange(quarterly, "2026-08-15")).toEqual({
-      startDate: "2026-07-01",
-      endDate: "2026-09-30",
-    });
-    const custom: Budget = {
-      ...budget,
-      period: "custom",
-      startDate: "2026-01-01",
-      endDate: "2026-03-31",
-    };
-    expect(budgetPeriodRange(custom, "2026-02-15")).toEqual({
-      startDate: "2026-01-01",
-      endDate: "2026-03-31",
-    });
-    expect(() => budgetPeriodRange(custom, "2026-05-01")).toThrow(DomainError);
   });
 });
 

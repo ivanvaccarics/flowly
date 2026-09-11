@@ -101,10 +101,6 @@ export const api = {
     request<{ items: Transaction[]; total: number; limit: number; offset: number }>(
       `/api/transactions${queryString(params)}`,
     ),
-  budgetConsumption: (reference?: string) =>
-    request<{ items: Dashboard["budgets"] }>(
-      `/api/budgets/consumption${queryString({ reference })}`,
-    ),
   create: <T>(csrf: string, kind: string, entity: unknown) =>
     request<{ entity: T }>(`/api/${kind}`, { method: "POST", csrf, body: { entity } }),
   update: <T>(csrf: string, kind: string, id: string, entity: unknown) =>

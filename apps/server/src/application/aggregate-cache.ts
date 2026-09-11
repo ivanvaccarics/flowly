@@ -56,7 +56,7 @@ export class AggregateCache {
   }
 
   private async fingerprint(): Promise<string> {
-    const tables = ["accounts", "transactions", "tags", "tagging_rules", "budgets"] as const;
+    const tables = ["accounts", "transactions", "tags", "tagging_rules"] as const;
     const stats = await Promise.all(tables.map((table) => this.vault.tableStats(table)));
     const now = this.clock.nowIso();
     return `${now.slice(0, 10)}|${tables

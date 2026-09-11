@@ -18,7 +18,7 @@ const archivePassword = "flowly acceptance archive password";
 
 const results = [];
 let session = { cookie: "", csrf: "" };
-let created = { account: "", tag: "", transaction: "", rule: "", budget: "" };
+let created = { account: "", tag: "", transaction: "", rule: "" };
 
 function newUuid() {
   return crypto.randomUUID();
@@ -259,38 +259,6 @@ await step("dashboard aggregates the data", async () => {
   );
   expect(tagSpending && tagSpending.spentMinor >= 5230, "expected tagged spending to be included");
   return `expenses ${flow.expensesMinor} EUR, tagged ${tagSpending.spentMinor} EUR`;
-});
-
-await step("budget reports consumption", async () => {
-  created.budget = newUuid();
-  const now = new Date().toISOString();
-  const { status } = await call("/api/budgets", {
-    method: "POST",
-    body: {
-      entity: {
-        formatVersion: 1,
-        revision: 1,
-        id: created.budget,
-        name: "Acceptance budget",
-        amountMinor: 10000,
-        currency: "EUR",
-        period: "monthly",
-        startDate: `${new Date().toISOString().slice(0, 7)}-01`,
-        tagIds: [created.tag],
-        rollover: false,
-        active: true,
-        createdAt: now,
-        updatedAt: now,
-      },
-    },
-  });
-  expect(status === 201, `budget create returned ${status}`);
-  const consumption = await call("/api/budgets/consumption");
-  expect(consumption.status === 200, `consumption returned ${consumption.status}`);
-  const entry = consumption.body.items.find((item) => item.name === "Acceptance budget");
-  expect(entry, "the budget is missing from the consumption report");
-  expect(entry.spentMinor >= 5230, `expected at least 5230 spent, got ${entry.spentMinor}`);
-  return `${entry.spentMinor} of ${entry.limitMinor} ${entry.currency} (${entry.status})`;
 });
 
 await step("concurrent edits are rejected instead of overwritten", async () => {

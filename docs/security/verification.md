@@ -7,7 +7,7 @@ open before a public release.
 
 | Area | Where |
 | --- | --- |
-| Domain invariants (money, dates, tags, rules, budgets) | `apps/server/tests/domain.test.ts`, `money.test.ts`, `tagging-rule.test.ts` |
+| Domain invariants (money, dates, tags, rules) | `apps/server/tests/domain.test.ts`, `money.test.ts`, `tagging-rule.test.ts` |
 | Contracts and generated types | `packages/web-contracts/tests/contracts.test.ts` |
 | Encrypted storage, migrations, crash atomicity | `apps/server/tests/storage.test.ts` |
 | Wrong key, tampering, corrupted database | `apps/server/tests/crypto.test.ts`, `vault.test.ts` |
@@ -16,7 +16,7 @@ open before a public release.
 | Optimistic concurrency | `apps/server/tests/api.test.ts`, `vault.test.ts` |
 | Tagging rules and backfill | `apps/server/tests/tagging.test.ts` |
 | CSV and archive round trips, failure modes | `apps/server/tests/portability.test.ts` |
-| Dashboard, search and budgets | `apps/server/tests/analytics.test.ts`, `search.test.ts` |
+| Dashboard and search | `apps/server/tests/analytics.test.ts`, `search.test.ts` |
 | API surface and deployment behaviour | `apps/server/tests/api-phase3.test.ts`, `api-phase4.test.ts`, `api-phase5.test.ts` |
 | UI behaviour and accessibility structure | `apps/web/src/**/*.test.tsx` |
 | End-to-end acceptance run | `tooling/scripts/acceptance.mjs` (16 checks against a running server) |

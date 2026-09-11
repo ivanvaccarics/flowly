@@ -5,7 +5,7 @@ disk, and the import/export files the user moves by hand.
 
 ## Assets
 
-1. The vault contents: accounts, transactions, notes, tags, rules, budgets.
+1. The vault contents: accounts, transactions, notes, tags and rules.
 2. The passphrase and the data-encryption key (DEK).
 3. Session cookies and CSRF tokens.
 4. Export files: plaintext transaction CSV and the password-encrypted archive.

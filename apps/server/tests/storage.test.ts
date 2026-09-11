@@ -41,7 +41,7 @@ describe.each(engines)("vault store contract (%s)", (engine) => {
   });
 
   it("applies migrations once and reports the schema version", async () => {
-    expect(await store.appliedMigrations()).toEqual([1, 2]);
+    expect(await store.appliedMigrations()).toEqual([1, 2, 3]);
     expect(await store.migrate()).toEqual([]);
   });
 
@@ -108,12 +108,48 @@ describe.each(engines)("vault store contract (%s)", (engine) => {
     await store.checkpoint();
     await store.close();
     store = await openStore(engine, join(dir, "vault.db"), dek);
-    expect(await store.appliedMigrations()).toEqual([1, 2]);
+    expect(await store.appliedMigrations()).toEqual([1, 2, 3]);
     expect(await store.count("transactions")).toBe(2);
   });
 });
 
 describe("migration atomicity", () => {
+  it("drops the budgets table from a vault created before the removal", async () => {
+    const dir = tempDir("flowly-migration-budgets-");
+    const key = randomBytes(32);
+    const file = join(dir, "vault.db");
+    const db = await SqlcipherDatabase.open(file, key);
+    // A vault that had already applied versions 1 and 2, budgets included.
+    expect(await runMigrations(db, MIGRATIONS.slice(0, 2))).toEqual([1, 2]);
+    await db.run(
+      "INSERT INTO accounts(id, updated_at, revision, ref_a, ref_b, payload) VALUES (?,?,?,?,?,?)",
+      [
+        "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "2026-09-01T08:00:00.000Z",
+        1,
+        null,
+        null,
+        JSON.stringify({ id: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f", name: "Keep me" }),
+      ],
+    );
+    expect(
+      await db.all("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'budgets'"),
+    ).toHaveLength(1);
+    await db.close();
+
+    const store = await openStore("sqlcipher", file, Buffer.from(key));
+    try {
+      expect(await store.migrate()).toEqual([3]);
+      expect((await store.migrate()).length, "migrations stay idempotent after the drop").toBe(0);
+      expect(await store.count("accounts")).toBe(1);
+      const remaining = await store.list<{ name: string }>("accounts");
+      expect(remaining[0]?.name).toBe("Keep me");
+    } finally {
+      await store.close();
+      cleanup(dir);
+    }
+  });
+
   it("rolls back a migration that crashes before commit", async () => {
     const dir = tempDir("flowly-migration-");
     const { dek } = await createVaultHeader("test passphrase", TEST_KDF);
@@ -138,9 +174,9 @@ describe("migration atomicity", () => {
     const db = await SqlcipherDatabase.open(join(dir, "custom.db"), randomBytes(32));
     const custom: Migration[] = [
       ...MIGRATIONS,
-      { version: 3, name: "later", statements: ["CREATE TABLE later(id TEXT PRIMARY KEY)"] },
+      { version: 4, name: "later", statements: ["CREATE TABLE later(id TEXT PRIMARY KEY)"] },
     ];
-    expect(await runMigrations(db, custom)).toEqual([1, 2, 3]);
+    expect(await runMigrations(db, custom)).toEqual([1, 2, 3, 4]);
     expect(await runMigrations(db, custom)).toEqual([]);
     await db.close();
     cleanup(dir);

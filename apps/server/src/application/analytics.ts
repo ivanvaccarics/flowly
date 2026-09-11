@@ -1,4 +1,3 @@
-import { budgetPeriodRange, type Budget } from "../domain/budget.js";
 import { systemClock, type Clock } from "../domain/clock.js";
 import { formatMinorToAmount } from "../domain/money.js";
 import type { Tag } from "../domain/tag.js";
@@ -36,35 +35,16 @@ export interface TagSpending {
   transactionCount: number;
 }
 
-export type BudgetStatus = "on-track" | "warning" | "over";
-
-export interface BudgetProgress {
-  budgetId: string;
-  name: string;
-  currency: string;
-  period: Budget["period"];
-  periodStart: string;
-  periodEnd: string;
-  limitMinor: number;
-  rolloverCarryMinor: number;
-  spentMinor: number;
-  remainingMinor: number;
-  percentUsed: number;
-  status: BudgetStatus;
-  skippedOtherCurrencies: number;
-}
-
 export interface Dashboard {
   range: DateRange;
   generatedAt: string;
   balances: AccountBalance[];
   cashFlow: CurrencyTotals[];
   spendingByTag: TagSpending[];
-  budgets: BudgetProgress[];
 }
 
 /**
- * Dashboard, cash flow, spending by tag and budget consumption.
+ * Dashboard aggregates: balances, cash flow and spending by tag.
  *
  * Everything is computed from signed minor units and ISO calendar dates, so
  * results do not depend on the server locale or time zone. Currencies are never
@@ -79,26 +59,15 @@ export class AnalyticsService {
     this.clock = clock;
   }
 
-  async dashboard(range: DateRange, referenceDate = range.to): Promise<Dashboard> {
-    return cacheFor(this.vault, this.clock).get(
-      `dashboard|${range.from}|${range.to}|${referenceDate}`,
-      async () => {
-        const [balances, cashFlow, spendingByTag, budgets] = await Promise.all([
-          this.balances(),
-          this.cashFlow(range),
-          this.spendingByTag(range),
-          this.budgetProgress(referenceDate),
-        ]);
-        return {
-          range,
-          generatedAt: this.clock.nowIso(),
-          balances,
-          cashFlow,
-          spendingByTag,
-          budgets,
-        };
-      },
-    );
+  async dashboard(range: DateRange): Promise<Dashboard> {
+    return cacheFor(this.vault, this.clock).get(`dashboard|${range.from}|${range.to}`, async () => {
+      const [balances, cashFlow, spendingByTag] = await Promise.all([
+        this.balances(),
+        this.cashFlow(range),
+        this.spendingByTag(range),
+      ]);
+      return { range, generatedAt: this.clock.nowIso(), balances, cashFlow, spendingByTag };
+    });
   }
 
   /**
@@ -199,130 +168,12 @@ export class AnalyticsService {
     });
   }
 
-  /**
-   * Consumption for every active budget at a reference date.
-   *
-   * A transaction counts when it is booked, it is an outflow, it falls in the
-   * budget period, it matches the budget's account and tag filters, and it is in
-   * the budget currency — or carries an explicit original amount in it. Other
-   * currencies are counted as skipped and never converted implicitly.
-   */
-  async budgetProgress(referenceDate = this.clock.todayIso()): Promise<BudgetProgress[]> {
-    return cacheFor(this.vault, this.clock).get(`budgets|${referenceDate}`, () =>
-      this.computeBudgetProgress(referenceDate),
-    );
-  }
-
-  private async computeBudgetProgress(referenceDate: string): Promise<BudgetProgress[]> {
-    const [budgets, transactions] = await Promise.all([
-      this.vault.budgets.list(),
-      this.vault.transactions.list(),
-    ]);
-    const progress: BudgetProgress[] = [];
-
-    for (const budget of budgets.filter((candidate) => candidate.active)) {
-      const range = budgetPeriodRange(budget, referenceDate);
-      const { spentMinor, skippedOtherCurrencies } = this.spendForBudget(
-        budget,
-        transactions,
-        range,
-      );
-      const rolloverCarryMinor = budget.rollover
-        ? Math.max(0, await this.previousPeriodCarry(budget, transactions, range))
-        : 0;
-      const limitMinor = budget.amountMinor + rolloverCarryMinor;
-      const remainingMinor = limitMinor - spentMinor;
-      const percentUsed = limitMinor === 0 ? 0 : round2((spentMinor * 100) / limitMinor);
-      progress.push({
-        budgetId: budget.id,
-        name: budget.name,
-        currency: budget.currency,
-        period: budget.period,
-        periodStart: range.startDate,
-        periodEnd: range.endDate,
-        limitMinor,
-        rolloverCarryMinor,
-        spentMinor,
-        remainingMinor,
-        percentUsed,
-        status: percentUsed >= 100 ? "over" : percentUsed >= 80 ? "warning" : "on-track",
-        skippedOtherCurrencies,
-      });
-    }
-
-    return progress.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-  }
-
   /** Human-readable amounts for logs and UI previews; never locale formatted. */
   format(minor: number, currency: string): string {
     return formatMinorToAmount(minor, currency);
   }
 
   private async inRange(range: DateRange): Promise<Transaction[]> {
-    return this.vault.transactions.list({
-      refBFrom: range.from,
-      refBTo: range.to,
-    });
+    return this.vault.transactions.list({ refBFrom: range.from, refBTo: range.to });
   }
-
-  private spendForBudget(
-    budget: Budget,
-    transactions: readonly Transaction[],
-    range: { startDate: string; endDate: string },
-  ): { spentMinor: number; skippedOtherCurrencies: number } {
-    let spentMinor = 0;
-    let skippedOtherCurrencies = 0;
-    for (const transaction of transactions) {
-      if (transaction.status !== "booked" || transaction.amountMinor >= 0) continue;
-      if (transaction.bookingDate < range.startDate || transaction.bookingDate > range.endDate) {
-        continue;
-      }
-      if (budget.accountIds && budget.accountIds.length > 0) {
-        if (!budget.accountIds.includes(transaction.accountId)) continue;
-      }
-      if (budget.tagIds && budget.tagIds.length > 0) {
-        if (!transaction.tagIds.some((tagId) => budget.tagIds?.includes(tagId))) continue;
-      }
-      if (transaction.currency === budget.currency) {
-        spentMinor += -transaction.amountMinor;
-        continue;
-      }
-      if (
-        transaction.originalCurrency === budget.currency &&
-        typeof transaction.originalAmountMinor === "number" &&
-        transaction.originalAmountMinor < 0
-      ) {
-        spentMinor += -transaction.originalAmountMinor;
-        continue;
-      }
-      skippedOtherCurrencies += 1;
-    }
-    return { spentMinor, skippedOtherCurrencies };
-  }
-
-  private async previousPeriodCarry(
-    budget: Budget,
-    transactions: readonly Transaction[],
-    range: { startDate: string },
-  ): Promise<number> {
-    const reference = previousDay(range.startDate);
-    if (reference < budget.startDate) return 0;
-    try {
-      const previous = budgetPeriodRange(budget, reference);
-      const { spentMinor } = this.spendForBudget(budget, transactions, previous);
-      return budget.amountMinor - spentMinor;
-    } catch {
-      return 0;
-    }
-  }
-}
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-function previousDay(isoDate: string): string {
-  const [year, month, day] = isoDate.split("-").map(Number) as [number, number, number];
-  const date = new Date(Date.UTC(year, month - 1, day - 1));
-  return date.toISOString().slice(0, 10);
 }

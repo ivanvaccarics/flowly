@@ -46,24 +46,6 @@ export interface ArchiveManifest {
   ];
 }
 
-export interface Budget {
-  formatVersion: 1;
-  revision: number;
-  id: string;
-  name: string;
-  amountMinor: number;
-  currency: string;
-  period: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
-  startDate: string;
-  endDate?: string;
-  accountIds?: string[];
-  tagIds?: string[];
-  rollover: boolean;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 /**
  * Dashboard view computed from the vault. Totals always carry a currency code and never blend currencies.
  */
@@ -94,21 +76,6 @@ export interface Dashboard {
     currency: string;
     spentMinor: number;
     transactionCount: number;
-  }[];
-  budgets: {
-    budgetId: string;
-    name: string;
-    currency: string;
-    period: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
-    periodStart: string;
-    periodEnd: string;
-    limitMinor: number;
-    rolloverCarryMinor: number;
-    spentMinor: number;
-    remainingMinor: number;
-    percentUsed: number;
-    status: "on-track" | "warning" | "over";
-    skippedOtherCurrencies: number;
   }[];
 }
 

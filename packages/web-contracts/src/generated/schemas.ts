@@ -132,100 +132,6 @@ export const schemas = {
       }
     }
   },
-  "budget": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://flowly.local/contracts/schemas/budget.schema.json",
-    "title": "Budget",
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "formatVersion",
-      "revision",
-      "id",
-      "name",
-      "amountMinor",
-      "currency",
-      "period",
-      "startDate",
-      "rollover",
-      "active",
-      "createdAt",
-      "updatedAt"
-    ],
-    "properties": {
-      "formatVersion": {
-        "const": 1
-      },
-      "revision": {
-        "type": "integer",
-        "minimum": 1
-      },
-      "id": {
-        "type": "string",
-        "format": "uuid"
-      },
-      "name": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 80
-      },
-      "amountMinor": {
-        "type": "integer",
-        "minimum": 1
-      },
-      "currency": {
-        "type": "string",
-        "pattern": "^[A-Z]{3}$"
-      },
-      "period": {
-        "enum": [
-          "weekly",
-          "monthly",
-          "quarterly",
-          "yearly",
-          "custom"
-        ]
-      },
-      "startDate": {
-        "type": "string",
-        "format": "date"
-      },
-      "endDate": {
-        "type": "string",
-        "format": "date"
-      },
-      "accountIds": {
-        "type": "array",
-        "uniqueItems": true,
-        "items": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      "tagIds": {
-        "type": "array",
-        "uniqueItems": true,
-        "items": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      "rollover": {
-        "type": "boolean"
-      },
-      "active": {
-        "type": "boolean"
-      },
-      "createdAt": {
-        "type": "string",
-        "format": "date-time"
-      },
-      "updatedAt": {
-        "type": "string",
-        "format": "date-time"
-      }
-    }
-  },
   "dashboard": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowly.local/contracts/schemas/dashboard.schema.json",
@@ -238,8 +144,7 @@ export const schemas = {
       "generatedAt",
       "balances",
       "cashFlow",
-      "spendingByTag",
-      "budgets"
+      "spendingByTag"
     ],
     "properties": {
       "range": {
@@ -363,85 +268,6 @@ export const schemas = {
               "type": "integer"
             },
             "transactionCount": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
-        }
-      },
-      "budgets": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "budgetId",
-            "name",
-            "currency",
-            "period",
-            "periodStart",
-            "periodEnd",
-            "limitMinor",
-            "rolloverCarryMinor",
-            "spentMinor",
-            "remainingMinor",
-            "percentUsed",
-            "status",
-            "skippedOtherCurrencies"
-          ],
-          "properties": {
-            "budgetId": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "name": {
-              "type": "string"
-            },
-            "currency": {
-              "type": "string",
-              "pattern": "^[A-Z]{3}$"
-            },
-            "period": {
-              "enum": [
-                "weekly",
-                "monthly",
-                "quarterly",
-                "yearly",
-                "custom"
-              ]
-            },
-            "periodStart": {
-              "type": "string",
-              "format": "date"
-            },
-            "periodEnd": {
-              "type": "string",
-              "format": "date"
-            },
-            "limitMinor": {
-              "type": "integer"
-            },
-            "rolloverCarryMinor": {
-              "type": "integer"
-            },
-            "spentMinor": {
-              "type": "integer"
-            },
-            "remainingMinor": {
-              "type": "integer"
-            },
-            "percentUsed": {
-              "type": "number",
-              "minimum": 0
-            },
-            "status": {
-              "enum": [
-                "on-track",
-                "warning",
-                "over"
-              ]
-            },
-            "skippedOtherCurrencies": {
               "type": "integer",
               "minimum": 0
             }
@@ -1002,11 +828,6 @@ export const schemaIndex = [
     "key": "archiveManifest",
     "title": "ArchiveManifest",
     "id": "https://flowly.local/contracts/schemas/archive-manifest.schema.json"
-  },
-  {
-    "key": "budget",
-    "title": "Budget",
-    "id": "https://flowly.local/contracts/schemas/budget.schema.json"
   },
   {
     "key": "dashboard",

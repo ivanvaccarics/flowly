@@ -48,23 +48,6 @@ const dashboard = {
       transactionCount: 1,
     },
   ],
-  budgets: [
-    {
-      budgetId: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7081",
-      name: "Groceries",
-      currency: "EUR",
-      period: "monthly",
-      periodStart: "2026-09-01",
-      periodEnd: "2026-09-30",
-      limitMinor: 10000,
-      rolloverCarryMinor: 0,
-      spentMinor: 8000,
-      remainingMinor: 2000,
-      percentUsed: 80,
-      status: "warning",
-      skippedOtherCurrencies: 0,
-    },
-  ],
 };
 
 interface RouteMap {

@@ -53,6 +53,14 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS transactions_updated_idx ON transactions(updated_at)`,
     ],
   },
+  {
+    // Budgets were removed from the product after version 1 shipped, so the
+    // table created by that migration is dropped here instead of editing
+    // history. Forward-only: the vault keeps opening with the same passphrase.
+    version: 3,
+    name: "drop-budgets",
+    statements: [`DROP TABLE IF EXISTS budgets`],
+  },
 ];
 
 export const SCHEMA_VERSION = Math.max(...MIGRATIONS.map((migration) => migration.version));

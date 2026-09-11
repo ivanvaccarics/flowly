@@ -4,7 +4,6 @@ import { fixedClock } from "../src/domain/clock.js";
 import { createAccount } from "../src/domain/account.js";
 import { createTag } from "../src/domain/tag.js";
 import { createTransaction } from "../src/domain/transaction.js";
-import type { Budget } from "../src/domain/budget.js";
 import { Vault } from "../src/vault/vault.js";
 import { cleanup, tempDir, TEST_KDF } from "./helpers/test-utils.js";
 
@@ -92,31 +91,6 @@ async function setup() {
   return { dir, vault, service: new AnalyticsService(vault, CLOCK) };
 }
 
-function budget(
-  overrides: Partial<Budget> & { clearTagIds?: boolean; clearAccountIds?: boolean } = {},
-): Budget {
-  const { clearTagIds, clearAccountIds, ...rest } = overrides;
-  const base: Budget = {
-    formatVersion: 1,
-    revision: 1,
-    id: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7081",
-    name: "Groceries",
-    amountMinor: 10000,
-    currency: "EUR",
-    period: "monthly",
-    startDate: "2026-01-01",
-    tagIds: [GROCERIES],
-    rollover: false,
-    active: true,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...rest,
-  };
-  if (clearTagIds) delete base.tagIds;
-  if (clearAccountIds) delete base.accountIds;
-  return base;
-}
-
 describe("balances", () => {
   it("keeps one line per account and currency and never blends", async () => {
     const { dir, vault, service } = await setup();
@@ -195,139 +169,10 @@ describe("cash flow", () => {
   });
 });
 
-describe("budget consumption", () => {
-  it("computes the period, the spend and the status", async () => {
-    const { dir, vault, service } = await setup();
-    try {
-      await vault.budgets.create(budget());
-      const [progress] = await service.budgetProgress("2026-09-15");
-      expect(progress).toMatchObject({
-        name: "Groceries",
-        periodStart: "2026-09-01",
-        periodEnd: "2026-09-30",
-        limitMinor: 10000,
-        spentMinor: 8000,
-        remainingMinor: 2000,
-        percentUsed: 80,
-        status: "warning",
-        rolloverCarryMinor: 0,
-        skippedOtherCurrencies: 0,
-      });
-    } finally {
-      await vault.lock();
-      cleanup(dir);
-    }
-  });
-
-  it("flags warning and over budgets", async () => {
-    const { dir, vault, service } = await setup();
-    try {
-      await vault.budgets.create(
-        budget({ id: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7082", amountMinor: 10000 }),
-      );
-      await vault.budgets.create({
-        ...budget({ id: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7083", amountMinor: 5000 }),
-        name: "Over",
-      });
-      const progress = await service.budgetProgress("2026-09-15");
-      const warning = progress.find((entry) => entry.budgetId.endsWith("7082"));
-      const over = progress.find((entry) => entry.budgetId.endsWith("7083"));
-      expect(warning?.status).toBe("warning");
-      expect(warning?.percentUsed).toBe(80);
-      expect(over?.status).toBe("over");
-      expect(over?.remainingMinor).toBe(-3000);
-    } finally {
-      await vault.lock();
-      cleanup(dir);
-    }
-  });
-
-  it("excludes other currencies and counts them as skipped", async () => {
-    const { dir, vault, service } = await setup();
-    try {
-      await vault.budgets.create(
-        budget({
-          id: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7084",
-          name: "All spending",
-          amountMinor: 100000,
-          clearTagIds: true,
-          clearAccountIds: true,
-          currency: "EUR",
-        }),
-      );
-      const progress = await service.budgetProgress("2026-09-15");
-      const entry = progress.find((candidate) => candidate.name === "All spending");
-      expect(entry?.spentMinor).toBe(103000);
-      expect(entry?.skippedOtherCurrencies).toBe(1);
-    } finally {
-      await vault.lock();
-      cleanup(dir);
-    }
-  });
-
-  it("counts explicit converted amounts instead of converting implicitly", async () => {
-    const { dir, vault, service } = await setup();
-    try {
-      await vault.transactions.create({
-        ...createTransaction(
-          {
-            accountId: CHECKING,
-            bookingDate: "2026-09-12",
-            amountMinor: -5000,
-            currency: "USD",
-            payee: "Converted shop",
-          },
-          { id: "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f99", now: NOW },
-        ),
-        originalAmountMinor: -4500,
-        originalCurrency: "EUR",
-      });
-      await vault.budgets.create(
-        budget({
-          id: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7085",
-          name: "Converted",
-          amountMinor: 100000,
-          clearTagIds: true,
-        }),
-      );
-      const progress = await service.budgetProgress("2026-09-15");
-      const entry = progress.find((candidate) => candidate.name === "Converted");
-      expect(entry?.spentMinor).toBe(107500); // 103000 EUR + 4500 converted
-      expect(entry?.skippedOtherCurrencies).toBe(1); // the USD transaction without conversion
-    } finally {
-      await vault.lock();
-      cleanup(dir);
-    }
-  });
-
-  it("carries the previous period surplus only when rollover is enabled", async () => {
-    const { dir, vault, service } = await setup();
-    try {
-      await vault.budgets.create(
-        budget({
-          id: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7086",
-          name: "Rollover",
-          amountMinor: 10000,
-          rollover: true,
-        }),
-      );
-      const progress = await service.budgetProgress("2026-09-15");
-      const entry = progress.find((candidate) => candidate.name === "Rollover");
-      // August spent 500 on groceries, so 9500 carries into September.
-      expect(entry?.rolloverCarryMinor).toBe(9500);
-      expect(entry?.limitMinor).toBe(19500);
-    } finally {
-      await vault.lock();
-      cleanup(dir);
-    }
-  });
-});
-
 describe("dashboard", () => {
   it("is deterministic for the same inputs and refreshes after a write", async () => {
     const { dir, vault, service } = await setup();
     try {
-      await vault.budgets.create(budget());
       const first = await service.dashboard({ from: "2026-09-01", to: "2026-09-30" });
       const second = await service.dashboard({ from: "2026-09-01", to: "2026-09-30" });
       expect(second).toEqual(first);

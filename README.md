@@ -71,8 +71,8 @@ rounding drama. Each transaction keeps its original currency, and Flowly refuses
 to blend unlike currencies into one fake number without a real exchange rate.
 
 ### 📊 A dashboard worth opening
-Balances per account, net cash flow, income vs. expenses, spending by tag,
-budget consumption and upcoming recurring transactions — all computed on your
+Balances per account, net cash flow, income vs. expenses, spending by tag and
+upcoming recurring transactions — all computed on your
 self-hosted server, without an Internet dependency. Totals always carry their
 currency, and only booked transactions move a balance.
 
@@ -80,11 +80,6 @@ currency, and only booked transactions move a balance.
 Filter by date range, account, tag, amount, currency, status or source — and
 free-text search across payee, description and your notes. Filtering runs on the
 server, so a large vault stays quick.
-
-### 🎯 Budgets
-Weekly, monthly, quarterly, yearly or custom periods. Scope them to accounts or
-tags. Turn rollover on or off. Watch the bar fill up (or not 😅). Transactions in
-another currency are skipped unless they carry an explicit converted amount.
 
 ### 🔁 Recurring transactions
 Real calendar arithmetic — not "every 30 days". Rent on the 31st behaves the way
@@ -108,8 +103,8 @@ work.*
 ### 📦 Your data, portable
 - 📄 **Transaction CSV** — clean, standard, spreadsheet-ready.
 - 🗃️ **Complete portable export** — a password-encrypted, versioned archive with
-  everything (accounts, transactions, tags, tagging rules, budgets, preferences,
-  and recurring rules once Phase 7 lands) and a checksum manifest. This is the
+  everything (accounts, transactions, tags, tagging rules, preferences, and
+  recurring rules once Phase 7 lands) and a checksum manifest. This is the
   supported way to move a complete vault between independent server and native
   deployments.
 - 🛡️ Spreadsheet formula-injection protection on export.
@@ -225,7 +220,7 @@ feasibility, Phase 1 stands up the real workspace with canonical contracts, and
 Phase 2 delivers the encrypted vault itself: Argon2id unlock, SQLCipher storage,
 browser sessions with auto-lock and revision-checked writes, and Phase 3 adds the
 daily finance flows with tagging rules and file-based portability. Phase 4 adds
-the dashboard, server-side search and budgets, and Phase 5 hardens the
+the dashboard and server-side search, and Phase 5 hardens the
 deployment: HTTPS with a local certificate authority, upgrade and rollback
 documentation, an SBOM and license inventory, and a threat model. The app is
 still pre-release: an independent cryptographic review and a full
@@ -237,7 +232,7 @@ assistive-technology audit remain open.
 | 1️⃣ | Server foundation, contracts and TypeScript domain | ✅ Complete |
 | 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ✅ Complete |
 | 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ✅ Complete |
-| 4️⃣ | Server dashboard, search and budgets | ✅ Complete |
+| 4️⃣ | Server dashboard and search | ✅ Complete |
 | 5️⃣ | Server hardening and release | ✅ Complete |
 | 6️⃣ | Enable Banking for Server | 🔮 Post-MVP |
 | 7️⃣ | Recurring transactions — the next feature after banking | 🔮 Post-MVP |

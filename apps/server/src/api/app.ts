@@ -301,9 +301,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     requireContext,
     (context) => context.vault.taggingRules,
   );
-  registerCollection(app, "/api/budgets", requireContext, (context) => context.vault.budgets);
-
-  // --- dashboard, search and budget consumption -----------------------------
+  // --- dashboard and search -------------------------------------------------
 
   app.get("/api/dashboard", async (request, reply) => {
     const context = requireContext(request, reply);
@@ -312,32 +310,17 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     const today = new Date().toISOString().slice(0, 10);
     const from = typeof query["from"] === "string" ? query["from"] : `${today.slice(0, 7)}-01`;
     const to = typeof query["to"] === "string" ? query["to"] : today;
-    const reference = typeof query["reference"] === "string" ? query["reference"] : to;
-    if (!isIsoDate(from) || !isIsoDate(to) || !isIsoDate(reference) || from > to) {
+    if (!isIsoDate(from) || !isIsoDate(to) || from > to) {
       reply.code(400);
       return { error: "invalid_date_range" };
     }
-    const dashboard = await new AnalyticsService(context.vault).dashboard({ from, to }, reference);
+    const dashboard = await new AnalyticsService(context.vault).dashboard({ from, to });
     const validation = validateContract("dashboard", dashboard);
     if (!validation.valid) {
       reply.code(500);
       return { error: "contract_violation", details: validation.errors };
     }
     return dashboard;
-  });
-
-  app.get("/api/budgets/consumption", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const query = request.query as Record<string, unknown>;
-    const reference = typeof query["reference"] === "string" ? query["reference"] : undefined;
-    if (reference !== undefined && !isIsoDate(reference)) {
-      reply.code(400);
-      return { error: "invalid_reference_date" };
-    }
-    const service = new AnalyticsService(context.vault);
-    const items = await (reference ? service.budgetProgress(reference) : service.budgetProgress());
-    return { items };
   });
 
   // --- destructive operations, cascades and tagging backfill -----------------

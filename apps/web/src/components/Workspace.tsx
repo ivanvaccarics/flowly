@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { VaultStatus } from "@flowly/web-contracts";
 import { AccountsPanel } from "./AccountsPanel.js";
-import { BudgetsPanel } from "./BudgetsPanel.js";
 import { DataPanel } from "./DataPanel.js";
 import { DashboardPanel } from "./DashboardPanel.js";
 import { RulesPanel } from "./RulesPanel.js";
@@ -13,7 +12,6 @@ const TABS = [
   ["accounts", "Accounts"],
   ["transactions", "Transactions"],
   ["tags", "Tags"],
-  ["budgets", "Budgets"],
   ["rules", "Rules"],
   ["data", "Import & export"],
 ] as const;
@@ -90,7 +88,6 @@ export function Workspace({
         {tab === "dashboard" ? <DashboardPanel /> : null}
         {tab === "transactions" ? <TransactionsPanel csrf={csrf} /> : null}
         {tab === "tags" ? <TagsPanel csrf={csrf} /> : null}
-        {tab === "budgets" ? <BudgetsPanel csrf={csrf} /> : null}
         {tab === "rules" ? <RulesPanel csrf={csrf} /> : null}
         {tab === "data" ? <DataPanel csrf={csrf} /> : null}
       </div>

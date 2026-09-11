@@ -33,7 +33,6 @@ import { validateAccount, type Account } from "../domain/account.js";
 import { validateTag, type Tag } from "../domain/tag.js";
 import { validateTaggingRule, type TaggingRule } from "../domain/tagging-rule.js";
 import { validateTransaction, type Transaction } from "../domain/transaction.js";
-import { validateBudget, type Budget } from "../domain/budget.js";
 import { validateRecurringRule, type RecurringRule } from "../domain/recurring.js";
 import { EXPORT_FORMAT_VERSION, VAULT_FORMAT_VERSION } from "../version.js";
 
@@ -119,7 +118,6 @@ export class Vault {
   readonly transactions: StoreRepository<Transaction>;
   readonly tags: StoreRepository<Tag>;
   readonly taggingRules: StoreRepository<TaggingRule>;
-  readonly budgets: StoreRepository<Budget>;
   readonly recurringRules: StoreRepository<RecurringRule>;
 
   private readonly clock: Clock;
@@ -159,7 +157,6 @@ export class Vault {
     this.accounts = repository<Account>("accounts", validateAccount);
     this.tags = repository<Tag>("tags", validateTag, (tag) => ({ refA: tag.normalizedName }));
     this.taggingRules = repository<TaggingRule>("tagging_rules", validateTaggingRule);
-    this.budgets = repository<Budget>("budgets", validateBudget);
     this.recurringRules = repository<RecurringRule>("recurring_rules", validateRecurringRule);
     this.transactions = repository<Transaction>(
       "transactions",
@@ -272,7 +269,6 @@ export class Vault {
     transactions?: Transaction[];
     tags?: Tag[];
     taggingRules?: TaggingRule[];
-    budgets?: Budget[];
     recurringRules?: RecurringRule[];
   }): Promise<void> {
     const store = this.store();
@@ -282,7 +278,6 @@ export class Vault {
         "transactions",
         "tags",
         "tagging_rules",
-        "budgets",
         "recurring_rules",
       ] as const) {
         await store.clear(table);
@@ -301,9 +296,6 @@ export class Vault {
       }
       for (const rule of data.taggingRules ?? []) {
         await store.insert("tagging_rules", rule.id, rule);
-      }
-      for (const budget of data.budgets ?? []) {
-        await store.insert("budgets", budget.id, budget);
       }
       for (const rule of data.recurringRules ?? []) {
         await store.insert("recurring_rules", rule.id, rule);
@@ -424,21 +416,21 @@ export class Vault {
 
   async stats(): Promise<VaultStats> {
     const store = this.store();
-    const [accounts, transactions, tags, taggingRules, budgets, recurringRules, applied] =
-      await Promise.all([
+    const [accounts, transactions, tags, taggingRules, recurringRules, applied] = await Promise.all(
+      [
         store.count("accounts"),
         store.count("transactions"),
         store.count("tags"),
         store.count("tagging_rules"),
-        store.count("budgets"),
         store.count("recurring_rules"),
         store.appliedMigrations(),
-      ]);
+      ],
+    );
     return {
       engine: store.engine,
       details: store.details,
       schemaVersion: applied.length > 0 ? Math.max(...applied) : 0,
-      counts: { accounts, transactions, tags, taggingRules, budgets, recurringRules },
+      counts: { accounts, transactions, tags, taggingRules, recurringRules },
       bytesOnDisk: store.bytesOnDisk(),
     };
   }

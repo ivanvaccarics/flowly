@@ -351,15 +351,3 @@ button:disabled {
   gap: 0.75rem;
   align-items: flex-end;
 }
-
-.budget-on-track {
-  color: #6ee7a8;
-}
-
-.budget-warning {
-  color: #ffd166;
-}
-
-.budget-over {
-  color: var(--danger);
-}
