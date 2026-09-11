@@ -77,6 +77,8 @@ tags. Turn rollover on or off. Watch the bar fill up (or not 😅).
 ### 🔁 Recurring transactions
 Real calendar arithmetic — not "every 30 days". Rent on the 31st behaves the way
 you'd expect in February. Pause and resume any time, no cloud scheduler needed.
+*Next feature after bank connections: scheduled for Phase 7, before any Flutter
+work.*
 
 ### 🔐 Security you can explain to a friend
 - A **mandatory passphrase** protects a randomly generated encryption key,
@@ -92,11 +94,10 @@ you'd expect in February. Pause and resume any time, no cloud scheduler needed.
 
 ### 📦 Your data, portable
 - 📄 **Transaction CSV** — clean, standard, spreadsheet-ready.
-- 🗃️ **Complete portable export** — a password-encrypted, versioned archive
-  with everything
-  (accounts, transactions, tags, budgets, recurring rules, preferences) and a
-  checksum manifest. This is the supported way to move a complete vault between
-  independent server and native deployments.
+- 🗃️ **Complete portable export** — a password-encrypted, versioned archive with
+  everything (accounts, transactions, tags, budgets, preferences, and recurring
+  rules once Phase 7 lands) and a checksum manifest. This is the supported way to
+  move a complete vault between independent server and native deployments.
 - 🛡️ Spreadsheet formula-injection protection on export.
 - ✅ Import with a **preview first**: transaction CSVs merge after duplicate
   checks; complete portable archives always replace the destination vault after
@@ -127,10 +128,10 @@ The delivery strategy starts with the server:
 | Platform | Runtime | Storage | Delivery |
 | --- | --- | --- | --- |
 | 🌐 Self-hosted server | React + TS service | Encrypted SQLite | Server MVP, Phases 0-5 |
-| 🍎 iOS | Flutter | SQLCipher + Drift | Core Phases 7-9; banking Phase 10 |
-| 🤖 Android | Flutter | SQLCipher + Drift | Core Phases 7-9; banking Phase 10 |
-| 💻 macOS | Flutter | SQLCipher + Drift | Core Phases 7-9; banking Phase 10 |
-| 🪟 Windows | Flutter | SQLCipher + Drift | Core Phases 7-9; banking Phase 10 |
+| 🍎 iOS | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
+| 🤖 Android | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
+| 💻 macOS | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
+| 🪟 Windows | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
 
 Why two clients instead of one? Because a browser shell bolted onto a phone is a
 worse product than a native app. React first provides an accessible interface
@@ -152,25 +153,29 @@ no release yet.
 | 1️⃣ | Server foundation, contracts and TypeScript domain | ⏳ Planned |
 | 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ⏳ Planned |
 | 3️⃣ | Server accounts, transactions, tags, notes and data portability | ⏳ Planned |
-| 4️⃣ | Server dashboard, search, budgets and recurring transactions | ⏳ Planned |
+| 4️⃣ | Server dashboard, search and budgets | ⏳ Planned |
 | 5️⃣ | Server hardening and release | ⏳ Planned |
 | 6️⃣ | Enable Banking for Server | 🔮 Post-MVP |
-| 7️⃣ | Flutter foundation and encrypted native vaults | 🔮 Post-MVP |
-| 8️⃣ | Flutter feature parity | 🔮 Post-MVP |
-| 9️⃣ | Native hardening and release | 🔮 Post-MVP |
-| 🔟 | Enable Banking for Flutter | 🔮 Post-MVP |
-| 1️⃣1️⃣ | Opt-in automatic encrypted backups | 🔮 Post-MVP |
+| 7️⃣ | Recurring transactions — the next feature after banking | 🔮 Post-MVP |
+| 8️⃣ | Flutter foundation and encrypted native vaults | 🔮 Post-MVP |
+| 9️⃣ | Flutter feature parity | 🔮 Post-MVP |
+| 🔟 | Native hardening and release | 🔮 Post-MVP |
+| 1️⃣1️⃣ | Enable Banking for Flutter | 🔮 Post-MVP |
+| 1️⃣2️⃣ | Opt-in automatic encrypted backups | 🔮 Post-MVP |
 
 ⭐ **Star the repo** to follow along — that's the easiest way to see it grow.
 
 ### 🏦 About bank connections
 
-Bank import is a post-MVP goal: Phase 6 adds it to the server, and Phase 10 adds
+Bank import is a post-MVP goal: Phase 6 adds it to the server, and Phase 11 adds
 it to Flutter. Provider credentials and signing keys will **never** ship inside
 either client. A separate service will fetch and normalize data, hand a batch to
 the unlocked destination vault once, and forget it. It's an import channel —
 not a sync service, and never the source of truth. The destination vault stays
 canonical. 🏠
+
+Recurring transactions come between the two banking steps, as Phase 7, so they
+land before any Flutter work starts.
 
 ---
 
@@ -196,7 +201,7 @@ canonical. 🏠
 - 📄 **Plain CSV exports are not encrypted.** Use the password-protected archive
   to move data around.
 - 💾 **The server is not a backup.** Manual encrypted exports are required in
-  the MVP; optional automatic backups are planned for Phase 11.
+  the MVP; optional automatic backups are planned for Phase 12.
 
 ---
 

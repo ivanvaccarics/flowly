@@ -25,12 +25,15 @@ The first release is the **Flowly Server MVP**. It includes:
 - Search and advanced filters
 - Dashboard and summaries
 - Budgets
-- Recurring transactions
 - Full data export and import
 - Server-side passphrase protection and secure browser sessions
 
+Recurring transactions are the next post-MVP feature: they are delivered in
+Phase 7, after Enable Banking for Server (Phase 6) and before Flutter work
+begins.
+
 Flutter applications, native encrypted storage, and biometric unlock are
-post-Server-MVP deliverables in Phases 7-9.
+post-Server-MVP deliverables in Phases 8-10.
 
 Username/password accounts, Flowly-operated cloud services, and cross-device
 synchronization are explicitly out of scope.
@@ -70,15 +73,16 @@ hardened.
 | Server distribution | Docker Compose on Linux amd64/arm64 and Docker Desktop on macOS/Windows |
 | Native distribution | App stores for mobile; direct signed downloads for desktop |
 | Account meaning | Financial account, not a Flowly user identity |
-| Unlock | Server passphrase and secure session; native passphrase plus optional biometrics from Phase 7 |
+| Unlock | Server passphrase and secure session; native passphrase plus optional biometrics from Phase 8 |
 | Device relationship | Installed apps own independent vaults; browser sessions share their server vault |
 | Data transfer | Explicit export/import performed by the user |
 | Web ownership | Single owner, one vault, multiple concurrent browser sessions |
 | Web deployment | Persistent Docker volume and private-network HTTPS; no direct Internet exposure |
 | Access boundary | Private LAN or user-managed VPN only |
-| Delivery order | Complete and release the server before starting Flutter implementation |
+| Delivery order | Release the server, then Enable Banking for Server, then recurring transactions, then Flutter |
 | Future bank integration | A separate trusted backend/connector is allowed |
-| Additional MVP scope | Dashboard, advanced search, multi-currency, budgets, recurring transactions |
+| Additional MVP scope | Dashboard, advanced search, multi-currency, budgets |
+| Next feature after the MVP | Recurring transactions in Phase 7, delivered after Enable Banking for Server and before Flutter |
 
 ## 4. Architecture Options Considered
 
@@ -361,6 +365,9 @@ transfers are independently configurable.
 
 ### 7.5 Recurring rules
 
+Delivered in Phase 7, after Enable Banking for Server and before Flutter. The
+Server MVP ships without recurring rules.
+
 - `id`
 - Template account, amount, currency, payee, note, and tags
 - Frequency and interval
@@ -369,8 +376,8 @@ transfers are independently configurable.
 - Active/paused state
 - Generation policy
 
-The MVP generates local transaction occurrences when the app is opened. It does
-not require a background cloud scheduler.
+Generation produces local transaction occurrences when the app is opened. It
+does not require a background cloud scheduler.
 
 ### 7.6 Operational metadata
 
@@ -517,12 +524,14 @@ Provide two workflows:
 1. **Transaction CSV:** one human-readable RFC 4180-compatible CSV for analysis
    in spreadsheet tools.
 2. **Complete portable export:** a password-encrypted, versioned archive
-  containing CSV files for accounts, transactions, tags, transaction-tag
-  links, budgets, recurring rules, and preferences, plus a small manifest
-  containing format and checksum metadata.
+   containing CSV files for accounts, transactions, tags, transaction-tag
+   links, budgets, and preferences, plus a small manifest containing format and
+   checksum metadata.
 
 The complete export is the supported device-to-device transfer format. The
 archive contents remain CSV-oriented while preserving normalized relationships.
+Recurring rules join the archive in Phase 7 through a versioned format bump that
+keeps the previous version importable.
 
 ### 10.2 Encoding and representation
 
@@ -593,7 +602,7 @@ The initial dashboard includes:
 - Income and expense totals
 - Spending by tag
 - Budget consumption
-- Upcoming recurring transactions
+- Upcoming recurring transactions (added with the recurring phase, Phase 7)
 
 ### 11.2 Search and filters
 
@@ -630,13 +639,15 @@ currency.
 
 ### 11.5 Recurrence
 
+Delivered in Phase 7, after Enable Banking for Server and before Flutter.
+
 Rules use calendar-aware arithmetic, not fixed day counts for monthly or yearly
 periods. Time-zone and end-of-month behavior must be covered by tests.
 
 ## 12. Enable Banking Integration
 
 Enable Banking is delivered in two steps: Phase 6 integrates the connector with
-the released server, and Phase 10 integrates the same connector contracts with
+the released server, and Phase 11 integrates the same connector contracts with
 Flutter. Neither step introduces synchronization between vaults.
 
 ### 12.1 Security boundary
@@ -664,7 +675,7 @@ Create a separate connector service that:
 The connector is an ingestion channel, not the canonical database:
 
 - The server vault links and imports independently in Phase 6.
-- Each native vault links and imports independently in Phase 10.
+- Each native vault links and imports independently in Phase 11.
 - The destination encrypted vault remains the source of truth.
 - The connector does not provide cross-device synchronization.
 - Provider data is deleted after delivery or after a short documented retry
@@ -793,8 +804,8 @@ Before reusing any logic from `enable_banking.py`:
 
 ### Automated tests
 
-- TypeScript domain and property-based tests for money, budgets, recurrence,
-  deduplication, and CSV round trips during Server MVP development
+- TypeScript domain and property-based tests for money, budgets, deduplication,
+  and CSV round trips during Server MVP development
 - Server storage contract, migration, crypto known-answer, and tamper tests
 - React component and accessibility tests
 - Migration tests from every released schema
@@ -803,18 +814,20 @@ Before reusing any logic from `enable_banking.py`:
 - End-to-end workflows for create, lock-current, lock-all, unlock, CSV merge,
   complete-vault replace, export, and delete
 - Connector contract tests using sanitized Enable Banking fixtures in Phase 6
+- Recurring rule contract, property, end-of-month, and time-zone tests in
+  Phase 7
 - Equivalent Dart domain, property-based, storage, crypto, component, and
-  accessibility tests beginning in Phase 7
+  accessibility tests beginning in Phase 8
 - Cross-language golden-vector and portable-archive conformance tests in Phases
-  7-10
-- Platform smoke tests on iOS, Android, macOS, and Windows beginning in Phase 7
+  8-11
+- Platform smoke tests on iOS, Android, macOS, and Windows beginning in Phase 8
 
 ### Security verification
 
-- Static analysis for TypeScript in Server MVP phases and Dart from Phase 7
+- Static analysis for TypeScript in Server MVP phases and Dart from Phase 8
 - Dependency and license scanning
 - Secret scanning
-- Mobile checks aligned with OWASP MASVS from Phase 7
+- Mobile checks aligned with OWASP MASVS from Phase 8
 - Web checks aligned with OWASP ASVS
 - Threat-model review before beta
 - Independent review of key management and export handling before production
@@ -822,8 +835,9 @@ Before reusing any logic from `enable_banking.py`:
 ## 17. Delivery Plan and Tasks
 
 Phases 0-5 are strictly server-first. They deliver the first releasable product,
-the **Flowly Server MVP**. Flutter work does not begin until that release gate
-has passed.
+the **Flowly Server MVP**. After that release gate, Phase 6 adds Enable Banking
+for Server, Phase 7 adds recurring transactions as the next feature, and only
+then does Flutter work begin in Phase 8.
 
 ### Phase 0 - Server architecture and security feasibility
 
@@ -910,17 +924,16 @@ locked state, and concurrent browser edits never overwrite silently.
 **Exit criteria:** server exports round-trip without changing IDs, amounts,
 dates, relationships, or notes; complete imports always replace atomically.
 
-### Phase 4 - Server analysis and planning features
+### Phase 4 - Server analysis and budgeting features
 
 #### Task `implement-server-dashboard-search`
 
 - Add dashboard summaries, date ranges, account/tag filters, and text search.
 - Add performance indexes and caches without weakening encryption boundaries.
 
-#### Task `implement-server-budgets-recurring`
+#### Task `implement-server-budgets`
 
 - Implement budget periods, filters, and consumption.
-- Implement recurrence rules and calendar-safe occurrence generation.
 - Add multi-currency exclusion and explicit-conversion rules.
 
 **Exit criteria:** calculations are deterministic across locale and time zone,
@@ -961,7 +974,7 @@ requires neither Internet access nor any Flowly-operated service for core use.
 - Replace the prototype with a separate connector architecture.
 - Define OAuth/session, callback, secret custody, retention, delivery, retry,
   audit, deletion, and normalized transaction contracts.
-- Keep delivery contracts client-neutral so Flutter can adopt them in Phase 10.
+- Keep delivery contracts client-neutral so Flutter can adopt them in Phase 11.
 - Complete a dedicated threat model and privacy assessment.
 
 #### Task `implement-server-banking-import`
@@ -975,7 +988,37 @@ requires neither Internet access nor any Flowly-operated service for core use.
 import transactions without receiving provider application secrets and without
 turning the connector into a synchronization service.
 
-### Phase 7 - Flutter foundation
+### Phase 7 - Recurring transactions (next feature)
+
+The next feature after Enable Banking for Server, delivered before Flutter work
+begins. The Server MVP ships without recurring rules, so this phase owns their
+contracts, storage, generation, UI, and portability.
+
+#### Task `define-recurring-contracts`
+
+- Add canonical recurrence schemas, rule shapes, generation policies, and
+  expected-result fixtures to `contracts/`.
+- Extend the portable archive with a new version that carries recurring rules
+  while remaining able to import the previous version.
+- Define `RecurringRuleRepository` and clock-driven occurrence-generation
+  interfaces.
+
+#### Task `implement-server-recurring`
+
+- Implement recurring rule CRUD in the server API and the React UI, including
+  pause and resume.
+- Implement calendar-aware occurrence generation when the app is opened, with
+  deterministic next-due handling and no background server scheduler.
+- Add the upcoming-recurring panel to the dashboard and the multi-currency
+  exclusion and explicit-conversion rules for generated occurrences.
+- Add property, end-of-month, time-zone, and archive round-trip tests against
+  the shared fixtures.
+
+**Exit criteria:** occurrences are generated deterministically across locale and
+time zone, paused rules stop generating, the new archive version round-trips and
+imports the previous one, and no recurring work requires a cloud scheduler.
+
+### Phase 8 - Flutter foundation
 
 #### Task `native-architecture-spike`
 
@@ -1002,7 +1045,7 @@ turning the connector into a synchronization service.
 **Exit criteria:** every native target opens the canonical fixture vault, fails
 closed on tampering, and matches the server domain and crypto vectors.
 
-### Phase 8 - Flutter feature parity
+### Phase 9 - Flutter feature parity
 
 #### Task `implement-native-core-finance`
 
@@ -1023,7 +1066,7 @@ closed on tampering, and matches the server domain and crypto vectors.
 **Exit criteria:** native results and portable exports conform to the released
 server contracts on iOS, Android, macOS, and Windows.
 
-### Phase 9 - Native hardening and release
+### Phase 10 - Native hardening and release
 
 #### Task `harden-native`
 
@@ -1040,7 +1083,7 @@ server contracts on iOS, Android, macOS, and Windows.
 **Exit criteria:** signed native releases pass the cross-platform acceptance
 suite and remain independent vaults with no automatic server synchronization.
 
-### Phase 10 - Enable Banking for Flutter
+### Phase 11 - Enable Banking for Flutter
 
 #### Task `implement-native-banking-import`
 
@@ -1055,7 +1098,7 @@ suite and remain independent vaults with no automatic server synchronization.
 Enable Banking without receiving provider application secrets, synchronizing
 with another vault, or changing server-side normalization semantics.
 
-### Phase 11 - Automatic encrypted backups
+### Phase 12 - Automatic encrypted backups
 
 #### Task `implement-automatic-backups`
 
@@ -1081,13 +1124,15 @@ recovery point.
 | `implement-server-core-finance` | `implement-server-storage` |
 | `implement-server-csv-transfer` | `implement-server-core-finance` |
 | `implement-server-dashboard-search` | `implement-server-core-finance` |
-| `implement-server-budgets-recurring` | `implement-server-core-finance` |
-| `integrate-server-deployment` | `implement-server-csv-transfer`, `implement-server-dashboard-search`, `implement-server-budgets-recurring` |
+| `implement-server-budgets` | `implement-server-core-finance` |
+| `integrate-server-deployment` | `implement-server-csv-transfer`, `implement-server-dashboard-search`, `implement-server-budgets` |
 | `harden-server` | `integrate-server-deployment` |
 | `build-server-release-pipeline` | `integrate-server-deployment`, `harden-server` |
 | `design-banking-connector` | `build-server-release-pipeline` |
 | `implement-server-banking-import` | `design-banking-connector` |
-| `native-architecture-spike` | `build-server-release-pipeline` |
+| `define-recurring-contracts` | `implement-server-banking-import`, `define-contracts-and-server-domain` |
+| `implement-server-recurring` | `define-recurring-contracts`, `implement-server-dashboard-search`, `implement-server-budgets` |
+| `native-architecture-spike` | `implement-server-recurring`, `build-server-release-pipeline` |
 | `scaffold-native` | `native-architecture-spike`, `define-contracts-and-server-domain` |
 | `implement-native-vault-storage` | `scaffold-native` |
 | `implement-native-core-finance` | `implement-native-vault-storage` |
@@ -1098,9 +1143,10 @@ recovery point.
 | `implement-native-banking-import` | `implement-server-banking-import`, `build-native-release-pipelines` |
 | `implement-automatic-backups` | `build-server-release-pipeline`, `implement-native-banking-import` |
 
-Server phases are sequential release gates. Phase 6 and Phase 7 may begin in
-parallel after the Server MVP, but Flutter feature work cannot move ahead of its
-foundation and conformance gates.
+Server phases are sequential release gates. After the Server MVP, Enable Banking
+for Server (Phase 6) is delivered first and recurring transactions (Phase 7)
+come next, before Flutter foundation (Phase 8) may begin. Flutter feature work
+cannot move ahead of its foundation and conformance gates.
 
 ## 19. Definition of Done for the Server MVP
 
@@ -1109,8 +1155,8 @@ The first MVP is complete at the end of Phase 5 only when:
 - Users can deploy with Docker Compose on every supported host platform.
 - A single owner can create and unlock one encrypted server vault shared by
   concurrent browser sessions on a private network.
-- Accounts, transactions, notes, tags, budgets, recurring rules, search, and
-  dashboards work without Internet access.
+- Accounts, transactions, notes, tags, budgets, search, and dashboards work
+  without Internet access.
 - Multi-currency values are represented without floating-point errors or
   misleading aggregation.
 - Manual transaction CSV and password-encrypted complete portable exports work.
@@ -1141,6 +1187,8 @@ The first MVP is complete at the end of Phase 5 only when:
 - Receipt/image attachment storage
 - Payment initiation
 - Enable Banking integration in the MVP
+- Recurring rules, occurrence generation, and upcoming-recurring widgets in the
+  Server MVP (delivered in Phase 7)
 - Background server scheduling for recurring transactions
 
 ## 21. Key Risks and Mitigations
@@ -1148,10 +1196,10 @@ The first MVP is complete at the end of Phase 5 only when:
 | Risk | Mitigation |
 |---|---|
 | Encrypted SQLite wrapper incompatibility across Docker platforms | Mandatory Phase 0 proof-of-concept, multi-arch images, and authenticated record-encryption fallback |
-| The self-hosted server is unavailable or its storage fails | Manual encrypted exports in the MVP, migration snapshots, visible health status, and automatic backups in Phase 11 |
+| The self-hosted server is unavailable or its storage fails | Manual encrypted exports in the MVP, migration snapshots, visible health status, and automatic backups in Phase 12 |
 | Local HTTPS setup is difficult | Versioned reverse-proxy configuration, guided local certificate enrollment, and an explicit supported-browser matrix |
 | Docker behavior differs across Linux and Docker Desktop | CI smoke tests on every supported host and conservative persistent-volume documentation |
-| React and Flutter behavior diverges after Phase 7 | Canonical schemas, generated models, shared design tokens, golden vectors, and conformance gates |
+| React and Flutter behavior diverges after Phase 8 | Canonical schemas, generated models, shared design tokens, golden vectors, and conformance gates |
 | Product behavior drifts between TypeScript and Dart | Cross-client conformance CI blocks releases when canonical outputs differ |
 | CSV is plaintext and easy to leak | Clear warning, streaming generation, encrypted archive recommended |
 | Importing between unsynchronized devices creates duplicates | Stable IDs, provider IDs, fingerprints, preview, explicit conflict policy |
