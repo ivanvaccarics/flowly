@@ -488,6 +488,18 @@ h3 {
   line-height: 1.05rem;
 }
 
+.amount-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.amount-edit input {
+  width: 110px;
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
 @media (max-width: 1199px) {
   .dash {
     grid-template-columns: 1fr;

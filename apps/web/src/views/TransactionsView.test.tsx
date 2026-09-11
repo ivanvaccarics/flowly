@@ -143,4 +143,43 @@ describe("transactions view", () => {
     expect(calls[0]?.url).toBe(`/api/transactions/${transaction.id}`);
     expect(calls[0]?.body).toContain('"tagIds":[]');
   });
+
+  it("edits payee and amount in the same inline save", async () => {
+    const calls: Array<{ body: string }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const parsed = new URL(raw, "http://localhost");
+        if (parsed.pathname === "/api/accounts") return json({ items: [account] });
+        if (parsed.pathname === "/api/tags") return json({ items: [tag] });
+        if (parsed.pathname === "/api/transactions" && (init?.method ?? "GET") === "GET") {
+          return json({ items: [transaction], total: 1, limit: 100, offset: 0 });
+        }
+        if (parsed.pathname.startsWith("/api/transactions/")) {
+          calls.push({ body: String(init?.body ?? "") });
+          return json({ entity: { ...transaction, revision: 2 } });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+    // The row prefills the amount in its own currency, editable as a decimal.
+    const amount = (await screen.findByLabelText("Amount in EUR")) as HTMLInputElement;
+    expect(amount.value).toBe("-12.30");
+    fireEvent.change(amount, { target: { value: "-15.00" } });
+    fireEvent.change(screen.getByLabelText(`Payee for ${transaction.id}`), {
+      target: { value: "Bar Centrale Roma" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.body).toContain('"amountMinor":-1500');
+    expect(calls[0]?.body).toContain('"payee":"Bar Centrale Roma"');
+  });
 });

@@ -7,6 +7,7 @@ import { Banner, Chip, Empty, Money } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { parseAmountToMinor } from "../lib/money.js";
+import { formatMinorToAmount } from "../lib/money.js";
 
 interface Filters {
   accountId: string;
@@ -38,7 +39,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
   const [status, setStatus] = useState<"booked" | "pending">("booked");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [editing, setEditing] = useState<
-    { id: string; note: string; tagIds: string[] } | undefined
+    { id: string; payee: string; amount: string; note: string; tagIds: string[] } | undefined
   >(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
 
@@ -114,9 +115,18 @@ export function TransactionsView({ csrf }: { csrf: string }) {
 
   async function saveEdits(transaction: Transaction) {
     if (!editing) return;
+    let amountMinor: number;
+    try {
+      amountMinor = parseAmountToMinor(editing.amount, transaction.currency);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Invalid amount");
+      return;
+    }
     try {
       await api.update<Transaction>(csrf, "transactions", transaction.id, {
         ...transaction,
+        payee: editing.payee,
+        amountMinor,
         userNote: editing.note,
         tagIds: editing.tagIds,
       });
@@ -328,12 +338,20 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                 <tr key={transaction.id}>
                   <td className="mono">{transaction.bookingDate}</td>
                   <td>
-                    <span className="stack">
-                      <strong>{transaction.payee ?? "—"}</strong>
-                      {transaction.description ? (
-                        <span className="sub">{transaction.description}</span>
-                      ) : null}
-                    </span>
+                    {editing?.id === transaction.id ? (
+                      <input
+                        aria-label={`Payee for ${transaction.id}`}
+                        value={editing.payee}
+                        onChange={(event) => setEditing({ ...editing, payee: event.target.value })}
+                      />
+                    ) : (
+                      <span className="stack">
+                        <strong>{transaction.payee ?? "—"}</strong>
+                        {transaction.description ? (
+                          <span className="sub">{transaction.description}</span>
+                        ) : null}
+                      </span>
+                    )}
                   </td>
                   <td>
                     {editing?.id === transaction.id ? (
@@ -386,7 +404,20 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                   </td>
                   <td className="mono sub">{transaction.source}</td>
                   <td>
-                    <Money minor={transaction.amountMinor} currency={transaction.currency} />
+                    {editing?.id === transaction.id ? (
+                      <span className="amount-edit">
+                        <input
+                          aria-label={`Amount in ${transaction.currency}`}
+                          value={editing.amount}
+                          onChange={(event) =>
+                            setEditing({ ...editing, amount: event.target.value })
+                          }
+                        />
+                        <span className="sub mono">{transaction.currency}</span>
+                      </span>
+                    ) : (
+                      <Money minor={transaction.amountMinor} currency={transaction.currency} />
+                    )}
                   </td>
                   <td>
                     <div className="cell-actions">
@@ -414,6 +445,11 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                           onClick={() =>
                             setEditing({
                               id: transaction.id,
+                              payee: transaction.payee ?? "",
+                              amount: formatMinorToAmount(
+                                transaction.amountMinor,
+                                transaction.currency,
+                              ),
                               note: transaction.userNote ?? "",
                               tagIds: transaction.tagIds,
                             })
