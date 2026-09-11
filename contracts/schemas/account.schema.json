@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowly.local/contracts/schemas/account.schema.json",
+  "title": "Account",
+  "description": "A financial account. Format version 1 of the Server MVP.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "id", "name", "type", "defaultCurrency", "createdAt", "updatedAt"],
+  "properties": {
+    "formatVersion": { "const": 1 },
+    "id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "type": {
+      "enum": ["checking", "savings", "credit-card", "cash", "wallet", "investment", "other"]
+    },
+    "defaultCurrency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "institutionName": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "openingBalanceMinor": { "type": "integer" },
+    "archivedAt": { "type": "string", "format": "date-time" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

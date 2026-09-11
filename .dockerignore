@@ -1,0 +1,12 @@
+.git
+node_modules
+**/node_modules
+**/dist
+**/coverage
+data
+secrets
+spikes
+ui
+.venv
+.env
+*.local

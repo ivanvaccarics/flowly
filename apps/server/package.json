@@ -1,0 +1,26 @@
+{
+  "name": "@flowly/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Flowly self-hosted server: API, domain, and encrypted vault.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@flowly/web-contracts": "workspace:*",
+    "fastify": "^5.12.4",
+    "zod": "^4.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.0"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowly.local/contracts/schemas/transaction.schema.json",
+  "title": "Transaction",
+  "description": "A transaction. `amountMinor` is signed: inflows positive, outflows negative.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "formatVersion",
+    "id",
+    "accountId",
+    "bookingDate",
+    "amountMinor",
+    "currency",
+    "status",
+    "source",
+    "tagIds",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "formatVersion": { "const": 1 },
+    "id": { "type": "string", "format": "uuid" },
+    "accountId": { "type": "string", "format": "uuid" },
+    "bookingDate": { "type": "string", "format": "date" },
+    "valueDate": { "type": "string", "format": "date" },
+    "amountMinor": { "type": "integer" },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "originalAmountMinor": { "type": "integer" },
+    "originalCurrency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "payee": { "type": "string", "maxLength": 120 },
+    "description": { "type": "string", "maxLength": 500 },
+    "userNote": { "type": "string", "maxLength": 2000 },
+    "status": { "enum": ["pending", "booked"] },
+    "source": { "enum": ["manual", "csv-import", "recurring-rule", "enable-banking"] },
+    "tagIds": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "type": "string", "format": "uuid" }
+    },
+    "provider": { "type": "string", "maxLength": 60 },
+    "providerAccountId": { "type": "string", "maxLength": 200 },
+    "providerTransactionId": { "type": "string", "maxLength": 200 },
+    "importFingerprint": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "recurringRuleId": { "type": "string", "format": "uuid" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

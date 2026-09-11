@@ -150,19 +150,51 @@ to the self-hosted vault. After that release is stable, Flutter adds mature
 encrypted storage, biometrics and installers. Shared contracts plus
 cross-client tests keep the two implementations honest. 🤝
 
+### 🗂️ Inside the repository
+
+```text
+apps/server             TypeScript service: domain, application, Fastify API
+apps/web                React/Vite browser client (no vault storage)
+packages/web-contracts  Generated types and Ajv validators from the schemas
+contracts/              JSON Schemas, fixtures and golden expected results
+deployment/self-hosted  Docker Compose for the server vault
+spikes/                 Phase 0 feasibility code, kept as evidence
+```
+
+## 🛠️ Run it locally
+
+Prerequisites: **Node.js 22.12+** and **pnpm** (`corepack enable pnpm`).
+
+```bash
+pnpm install            # install the workspace
+pnpm contracts:generate # regenerate types from contracts/ (committed output)
+pnpm dev                # server on 127.0.0.1:8787 + UI on 127.0.0.1:5173
+pnpm verify             # format, lint, secret scan, types and tests
+pnpm build              # compile the server and bundle the UI
+
+docker compose -f deployment/self-hosted/compose.yaml up --build
+```
+
+The vault is still locked at this stage: the API answers
+`/api/vault/status`, `/api/health` and `/api/contracts`, and unlock returns an
+explicit "not implemented" until Phase 2 lands. The Compose file publishes the
+port on `127.0.0.1` only, and the server refuses to bind a public interface
+unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
+
 ---
 
 ## 🚦 Where we are
 
 Flowly is **in early development**. The architecture and security model are
-designed and reviewed, the Phase 0 server feasibility spike is complete
-(encrypted vault storage, key hierarchy, sessions and portable exports), and the
-app itself is being built in the open. There is no release yet.
+designed and reviewed, Phase 0 proved the encrypted storage and session
+feasibility, and Phase 1 stands up the real workspace: TypeScript service,
+React client, canonical contracts and CI. The app itself is being built in the
+open and there is no release yet.
 
 | | Milestone | Status |
 | --- | --- | --- |
 | 0️⃣ | Server storage, Docker and private-network security feasibility | ✅ Complete |
-| 1️⃣ | Server foundation, contracts and TypeScript domain | ⏳ Planned |
+| 1️⃣ | Server foundation, contracts and TypeScript domain | ✅ Complete |
 | 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ⏳ Planned |
 | 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ⏳ Planned |
 | 4️⃣ | Server dashboard, search and budgets | ⏳ Planned |

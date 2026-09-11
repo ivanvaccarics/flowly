@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowly.local/contracts/schemas/vault-status.schema.json",
+  "title": "VaultStatus",
+  "description": "What the web UI knows about the vault before it is unlocked. It never carries keys, passphrases or financial data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["state", "vaultFormatVersion", "exportFormatVersion"],
+  "properties": {
+    "state": { "enum": ["locked", "unlocked"] },
+    "vaultFormatVersion": { "type": "integer", "minimum": 1 },
+    "exportFormatVersion": { "type": "integer", "minimum": 1 },
+    "storageEngine": { "enum": ["sqlcipher", "record-encryption", null] },
+    "schemaVersion": { "type": ["integer", "null"], "minimum": 0 },
+    "lastUnlockedAt": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

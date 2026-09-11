@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "description": "Canonical decimal parsing and formatting into signed minor units. Every client must reproduce these values exactly.",
+  "valid": [
+    { "amount": "-12.30", "currency": "EUR", "minor": -1230, "formatted": "-12.30" },
+    { "amount": "0.01", "currency": "EUR", "minor": 1, "formatted": "0.01" },
+    { "amount": "1234567.89", "currency": "EUR", "minor": 123456789, "formatted": "1234567.89" },
+    { "amount": "-7", "currency": "JPY", "minor": -7, "formatted": "-7" },
+    { "amount": "1.234", "currency": "KWD", "minor": 1234, "formatted": "1.234" },
+    { "amount": "-0.005", "currency": "BHD", "minor": -5, "formatted": "-0.005" },
+    { "amount": "0", "currency": "USD", "minor": 0, "formatted": "0.00" }
+  ],
+  "invalid": [
+    { "amount": "1.234", "currency": "EUR", "reason": "too many decimal places" },
+    { "amount": "1,20", "currency": "EUR", "reason": "not a canonical decimal string" },
+    { "amount": "1.2.3", "currency": "EUR", "reason": "not a canonical decimal string" },
+    { "amount": "10", "currency": "XYZ", "reason": "unsupported currency" },
+    { "amount": "", "currency": "EUR", "reason": "empty amount" }
+  ]
+}

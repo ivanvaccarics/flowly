@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+packages/web-contracts/src/generated
+spikes
+data
+secrets
+*.md

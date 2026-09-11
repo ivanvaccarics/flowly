@@ -1,0 +1,107 @@
+:root {
+  color-scheme: dark light;
+  --bg: #0f1117;
+  --panel: #171a22;
+  --text: #f5f6f8;
+  --muted: #9aa3b2;
+  --accent: #8a2be2;
+  --danger: #ff6b6b;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at top, #1c2030, var(--bg));
+  color: var(--text);
+}
+
+.shell {
+  width: min(680px, 92vw);
+  padding: 2.5rem;
+  background: var(--panel);
+  border-radius: 1.25rem;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 45%);
+}
+
+.brand {
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.lead {
+  margin: 0 0 1.75rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.unlock {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1.75rem;
+}
+
+.unlock input,
+.unlock button {
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid #2b3140;
+  font: inherit;
+}
+
+.unlock button {
+  background: var(--accent);
+  border-color: transparent;
+  color: white;
+  font-weight: 600;
+}
+
+.unlock input:disabled,
+.unlock button:disabled {
+  opacity: 0.55;
+}
+
+.status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.status dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.status dd {
+  margin: 0.25rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.error {
+  color: var(--danger);
+}
+
+footer {
+  border-top: 1px solid #2b3140;
+  padding-top: 1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}

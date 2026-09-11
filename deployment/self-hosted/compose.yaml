@@ -1,0 +1,34 @@
+name: flowly
+
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: apps/server/Dockerfile
+    image: flowly-server:local
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      FLOWLY_HOST: 0.0.0.0
+      FLOWLY_ALLOW_PUBLIC_BIND: "true"
+      FLOWLY_PORT: "8787"
+      FLOWLY_VAULT_DIR: /vault
+      FLOWLY_STORAGE_ENGINE: ${FLOWLY_STORAGE_ENGINE:-sqlcipher}
+      FLOWLY_ALLOWED_ORIGIN: ${FLOWLY_ALLOWED_ORIGIN:-http://127.0.0.1:5173}
+      FLOWLY_LOG_LEVEL: ${FLOWLY_LOG_LEVEL:-info}
+    # Keep the published port on the private interface. Never change this to
+    # "8787:8787" on a host reachable from the Internet.
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - vault-data:/vault
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  vault-data:

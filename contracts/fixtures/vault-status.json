@@ -1,0 +1,8 @@
+{
+  "state": "locked",
+  "vaultFormatVersion": 1,
+  "exportFormatVersion": 1,
+  "storageEngine": "sqlcipher",
+  "schemaVersion": null,
+  "lastUnlockedAt": null
+}

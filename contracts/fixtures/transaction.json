@@ -1,0 +1,17 @@
+{
+  "formatVersion": 1,
+  "id": "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f70",
+  "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+  "bookingDate": "2026-09-03",
+  "valueDate": "2026-09-03",
+  "amountMinor": -1230,
+  "currency": "EUR",
+  "payee": "Bar Centrale",
+  "description": "CARD PURCHASE",
+  "userNote": "espresso with Luca",
+  "status": "booked",
+  "source": "manual",
+  "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
+  "createdAt": "2026-09-03T18:12:00.000Z",
+  "updatedAt": "2026-09-03T18:12:00.000Z"
+}

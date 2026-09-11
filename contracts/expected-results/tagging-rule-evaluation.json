@@ -1,0 +1,239 @@
+{
+  "version": 1,
+  "description": "Golden outcomes for tagging rule evaluation. Text is NFKC-normalized and lowercased; whitespace is collapsed. An amount condition only matches transactions in its own currency. All enabled rules that match contribute their tags, and the result is a deduplicated set in rule order.",
+  "tags": {
+    "coffee": "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081",
+    "rent": "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082",
+    "salary": "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7083"
+  },
+  "accounts": {
+    "everyday": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+    "credit": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e7000"
+  },
+  "cases": [
+    {
+      "name": "text containment is case-insensitive",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-03",
+        "amountMinor": -1230,
+        "currency": "EUR",
+        "payee": "Bar Centrale",
+        "userNote": "ESPRESSO with Luca"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
+          "conditions": [{ "field": "userNote", "operator": "contains", "value": "espresso" }]
+        }
+      ],
+      "expectedTagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"]
+    },
+    {
+      "name": "whitespace is collapsed before matching",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-03",
+        "amountMinor": -1230,
+        "currency": "EUR",
+        "userNote": "espresso    with   Luca at 8am"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
+          "conditions": [
+            { "field": "userNote", "operator": "contains", "value": "espresso with luca" }
+          ]
+        }
+      ],
+      "expectedTagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"]
+    },
+    {
+      "name": "payee equality ignores case and surrounding spaces",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-03",
+        "amountMinor": -1230,
+        "currency": "EUR",
+        "payee": "  bar centrale "
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
+          "conditions": [{ "field": "payee", "operator": "is", "value": "Bar Centrale" }]
+        }
+      ],
+      "expectedTagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"]
+    },
+    {
+      "name": "disabled rules never match",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-03",
+        "amountMinor": -1230,
+        "currency": "EUR",
+        "userNote": "espresso"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": false,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
+          "conditions": [{ "field": "userNote", "operator": "contains", "value": "espresso" }]
+        }
+      ],
+      "expectedTagIds": []
+    },
+    {
+      "name": "amount comparison matches a signed outflow",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-03",
+        "amountMinor": -95000,
+        "currency": "EUR",
+        "userNote": "september rent"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"],
+          "conditions": [
+            { "field": "amountMinor", "operator": "lessThan", "value": -50000, "currency": "EUR" }
+          ]
+        }
+      ],
+      "expectedTagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"]
+    },
+    {
+      "name": "amount conditions never cross currencies",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-03",
+        "amountMinor": -95000,
+        "currency": "USD",
+        "userNote": "september rent"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"],
+          "conditions": [
+            { "field": "amountMinor", "operator": "lessThan", "value": -50000, "currency": "EUR" }
+          ]
+        }
+      ],
+      "expectedTagIds": []
+    },
+    {
+      "name": "AND requires every condition",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e7000",
+        "bookingDate": "2026-10-01",
+        "amountMinor": -95000,
+        "currency": "EUR",
+        "userNote": "october rent"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"],
+          "conditions": [
+            { "field": "userNote", "operator": "contains", "value": "rent" },
+            {
+              "field": "accountId",
+              "operator": "is",
+              "value": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f"
+            }
+          ]
+        }
+      ],
+      "expectedTagIds": []
+    },
+    {
+      "name": "OR needs a single condition",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e7000",
+        "bookingDate": "2026-10-01",
+        "amountMinor": -95000,
+        "currency": "EUR",
+        "payee": "ACME Property"
+      },
+      "rules": [
+        {
+          "combinator": "or",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"],
+          "conditions": [
+            { "field": "payee", "operator": "is", "value": "acme property" },
+            {
+              "field": "amountMinor",
+              "operator": "greaterThan",
+              "value": 1000000,
+              "currency": "EUR"
+            }
+          ]
+        }
+      ],
+      "expectedTagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"]
+    },
+    {
+      "name": "every matching rule contributes and duplicates collapse",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-03",
+        "amountMinor": 250000,
+        "currency": "EUR",
+        "payee": "Employer Inc",
+        "userNote": "salary"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": [
+            "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7083",
+            "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"
+          ],
+          "conditions": [{ "field": "userNote", "operator": "contains", "value": "salary" }]
+        },
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"],
+          "conditions": [{ "field": "payee", "operator": "is", "value": "Employer Inc" }]
+        }
+      ],
+      "expectedTagIds": [
+        "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7083",
+        "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"
+      ]
+    },
+    {
+      "name": "missing fields simply do not match",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-03",
+        "amountMinor": -1230,
+        "currency": "EUR"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
+          "conditions": [{ "field": "userNote", "operator": "contains", "value": "espresso" }]
+        }
+      ],
+      "expectedTagIds": []
+    }
+  ]
+}

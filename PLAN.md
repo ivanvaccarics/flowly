@@ -42,20 +42,29 @@ synchronization are explicitly out of scope.
 
 ## 2. Current Repository Assessment
 
-The repository is an early prototype rather than an application:
+The repository holds the completed Phase 0 feasibility work and the Phase 1
+foundation:
 
-- `README.md` describes the intended product and roadmap but no application has
-  been implemented yet.
+- `apps/server` is the TypeScript service: domain models and invariants,
+  application interfaces, and a Fastify JSON API. `apps/web` is the React/Vite
+  browser client and `packages/web-contracts` holds generated types plus runtime
+  validators. All three are pnpm workspace members.
+- `contracts/` is the canonical, language-neutral source of truth with JSON
+  Schema 2020-12 definitions, valid fixtures and golden expected results.
+  Regenerating them is part of the gate, so generated code cannot drift.
+- `docs/adr/` records the binding Phase 0 decisions on storage, key hierarchy,
+  sessions and portability.
 - `spikes/server-architecture/` holds the completed Phase 0 proof-of-concepts:
   encrypted vault storage, vault lifecycle, migrations, failure behaviour,
   portability and HTTPS sessions, with a measured report and multi-architecture
-  container checks. It is throwaway code and stays outside the production
-  workspace.
-- `.python-version` selects Python 3.14.
-- `enable_banking.py` is a standalone Enable Banking exploration script.
-- There is no production dependency manifest, application structure, CI
-  configuration, or release configuration yet; Phase 1 creates them. The only
-  test suite is the Phase 0 spike suite.
+  container checks. It is retained as reference evidence and is excluded from
+  the workspace, lint and formatting surface.
+- CI (`.github/workflows/ci.yml`) verifies formatting, lint, types, tests,
+  contract freshness, builds, and both container architectures.
+- The vault itself is not implemented yet: Phase 2 adds unlock, sessions and
+  encrypted storage, and the API currently serves a locked-vault shell only.
+- `.python-version` selects Python 3.14, and `enable_banking.py` is a standalone
+  Enable Banking exploration script.
 - Local `data/`, `secrets/`, `.venv/`, and `node_modules/` paths are ignored.
 - The prototype reads an RSA private key from `secrets/`, creates a JWT, prints
   that JWT, and performs an interactive authorization flow. Printing tokens and
@@ -88,6 +97,9 @@ hardened.
 | Web deployment | Persistent Docker volume and private-network HTTPS; no direct Internet exposure |
 | Access boundary | Private LAN or user-managed VPN only |
 | Server storage engine | SQLCipher 4 through `@journeyapps/sqlcipher`, with `node:sqlite` plus AES-256-GCM record encryption as the documented fallback |
+| Toolchain | pnpm workspace on Node.js 22.12 or newer; TypeScript 6.0.3 while `typescript-eslint` does not support TypeScript 7 |
+| Server HTTP layer | Fastify 5 serving a same-origin JSON API; the domain imports no HTTP or storage API |
+| Contract tooling | JSON Schema 2020-12 as the source of truth, generated TypeScript types, and Ajv runtime validation that always accompanies them |
 | Delivery order | Release the server, then Enable Banking for Server, then recurring transactions, then Flutter |
 | Future bank integration | A separate trusted backend/connector is allowed |
 | Additional MVP scope | Dashboard, advanced search, multi-currency, budgets, manual tagging rules |
@@ -149,52 +161,49 @@ the need for platform-specific testing.
 ```text
 flowly/
   apps/
-    web/                         # React/TypeScript browser UI; no vault storage
+    server/                      # Self-hosted TypeScript API, domain and vault
       src/
-        ui/
-    server/                      # Self-hosted API, domain, sessions, storage
+        api/                     # Fastify routes and contract validation
+        application/             # Repository and platform-service interfaces
+        domain/                  # Money, accounts, transactions, tags, rules
+      tests/                     # Vitest suites, including golden vectors
+      Dockerfile                 # Multi-arch server image
+    web/                         # React/Vite browser UI; no vault storage
       src/
-        domain/
-        application/
-        infrastructure/
+        api/                     # Same-origin API client
+        components/              # Locked-vault shell and future screens
     native/                      # Flutter app for iOS/Android/macOS/Windows
-      lib/
-        domain/
-        application/
-        infrastructure/
-        presentation/
     banking-connector/           # Future TypeScript Enable Banking service
-  spikes/
-    server-architecture/         # Throwaway Phase 0 proof-of-concepts, retired after Phase 1
   contracts/
     schemas/                     # Canonical JSON Schema definitions
-    csv/                         # CSV/archive schemas and version documentation
-    fixtures/                    # Sanitized cross-client golden fixtures
-    expected-results/            # Canonical calculations and deduplication outcomes
+    fixtures/                    # Valid instances every client must accept
+    expected-results/            # Golden vectors: money, tagging rules, dedup
   packages/
-    web-contracts/               # Generated TS types and runtime validators
+    web-contracts/               # Generated TS types plus Ajv runtime validators
     web-test-support/            # React/TS conformance helpers
   native-packages/
     flowly_contracts/            # Generated Dart models and validators
     flowly_test_support/         # Flutter/Dart conformance helpers
   tooling/
-    scripts/                     # Language-neutral orchestration and schema generation
-    eslint/
-    typescript/
+    scripts/                     # Workspace checks such as the secret scan
   docs/
-    adr/
+    adr/                         # Phase 0 and later decision records
     security/
   deployment/
     self-hosted/                 # Docker Compose, HTTPS proxy, multi-arch packaging
+  spikes/
+    server-architecture/         # Phase 0 proof-of-concepts, retained as evidence
+  .github/workflows/             # CI: verify + multi-arch container build
   prototypes/
     enable-banking/              # Temporary, sanitized prototype only
 ```
 
 Use `pnpm` workspaces for the React client, generated TypeScript packages, and
-future connector. Use the Flutter SDK and Dart packages for the native client.
-Root scripts must provide one command surface for format, lint, test, contract
-generation, and cross-client conformance. Add a Flutter monorepo tool such as
-Melos only if multiple Dart packages make it worthwhile.
+future connector, on Node.js 22.12 or newer. Use the Flutter SDK and Dart
+packages for the native client. Root scripts provide one command surface:
+`pnpm verify` (format, lint, secret scan, types, tests), `pnpm build`,
+`pnpm dev`, and `pnpm contracts:generate` / `pnpm contracts:check`. Add a Flutter
+monorepo tool such as Melos only if multiple Dart packages make it worthwhile.
 
 ## 6. Architectural Boundaries
 
@@ -892,6 +901,9 @@ Before reusing any logic from `enable_banking.py`:
 
 - TypeScript domain and property-based tests for money, budgets, deduplication,
   and CSV round trips during Server MVP development
+- Workspace gate on every change: Prettier, ESLint, the frontend secret scan,
+  TypeScript across all packages, Vitest suites, and a contract-regeneration
+  diff that fails when generated code drifts from `contracts/`
 - Server storage contract, migration, crypto known-answer, and tamper tests
 - React component and accessibility tests
 - Tagging rule contract, normalization, AND/OR, amount-currency, account,
@@ -959,6 +971,32 @@ remain to be confirmed during Phase 1 CI setup.
 
 ### Phase 1 - Server foundation
 
+Status: **complete** (2026-09-11). `pnpm verify` runs the whole gate — Prettier
+check, ESLint, frontend secret scan, TypeScript across all packages, and 64
+tests (contracts 11, server 51, web 2). `pnpm build` compiles the server and
+bundles the web client, and `apps/server/Dockerfile` builds for `linux/amd64`
+and `linux/arm64` in CI. See `docs/adr/0005-phase-1-workspace-and-toolchain.md`.
+
+Delivered:
+
+- A pnpm workspace with `apps/server`, `apps/web`, and
+  `packages/web-contracts`, plus root scripts for dev, build, test, lint,
+  formatting, contract generation and the full `verify` gate.
+- Canonical contracts in `contracts/`: JSON Schema 2020-12 definitions, valid
+  fixtures, and golden vectors for money and tagging-rule evaluation. Codegen
+  produces TypeScript types and Ajv validators, and CI fails when the generated
+  output drifts from the schemas.
+- Domain invariants for money and currency, accounts, transactions, tags,
+  tagging rules, budgets and recurring-rule shapes, with UUIDv7 identifiers and
+  the versioned import fingerprint.
+- A Fastify same-origin API serving `/api/health`, a contract-validated
+  `/api/vault/status`, `/api/contracts`, and an explicit `501` for unlock until
+  Phase 2 implements it.
+- A React locked-vault shell that reads the vault status through the same-origin
+  API, with component tests for the success and unreachable-server paths.
+- Environment validation that refuses a public bind without an explicit opt-in
+  and blocks secret-looking `VITE_*` variables.
+
 #### Task `scaffold-server`
 
 - Create the TypeScript workspace, React/Vite UI, server API, Docker Compose
@@ -980,6 +1018,11 @@ remain to be confirmed during Phase 1 CI setup.
 
 **Exit criteria:** the TypeScript domain suite runs without UI or infrastructure
 dependencies, and the React UI renders a locked-vault shell from the server API.
+
+Met: the domain suite runs with no UI or storage dependency, the web shell
+renders from `/api/vault/status`, and the proxy path was verified against a
+running server. Serving the built web client from the server itself belongs to
+the Phase 5 deployment work.
 
 ### Phase 2 - Server vault and persistence
 
