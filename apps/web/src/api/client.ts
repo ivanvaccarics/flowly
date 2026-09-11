@@ -121,6 +121,12 @@ export const api = {
       csrf,
       body: { revision },
     }),
+  restoreAccount: (csrf: string, id: string, revision: number) =>
+    request<{ entity: unknown }>(`/api/accounts/${id}/restore`, {
+      method: "POST",
+      csrf,
+      body: { revision },
+    }),
   backfill: (
     csrf: string,
     scope: { accountId?: string; fromDate?: string; toDate?: string } = {},

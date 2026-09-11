@@ -1,43 +1,25 @@
 import { useState } from "react";
 import type { Tag } from "@flowly/web-contracts";
 import { Icon } from "../components/icons.js";
+import { TagColorField } from "../components/TagColorField.js";
 import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
+import { normalizeTagName } from "../lib/tags.js";
 
-/**
- * Tag colours are interface-only, so the palette is a fixed set from the
- * Sovereign Ledger tokens instead of a free colour wheel. The hex field next to
- * it keeps every `#rrggbb` value reachable.
- */
-const TAG_COLORS: Array<{ value: string; label: string }> = [
-  { value: "#4648d4", label: "Indigo" },
-  { value: "#2f2ebe", label: "Deep indigo" },
-  { value: "#006c49", label: "Emerald" },
-  { value: "#0f766e", label: "Teal" },
-  { value: "#b90538", label: "Rose" },
-  { value: "#dc2c4f", label: "Coral" },
-  { value: "#b45309", label: "Amber" },
-  { value: "#475569", label: "Slate" },
-];
+const DEFAULT_COLOR = "#4648d4";
 
-const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
+interface Draft {
+  id: string;
+  name: string;
+  color: string;
+}
 
 export function TagsView({ csrf }: { csrf: string }) {
   const tags = useCollection<Tag>("tags", csrf, true);
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#4648d4");
-  const [hexDraft, setHexDraft] = useState("#4648d4");
+  const [color, setColor] = useState(DEFAULT_COLOR);
+  const [editing, setEditing] = useState<Draft | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
-
-  function chooseColor(value: string) {
-    setColor(value);
-    setHexDraft(value);
-  }
-
-  function typeHex(value: string) {
-    setHexDraft(value);
-    if (HEX_PATTERN.test(value)) setColor(value.toLowerCase());
-  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -47,16 +29,30 @@ export function TagsView({ csrf }: { csrf: string }) {
       formatVersion: 1,
       revision: 1,
       id: crypto.randomUUID(),
-      name,
-      normalizedName: name.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase(),
+      name: name.trim(),
+      normalizedName: normalizeTagName(name),
       color,
       createdAt: now,
       updatedAt: now,
     });
-    if (created) {
-      setName("");
-      setError(undefined);
+    if (created) setName("");
+  }
+
+  async function saveEdit(tag: Tag) {
+    if (!editing) return;
+    const nextName = editing.name.trim();
+    if (nextName === "") {
+      setError("A tag needs a name.");
+      return;
     }
+    setError(undefined);
+    const updated = await tags.update({
+      ...tag,
+      name: nextName,
+      normalizedName: normalizeTagName(nextName),
+      color: editing.color,
+    });
+    if (updated) setEditing(undefined);
   }
 
   async function remove(tag: Tag) {
@@ -75,7 +71,7 @@ export function TagsView({ csrf }: { csrf: string }) {
         eyebrow="Taxonomy · case-insensitive, Unicode-aware"
         title="Tags"
         titleId="tags-title"
-        lead="Tags bucket spending and drive the tagging rules. Deleting one removes it from every transaction and rule that used it."
+        lead="Tags bucket spending and drive the tagging rules. Renaming one keeps every transaction and rule that uses it."
         facts={<Chip tone="neutral">{tags.items.length} defined</Chip>}
       />
 
@@ -92,37 +88,9 @@ export function TagsView({ csrf }: { csrf: string }) {
             <input value={name} onChange={(event) => setName(event.target.value)} required />
           </label>
           <div className="field">
-            <span id="tag-colour-label">Colour</span>
-            <div className="swatch-picker" role="radiogroup" aria-labelledby="tag-colour-label">
-              {TAG_COLORS.map((option) => {
-                const selected = color === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    aria-label={`${option.label} ${option.value}`}
-                    className={selected ? "swatch-choice selected" : "swatch-choice"}
-                    style={{ background: option.value }}
-                    onClick={() => chooseColor(option.value)}
-                  >
-                    {selected ? <Icon name="check" size={13} /> : null}
-                  </button>
-                );
-              })}
-            </div>
+            <span id="tag-colour-new">Colour</span>
+            <TagColorField color={color} onChange={setColor} labelId="tag-colour-new" />
           </div>
-          <label>
-            Custom hex
-            <input
-              value={hexDraft}
-              spellCheck={false}
-              placeholder="#4648d4"
-              className="hex-field"
-              onChange={(event) => typeHex(event.target.value)}
-            />
-          </label>
           <button type="submit" className="btn primary" disabled={name.trim() === ""}>
             <Icon name="plus" size={16} />
             Add tag
@@ -142,18 +110,75 @@ export function TagsView({ csrf }: { csrf: string }) {
         </header>
         {tags.items.length > 0 ? (
           <ul className="tag-list">
-            {tags.items.map((tag) => (
-              <li key={tag.id}>
-                <span>
-                  <span className="swatch" style={{ background: tag.color ?? "#4648d4" }} />
-                  <strong>{tag.name}</strong>
-                </span>
-                <button type="button" className="btn small danger" onClick={() => void remove(tag)}>
-                  <Icon name="trash" size={14} />
-                  Delete everywhere
-                </button>
-              </li>
-            ))}
+            {tags.items.map((tag) =>
+              editing?.id === tag.id ? (
+                <li key={tag.id} className="tag-row editing">
+                  <label>
+                    Name
+                    <input
+                      aria-label={`Tag name ${tag.name}`}
+                      value={editing.name}
+                      onChange={(event) => setEditing({ ...editing, name: event.target.value })}
+                    />
+                  </label>
+                  <div className="field">
+                    <span id={`tag-colour-${tag.id}`}>Colour</span>
+                    <TagColorField
+                      color={editing.color}
+                      onChange={(value) => setEditing({ ...editing, color: value })}
+                      labelId={`tag-colour-${tag.id}`}
+                    />
+                  </div>
+                  <div className="cell-actions">
+                    <button
+                      type="button"
+                      className="btn small"
+                      onClick={() => setEditing(undefined)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn small primary"
+                      onClick={() => void saveEdit(tag)}
+                    >
+                      <Icon name="check" size={14} />
+                      Save
+                    </button>
+                  </div>
+                </li>
+              ) : (
+                <li key={tag.id} className="tag-row">
+                  <span>
+                    <span className="swatch" style={{ background: tag.color ?? DEFAULT_COLOR }} />
+                    <strong>{tag.name}</strong>
+                  </span>
+                  <div className="cell-actions">
+                    <button
+                      type="button"
+                      className="btn small"
+                      onClick={() =>
+                        setEditing({
+                          id: tag.id,
+                          name: tag.name,
+                          color: tag.color ?? DEFAULT_COLOR,
+                        })
+                      }
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn small danger"
+                      onClick={() => void remove(tag)}
+                    >
+                      <Icon name="trash" size={14} />
+                      Delete everywhere
+                    </button>
+                  </div>
+                </li>
+              ),
+            )}
           </ul>
         ) : (
           <Empty>No tags yet. Add the first one above.</Empty>

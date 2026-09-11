@@ -45,9 +45,7 @@ export function AppShell({
       <aside className="sidebar">
         <div>
           <div className="brand">
-            <span className="brand-icon">
-              <Icon name="shield" size={16} />
-            </span>
+            <img className="brand-mark" src="/favicon.svg" alt="" width={30} height={30} />
             Flowly
           </div>
           <p className="nav-section">Vault navigation</p>

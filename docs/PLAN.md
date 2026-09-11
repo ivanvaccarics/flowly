@@ -311,7 +311,7 @@ import. Each section opens with a header card (eyebrow, title, facts and
 actions), cards are white and borderless over a lavender canvas, and tinted
 panels carry nested controls. Only implemented features are rendered, fonts use
 local stacks so the app never needs a CDN, and `docs/DESIGN.md` records the
-tokens and the mapping.
+tokens, the brand assets shipped from `apps/web/public` and the mapping.
 
 The two UIs follow one product design specification but are implemented with
 their platform-native toolkit:
@@ -1080,9 +1080,10 @@ in `docs/adr/0007-finance-cascades-and-portability.md`.
 Delivered:
 
 - Account, transaction, tag and note CRUD over the repository layer with
-  revision-checked writes, archive-instead-of-delete for accounts, and explicit
-  cascade confirmations for accounts and tags. `409` responses carry the counts
-  the user is about to remove.
+  revision-checked writes, archive-instead-of-delete for accounts (reversible
+  through `POST /api/accounts/:id/restore`, `docs/adr/0013`), and explicit cascade
+  confirmations for accounts and tags. `409` responses carry the counts the user
+  is about to remove.
 - Tagging rules: CRUD, evaluation on manual creation and CSV merge, and an
   explicit idempotent backfill with an evaluated/changed report.
 - Transaction CSV export and import following
@@ -1138,8 +1139,8 @@ it inside a single transaction after writing an encrypted snapshot.
 
 ### Phase 4 - Server analysis features
 
-Status: **complete** (2026-09-11). `pnpm verify` runs 147 tests (contracts 11,
-server 124, web 12), including the analytics and search suites. Decisions are
+Status: **complete** (2026-09-11). `pnpm verify` runs 148 tests (contracts 11,
+server 125, web 12), including the analytics and search suites. Decisions are
 recorded in `docs/adr/0008-dashboard-search-and-budget-semantics.md`; its budget
 parts are superseded by `docs/adr/0010-remove-budgets.md`.
 
@@ -1178,7 +1179,7 @@ cached in memory.
 ### Phase 5 - Server hardening and release
 
 Status: **complete for its engineering scope** (2026-09-11). `pnpm verify` runs
-147 tests (contracts 11, server 124, web 12). Two verification items cannot be
+148 tests (contracts 11, server 125, web 12). Two verification items cannot be
 finished by writing code in this repository — an independent cryptographic
 review and a full assistive-technology accessibility audit — and are tracked as
 open in `docs/security/verification.md`. Decisions are recorded in
@@ -1233,7 +1234,7 @@ Delivered:
 **Exit criteria:** the **Flowly Server MVP** passes its acceptance suite and
 requires neither Internet access nor any Flowly-operated service for core use.
 
-Met: the acceptance suite is `pnpm verify` plus `pnpm build` (147 tests), the
+Met: the acceptance suite is `pnpm verify` plus `pnpm build` (148 tests), the
 container runs with no outbound network dependency and no Flowly-operated
 service, and the deployment, backup and threat-model documentation ships with
 the repository. The independent cryptographic review and the assistive-technology

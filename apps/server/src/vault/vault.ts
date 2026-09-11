@@ -319,6 +319,15 @@ export class Vault {
     return this.accounts.update({ ...account, archivedAt: this.clock.nowIso() }, revision);
   }
 
+  /** Clears `archivedAt`, so an archived account returns to the active list. */
+  async restoreAccount(id: string, revision: number): Promise<Account> {
+    const account = await this.accounts.get(id);
+    if (!account) throw new AccountNotFoundError(id);
+    const restored: Account = { ...account };
+    delete restored.archivedAt;
+    return this.accounts.update(restored, revision);
+  }
+
   /** Deletes an account; without `cascade` it refuses when transactions exist. */
   async deleteAccount(
     id: string,

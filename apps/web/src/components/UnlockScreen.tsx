@@ -27,12 +27,13 @@ export function UnlockScreen({
   return (
     <div className="unlock-layout">
       <main className="unlock-card" aria-labelledby="shell-title">
-        <div className="brand" style={{ height: "auto", padding: 0, border: 0 }}>
-          <span className="brand-icon">
-            <Icon name="shield" size={16} />
-          </span>
-          Flowly
-        </div>
+        <img
+          className="logo-lockup"
+          src="/logo.svg"
+          alt="Flowly — your money, your device, your keys"
+          width={228}
+          height={57}
+        />
 
         <div>
           <p className="eyebrow">

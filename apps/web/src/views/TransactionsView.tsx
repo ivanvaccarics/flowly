@@ -344,7 +344,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                   setFilters({ ...filters, tagId: filters.tagId === tag.id ? "" : tag.id })
                 }
               >
-                #{tag.name}
+                {tag.name}
               </button>
             ))}
           </div>
@@ -428,7 +428,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                               className="swatch"
                               style={{ background: tag?.color ?? "#4648d4" }}
                             />
-                            #{tag?.name ?? "…"}
+                            {tag?.name ?? "…"}
                           </span>
                         );
                       })

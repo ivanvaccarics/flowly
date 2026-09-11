@@ -167,6 +167,45 @@ describe("core finance API", () => {
     }
   });
 
+  it("restores an archived account", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    try {
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/accounts",
+        payload: { entity: SAMPLE_ACCOUNT },
+      });
+      const archived = await call(harness.app, harness.client, {
+        method: "POST",
+        url: `/api/accounts/${SAMPLE_ACCOUNT.id}/archive`,
+        payload: { revision: 1 },
+      });
+      expect(archived.statusCode).toBe(200);
+
+      const restored = await call(harness.app, harness.client, {
+        method: "POST",
+        url: `/api/accounts/${SAMPLE_ACCOUNT.id}/restore`,
+        payload: { revision: 2 },
+      });
+      expect(restored.statusCode).toBe(200);
+      const entity = restored.json<{ entity: { archivedAt?: string; revision: number } }>().entity;
+      expect(entity.archivedAt).toBeUndefined();
+      expect(entity.revision).toBe(3);
+
+      const listed = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/accounts",
+      });
+      const items = listed.json<{ items: Array<{ id: string; archivedAt?: string }> }>().items;
+      expect(
+        items.find((candidate) => candidate.id === SAMPLE_ACCOUNT.id)?.archivedAt,
+      ).toBeUndefined();
+    } finally {
+      await harness.close();
+    }
+  });
+
   it("accepts an edit that clears an optional text field", async () => {
     const { config } = makeConfig();
     const harness = await startHarness(config);

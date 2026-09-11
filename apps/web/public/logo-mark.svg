@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Flowly">
+  <defs>
+    <linearGradient id="flowly-flow" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#006c49" />
+      <stop offset="1" stop-color="#6cf8bb" />
+    </linearGradient>
+  </defs>
+  <g fill="#005236">
+    <path d="M4 34 C16 8 34 2 47 11 C36 22 13 30 4 34 Z" transform="translate(0 3)" />
+    <path d="M9 51 C19 27 35 21 45 28 C35 38 17 46 9 51 Z" transform="translate(0 3)" />
+    <path d="M21 62 C29 46 38 42 43 45 C39 53 26 58 21 62 Z" transform="translate(0 3)" />
+  </g>
+  <g fill="url(#flowly-flow)">
+    <path d="M4 34 C16 8 34 2 47 11 C36 22 13 30 4 34 Z" />
+    <path d="M9 51 C19 27 35 21 45 28 C35 38 17 46 9 51 Z" />
+    <path d="M21 62 C29 46 38 42 43 45 C39 53 26 58 21 62 Z" />
+  </g>
+</svg>

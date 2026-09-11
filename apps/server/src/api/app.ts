@@ -337,6 +337,18 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     return { entity: await context.vault.archiveAccount(id, revision) };
   });
 
+  app.post("/api/accounts/:id/restore", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    const { id } = request.params as { id: string };
+    const revision = revisionFrom(request.body);
+    if (!revision) {
+      reply.code(400);
+      return { error: "revision_required" };
+    }
+    return { entity: await context.vault.restoreAccount(id, revision) };
+  });
+
   app.delete("/api/accounts/:id/cascade", async (request, reply) => {
     const context = requireContext(request, reply);
     if (!context) return errorBody(reply);

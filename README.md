@@ -186,12 +186,14 @@ with one sidebar and six sections: **Dashboard**, **Accounts**, **Transactions**
 **Tags**, **Rules** and **Settings**. Every section opens with a header card
 carrying its status facts and actions; accounts are endpoint cards with their real
 balances, rules are tiles with an on/off switch, and the ledger's filters include
-quick tag pills. Settings holds the passphrase change plus export and import,
-where a CSV merge is additive and a complete archive replaces the vault after an
-explicit confirmation and an encrypted safety snapshot. Deleting an account or a
-tag asks for a cascade and tells you how many records are affected. See
-[docs/DESIGN.md](docs/DESIGN.md) for the tokens and the mapping to what actually
-ships.
+quick tag pills. Accounts can be archived and restored, tags can be renamed and
+recoloured in place, and Settings holds the passphrase change plus export and
+import, where a CSV merge is additive and a complete archive replaces the vault
+after an explicit confirmation and an encrypted safety snapshot. Deleting an
+account or a tag asks for a cascade and tells you how many records are affected.
+The product mark (SVG logo, favicon and iOS icon) ships in `apps/web/public` and
+is documented in [docs/DESIGN.md](docs/DESIGN.md), along with the tokens and the
+mapping to what actually ships.
 
 You can drive the whole lifecycle against a running server with
 `node tooling/scripts/vault-smoke.mjs create` and then

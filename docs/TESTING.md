@@ -76,7 +76,7 @@ passphrase, instead of showing a locked vault you cannot open.
 The unit, integration and contract suites are separate:
 
 ```bash
-pnpm verify          # format, lint, secret scan, types, 147 tests
+pnpm verify          # format, lint, secret scan, types, 148 tests
 pnpm build           # compile the server, bundle the UI
 pnpm release:check   # license policy for runtime dependencies
 ```
@@ -105,13 +105,15 @@ you should see.
 | Do this | Expect |
 | --- | --- |
 | Add an account (name, type, currency) | It appears in the list and in the transaction form's account picker |
-| Add a tag with a color | It appears with its color and can be selected on transactions |
+| Add a tag from the colour palette | It appears with that colour and can be selected on transactions |
+| Rename a tag and pick another colour, then save | The row shows the new name once; transactions and rules that use the tag keep it |
 | Add a transaction with payee, note and a tag | It appears in the table with the amount formatted in its currency |
 | Edit the note of a transaction | The change is saved; the revision increases |
 | Open the same transaction in two tabs and save both | The second save reports a revision conflict instead of overwriting |
 | Filter by account, date range, tag, status or free text | The list narrows and the count updates; nothing is filtered in the browser only |
 | Delete a transaction | It disappears; reloading keeps it gone |
-| Archive an account | It stays in the list marked archived, and no longer offers archiving |
+| Archive an account | It stays in the list marked archived, and offers **Restore** instead of **Archive** |
+| Restore that account | It is active again with the same id, balance and transactions |
 | Try to delete an account that has transactions | You are told how many transactions are involved and asked for a cascade |
 | Confirm the cascade delete | The account and its transactions are gone |
 | Delete a tag that is in use, then confirm the cascade | The tag disappears from transactions and rules everywhere |

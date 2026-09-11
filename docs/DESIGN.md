@@ -14,6 +14,24 @@ canvas, soft ambient shadows instead of hard borders, dense tabular structures,
 restrained feedback and precise typographic contrast. No gradients, no
 decorative noise, no dark-mode inversion.
 
+## Brand
+
+The Flowly mark is three nested "flow" leaves with a folded underside, drawn as
+SVG and served from `apps/web/public`:
+
+| Asset | Use |
+| --- | --- |
+| `logo-mark.svg` | The mark alone, transparent, for light surfaces |
+| `logo.svg` | Horizontal lockup: mark, the `Flowly` wordmark and the tagline; used on the unlock card |
+| `favicon.svg` | Rounded dark tile with the mark; browser tab and the sidebar brand |
+| `apple-touch-icon.png` | 180 px full-bleed square of the same tile for iOS home-screen bookmarks |
+
+Colours come from the platform tokens: the leaves run from `--secondary`
+`#006c49` to the mint `#6cf8bb` with the fold in `#005236`, the wordmark uses
+`--text` `#131b2e` and the tagline `--text-muted`. The lockup is drawn for light
+surfaces; on dark surfaces use the mark or the tile. The wordmark is live text in
+the SVG, so it follows the same local font stack as the rest of the interface.
+
 ## Tokens
 
 Defined once as CSS custom properties in `apps/web/src/styles.css`. The values
@@ -86,12 +104,14 @@ not shift.
   a dashed dropzone.
 - **Status chip:** compact 2/8 px padding with tone variants (`income`, `expense`,
   `vault`, `neutral`); `meta` and `mono` variants cover uppercase and hashed data.
-- **Tag pill:** monospaced `#name` pill tinted with the tag colour; the same pill
-  is used as a quick filter button, filled indigo when active.
+- **Tag pill:** monospaced pill tinted with the tag colour. The ledger shows the
+  plain tag name and reuses the pill as a quick filter button (filled indigo when
+  active); the rule tiles prefix `#` because there the tag reads as part of the
+  expression a rule applies.
 - **Colour picker:** eight palette swatches from the design tokens rendered as a
   radiogroup (a ring plus a check marks the selection), with a monospaced
   `#rrggbb` field beside it so any colour stays reachable. No native colour
-  wheel.
+  wheel. Shared by the create form and the inline tag editor.
 - **Switch:** 40×22 px on/off control for pausing a tagging rule.
 - **Tag picker:** a compact trigger that summarises the selection (up to two tag
   pills plus a `+N` counter) and opens a popup with a search field, a scrollable
@@ -110,9 +130,9 @@ Only shipping functionality is on screen; every figure comes from the API.
 | Section | Contents |
 | --- | --- |
 | Dashboard | Hero with the vault engine and vault id, segmented period control (month / 3 months / year / custom), Export data and New transaction shortcuts, four metric cards per currency (total balance, income, expenses, net + savings rate) with deltas against the previous equal-length period, cash-flow chart (weekly income/expense bars with a net line, inline SVG), spending breakdown with a stacked share bar and percentages, average daily spend, recent transactions table, accounts summary and the local vault status card |
-| Accounts | Hero with the account and currency counts, create form, and one card per account with its real balance per currency and booked-movement count, archive and cascade delete |
+| Accounts | Hero with the account and currency counts, create form, and one card per account with its real balance per currency and booked-movement count, archive, restore an archived account, and cascade delete |
 | Transactions | Hero with the match count, record form (notes, tag picker, status), server-side filters (text, account, tag, status, date range), quick tag-filter pills, and a table with inline editing of **payee, amount, note and tags**, a status chip that switches booked ↔ pending, the source shown as an offline-AES chip, and delete |
-| Tags | Hero with the tag count, create with a palette colour (or a custom hex value), cascade delete |
+| Tags | Hero with the tag count, create with a palette colour (or a custom hex value), **inline rename and recolour** of an existing tag, and cascade delete |
 | Rules | Hero with the rule counts and the backfill action, condition builder (AND/OR, per-field operators, amount currency), tag selection, and a side column of rule tiles with an on/off switch, the matched expression and delete |
 | Settings | Hero with the cipher and zero-cloud chips, passphrase change, and paired export and import option cards: transaction CSV, complete encrypted archive, CSV preview and merge, archive replacement |
 

@@ -77,6 +77,17 @@ export function AccountsView({ csrf }: { csrf: string }) {
     }
   }
 
+  async function restore(account: Account) {
+    setActionError(undefined);
+    try {
+      await api.restoreAccount(csrf, account.id, account.revision);
+      await accounts.reload();
+      await loadBalances();
+    } catch (cause) {
+      setActionError(describeError(cause));
+    }
+  }
+
   const currencies = new Set(balances.map((line) => line.currency));
 
   return (
@@ -191,7 +202,16 @@ export function AccountsView({ csrf }: { csrf: string }) {
                   ))}
 
                 <div className="cell-actions">
-                  {account.archivedAt ? null : (
+                  {account.archivedAt ? (
+                    <button
+                      type="button"
+                      className="btn small primary"
+                      onClick={() => void restore(account)}
+                    >
+                      <Icon name="check" size={14} />
+                      Restore
+                    </button>
+                  ) : (
                     <button
                       type="button"
                       className="btn small"

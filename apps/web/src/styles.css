@@ -173,16 +173,17 @@ h3 {
   color: var(--text);
 }
 
-.brand-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.brand-mark {
+  display: block;
   width: 30px;
   height: 30px;
-  border-radius: var(--radius-md);
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(70, 72, 212, 0.35);
+  flex: 0 0 auto;
+}
+
+.logo-lockup {
+  display: block;
+  width: min(228px, 60%);
+  height: auto;
 }
 
 .nav-section {
@@ -736,6 +737,13 @@ input[type="checkbox"] {
   gap: 0.4rem;
 }
 
+.colour-control {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
 .swatch-choice {
   display: inline-flex;
   align-items: center;
@@ -767,6 +775,15 @@ input[type="checkbox"] {
   width: 128px;
   font-family: var(--font-mono);
   text-transform: lowercase;
+}
+
+.tag-list li.editing {
+  align-items: flex-end;
+}
+
+.tag-list li.editing > label {
+  flex: 1 1 180px;
+  min-width: 180px;
 }
 
 .checkline {
