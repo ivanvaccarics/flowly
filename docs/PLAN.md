@@ -1,5 +1,11 @@
 # Flowly - Architecture, Security, Requirements, and Implementation Plan
 
+> Companion documents: [RUNNING.md](./RUNNING.md) explains how to run the app,
+> self-host it and work on later iterations; [adr/](./adr/) records the decisions
+> behind each phase; [../contracts/](../contracts/) holds the canonical schemas
+> and golden vectors. All paths in this document are relative to the repository
+> root.
+
 ## 1. Purpose
 
 Flowly is a local-first personal finance application delivered first as a

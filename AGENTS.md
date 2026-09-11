@@ -20,11 +20,12 @@
 
 ## Documentation Maintenance
 
-Review `PLAN.md` and `README.md` during every development iteration and update them whenever necessary.
+Review `docs/PLAN.md`, `docs/RUNNING.md` and `README.md` during every development
+iteration and update them whenever necessary.
 
-### `PLAN.md`
+### `docs/PLAN.md`
 
-Keep `PLAN.md` aligned with the current state of the project. Update it to reflect:
+Keep `docs/PLAN.md` aligned with the current state of the project. Update it to reflect:
 
 - Completed work.
 - Current implementation status.
@@ -46,7 +47,9 @@ Update `README.md` whenever a change affects:
 
 Documentation must accurately describe the implemented behavior. Include documentation updates in the same commit as the change they describe.
 
-If an iteration does not require documentation changes, verify that both `PLAN.md` and `README.md` remain accurate before completing the iteration.
+If an iteration does not require documentation changes, verify that
+`docs/PLAN.md`, `docs/RUNNING.md` and `README.md` remain accurate before
+completing the iteration.
 
 ## Iteration Completion Checklist
 
@@ -54,7 +57,7 @@ Before considering an iteration complete:
 
 1. Review the implementation and its associated tests.
 2. Run all relevant tests, linters, and validation checks.
-3. Review and update `PLAN.md` and `README.md` as necessary.
+3. Review and update `docs/PLAN.md`, `docs/RUNNING.md` and `README.md` as necessary.
 4. Inspect the final changes with `git diff`.
 5. Create a clear, focused commit containing the completed work.
 6. Verify the repository state with `git status`.

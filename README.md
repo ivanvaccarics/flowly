@@ -195,6 +195,17 @@ You can drive the whole lifecycle against a running server with
 publishes the port on `127.0.0.1` only, and the server refuses to bind a public
 interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
 
+### 📚 Documentation
+
+- [docs/RUNNING.md](docs/RUNNING.md) — how to run Flowly locally, self-host it,
+  use it from a phone today, and what the planned mobile/desktop apps will need.
+- [docs/PLAN.md](docs/PLAN.md) — architecture, security requirements, data
+  model and the phase-by-phase delivery plan.
+- [docs/adr/](docs/adr/) — the decisions behind the storage engine, key
+  hierarchy, sessions, portability, toolchain, concurrency and cascades.
+- [contracts/README.md](contracts/README.md) — the canonical schemas, fixtures
+  and golden vectors that both clients must satisfy.
+
 ---
 
 ## 🚦 Where we are
@@ -203,8 +214,9 @@ Flowly is **in early development**. The architecture and security model are
 designed and reviewed, Phase 0 proved the encrypted storage and session
 feasibility, Phase 1 stands up the real workspace with canonical contracts, and
 Phase 2 delivers the encrypted vault itself: Argon2id unlock, SQLCipher storage,
-browser sessions with auto-lock and revision-checked writes. The app itself is
-being built in the open and there is no release yet.
+browser sessions with auto-lock and revision-checked writes, and Phase 3 adds the
+daily finance flows with tagging rules and file-based portability. The app itself
+is being built in the open and there is no release yet.
 
 | | Milestone | Status |
 | --- | --- | --- |

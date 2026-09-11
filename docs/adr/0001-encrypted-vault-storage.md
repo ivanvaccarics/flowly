@@ -4,7 +4,7 @@ Status: Accepted (Phase 0)
 
 ## Context
 
-The server owns one vault on hardware the user controls. PLAN.md requires that a
+The server owns one vault on hardware the user controls. `docs/PLAN.md` requires that a
 locked vault leaves nothing readable on disk, that tampering fails closed, and
 that migrations, exports and rollbacks stay atomic. Phase 0 had to choose how
 SQLite data is encrypted at rest and prove it works on the supported Docker

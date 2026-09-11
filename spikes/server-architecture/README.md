@@ -1,6 +1,6 @@
 # Phase 0 spike — self-hosted server architecture
 
-Throwaway proof-of-concepts for the Phase 0 exit criteria in `PLAN.md`:
+Throwaway proof-of-concepts for the Phase 0 exit criteria in `docs/PLAN.md`:
 encrypted vault storage, vault lifecycle, migrations, failure behaviour,
 portable export/import, and private-network HTTPS sessions.
 
