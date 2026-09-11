@@ -27,7 +27,6 @@ export function makeConfig(overrides: Partial<ServerConfig> = {}): {
     FLOWLY_VAULT_DIR: dir,
     FLOWLY_STORAGE_ENGINE: "sqlcipher",
     FLOWLY_LOG_LEVEL: "silent",
-    FLOWLY_ALLOWED_ORIGIN: "http://127.0.0.1:5173",
   });
   return { config: { ...base, ...overrides }, dir };
 }

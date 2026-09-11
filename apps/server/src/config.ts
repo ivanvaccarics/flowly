@@ -37,7 +37,8 @@ const envSchema = z.object({
   FLOWLY_PORT: z.coerce.number().int().min(1).max(65535).default(8787),
   FLOWLY_VAULT_DIR: z.string().min(1).default("./data/vault"),
   FLOWLY_STORAGE_ENGINE: z.enum(["sqlcipher", "record-encryption"]).default("sqlcipher"),
-  FLOWLY_ALLOWED_ORIGIN: z.string().min(1).default("http://127.0.0.1:5173"),
+  /** Extra browser origin allowed to call the API; same-origin is always allowed. */
+  FLOWLY_ALLOWED_ORIGIN: z.string().default(""),
   FLOWLY_LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),

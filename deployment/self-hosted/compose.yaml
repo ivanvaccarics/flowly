@@ -14,7 +14,8 @@ services:
       FLOWLY_PORT: "8787"
       FLOWLY_VAULT_DIR: /vault
       FLOWLY_STORAGE_ENGINE: ${FLOWLY_STORAGE_ENGINE:-sqlcipher}
-      FLOWLY_ALLOWED_ORIGIN: ${FLOWLY_ALLOWED_ORIGIN:-http://127.0.0.1:5173}
+      # Optional: extra origin allowed to call the API (same-origin is implicit).
+      FLOWLY_ALLOWED_ORIGIN: ${FLOWLY_ALLOWED_ORIGIN:-}
       FLOWLY_LOG_LEVEL: ${FLOWLY_LOG_LEVEL:-info}
       FLOWLY_WEB_DIR: /repo/apps/web/dist
       # TLS terminates at the reverse proxy below, so cookies get the Secure flag.

@@ -80,6 +80,11 @@ sent. The server also sets `Content-Security-Policy`, `X-Content-Type-Options`,
 `Referrer-Policy`, `X-Frame-Options`, `Cross-Origin-Opener-Policy` and
 `Permissions-Policy` on every response.
 
+Requests coming from the app the server itself serves are always trusted; a
+foreign `Origin` is rejected. Set `FLOWLY_ALLOWED_ORIGIN` only when a different
+host must call the API (for example a separately served front-end), which is why
+it is empty by default.
+
 ## Backup and restore
 
 Manual exports are the supported backup in the MVP (automatic encrypted backups

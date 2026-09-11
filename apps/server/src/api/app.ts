@@ -100,7 +100,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   const requireSession = (request: FastifyRequest, reply: FastifyReply): Session | undefined => {
     const session = sessions.touch(readCookie(request, COOKIE_NAME) ?? "");
     if (!session) {
-      reply.code(401);
+      deny(reply, 401, "session_required");
       return undefined;
     }
     return session;
@@ -108,17 +108,17 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   const requireContext: ContextGuard = (request, reply) => {
     if (!originAllowed(request, config)) {
-      reply.code(403);
+      deny(reply, 403, "origin_not_allowed");
       return undefined;
     }
     const session = requireSession(request, reply);
     if (!session) return undefined;
     if (isMutating(request) && !csrfMatches(request, session)) {
-      reply.code(403);
+      deny(reply, 403, "csrf_token_invalid");
       return undefined;
     }
     if (!vault?.isUnlocked) {
-      reply.code(423);
+      deny(reply, 423, "vault_locked");
       return undefined;
     }
     return { session, vault };
@@ -638,6 +638,8 @@ function lockedStatus(engine: ServerConfig["storageEngine"]): VaultStatus {
 }
 
 function errorBody(reply: FastifyReply): Record<string, unknown> {
+  const reason = (reply as unknown as { flowlyError?: string }).flowlyError;
+  if (reason) return { error: reason };
   switch (reply.statusCode) {
     case 401:
       return { error: "session_required" };
@@ -650,6 +652,11 @@ function errorBody(reply: FastifyReply): Record<string, unknown> {
   }
 }
 
+function deny(reply: FastifyReply, status: number, error: string): void {
+  (reply as unknown as { flowlyError?: string }).flowlyError = error;
+  reply.code(status);
+}
+
 function isMutating(request: FastifyRequest): boolean {
   return request.method !== "GET" && request.method !== "HEAD";
 }
@@ -657,7 +664,12 @@ function isMutating(request: FastifyRequest): boolean {
 function originAllowed(request: FastifyRequest, config: ServerConfig): boolean {
   const origin = request.headers.origin;
   if (!origin) return true;
-  return origin === config.allowedOrigin;
+  // The app is served by this server, so its own origin is always trusted: the
+  // browser sets Host from the URL it called, and a foreign page cannot forge it.
+  const sameOrigin = `${request.protocol}://${request.headers.host ?? ""}`;
+  if (origin === sameOrigin) return true;
+  // An extra origin (a separate front-end host, or a dev server) is opt-in.
+  return config.allowedOrigin !== "" && origin === config.allowedOrigin;
 }
 
 function csrfMatches(request: FastifyRequest, session: Session): boolean {

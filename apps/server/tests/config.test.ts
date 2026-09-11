@@ -7,7 +7,7 @@ describe("server configuration", () => {
     expect(config.host).toBe("127.0.0.1");
     expect(config.port).toBe(8787);
     expect(config.storageEngine).toBe("sqlcipher");
-    expect(config.allowedOrigin).toBe("http://127.0.0.1:5173");
+    expect(config.allowedOrigin).toBe("");
     expect(config.vaultDir).toBe("./data/vault");
   });
 
