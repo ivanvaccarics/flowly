@@ -1,0 +1,18 @@
+services:
+  vault-smoke:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: flowly-spike-server-architecture:local
+    environment:
+      FLOWLY_VAULT_DIR: /vault/data
+      FLOWLY_EXPORTS_DIR: /vault/exports
+      FLOWLY_PASSPHRASE: ${FLOWLY_PASSPHRASE:-smoke test passphrase}
+      FLOWLY_ARCHIVE_PASSWORD: ${FLOWLY_ARCHIVE_PASSWORD:-smoke archive password}
+      FLOWLY_ENGINE: ${FLOWLY_ENGINE:-sqlcipher}
+    volumes:
+      - vault-data:/vault
+    command: ["create"]
+
+volumes:
+  vault-data:

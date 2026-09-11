@@ -1,0 +1,24 @@
+{
+  "name": "@flowly/spike-server-architecture",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Throwaway Phase 0 proof-of-concepts: encrypted vault storage, vault lifecycle, sessions, transport and portability.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --no-warnings --experimental-strip-types --experimental-sqlite --test tests/*.test.ts",
+    "bench": "node --no-warnings --experimental-strip-types --experimental-sqlite src/bench/run-bench.ts"
+  },
+  "dependencies": {
+    "@journeyapps/sqlcipher": "^6.0.0",
+    "@node-rs/argon2": "^2.2.1",
+    "tar": "^7.5.22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "typescript": "^7.0.2"
+  }
+}

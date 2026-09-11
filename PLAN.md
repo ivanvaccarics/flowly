@@ -46,10 +46,16 @@ The repository is an early prototype rather than an application:
 
 - `README.md` describes the intended product and roadmap but no application has
   been implemented yet.
+- `spikes/server-architecture/` holds the completed Phase 0 proof-of-concepts:
+  encrypted vault storage, vault lifecycle, migrations, failure behaviour,
+  portability and HTTPS sessions, with a measured report and multi-architecture
+  container checks. It is throwaway code and stays outside the production
+  workspace.
 - `.python-version` selects Python 3.14.
 - `enable_banking.py` is a standalone Enable Banking exploration script.
-- There is no dependency manifest, application structure, schema migration
-  system, automated test suite, CI configuration, or release configuration.
+- There is no production dependency manifest, application structure, CI
+  configuration, or release configuration yet; Phase 1 creates them. The only
+  test suite is the Phase 0 spike suite.
 - Local `data/`, `secrets/`, `.venv/`, and `node_modules/` paths are ignored.
 - The prototype reads an RSA private key from `secrets/`, creates a JWT, prints
   that JWT, and performs an interactive authorization flow. Printing tokens and
@@ -81,6 +87,7 @@ hardened.
 | Web ownership | Single owner, one vault, multiple concurrent browser sessions |
 | Web deployment | Persistent Docker volume and private-network HTTPS; no direct Internet exposure |
 | Access boundary | Private LAN or user-managed VPN only |
+| Server storage engine | SQLCipher 4 through `@journeyapps/sqlcipher`, with `node:sqlite` plus AES-256-GCM record encryption as the documented fallback |
 | Delivery order | Release the server, then Enable Banking for Server, then recurring transactions, then Flutter |
 | Future bank integration | A separate trusted backend/connector is allowed |
 | Additional MVP scope | Dashboard, advanced search, multi-currency, budgets, manual tagging rules |
@@ -157,6 +164,8 @@ flowly/
         infrastructure/
         presentation/
     banking-connector/           # Future TypeScript Enable Banking service
+  spikes/
+    server-architecture/         # Throwaway Phase 0 proof-of-concepts, retired after Phase 1
   contracts/
     schemas/                     # Canonical JSON Schema definitions
     csv/                         # CSV/archive schemas and version documentation
@@ -468,10 +477,11 @@ Required behavior:
 ### 8.2 Self-hosted web service
 
 The server deployment is the source of truth for all of its browser sessions.
-Use SQLCipher-backed SQLite if the feasibility spike proves a maintained
-TypeScript binding and reliable packaging on every supported Docker platform.
-Otherwise use audited authenticated record encryption over SQLite behind the
-same repository interfaces.
+Phase 0 proved SQLCipher 4 through `@journeyapps/sqlcipher` on
+`linux/arm64` and `linux/amd64`, so SQLCipher is the primary engine. Keep it
+behind a storage adapter and retain `node:sqlite` plus AES-256-GCM record
+encryption as the fallback when the native build is unavailable on a supported
+host.
 
 - Store the database, journal, and migration state in a persistent Docker
   volume with restrictive host permissions.
@@ -523,6 +533,13 @@ adapters. CI must compare canonical outputs. The suites verify:
 6. Keep the unwrapped DEK in memory only while the vault is unlocked.
 
 Do not implement cryptographic primitives manually.
+
+Phase 0 established the concrete construction: Argon2id through
+`@node-rs/argon2` with a 16-byte salt and versioned parameters (default
+19 MiB, t=2, p=1, 32-byte output, measured at 22.9 ms per unlock), AES-256-GCM
+to wrap the DEK with the vault identifier as additional authenticated data, and
+HKDF-SHA256 subkeys per purpose. Parameters are stored with the vault so they
+can be strengthened later without re-encrypting data.
 
 ### 9.2 Optional biometric unlock
 
@@ -913,6 +930,12 @@ then does Flutter work begin in Phase 8.
 
 ### Phase 0 - Server architecture and security feasibility
 
+Status: **complete** (2026-09-11). Results, measurements and reproduction
+commands are in `spikes/server-architecture/REPORT.md`; the binding decisions are
+recorded in `docs/adr/0001`-`docs/adr/0004`. The 23-test spike suite passes, and
+the vault lifecycle was verified in containers on `linux/arm64` and
+`linux/amd64` with no plaintext artifacts.
+
 #### Task `server-architecture-spike`
 
 - Build throwaway proof-of-concepts for:
@@ -929,6 +952,10 @@ then does Flutter work begin in Phase 8.
 
 **Exit criteria:** every supported Docker platform can create, lock, reopen,
 migrate, export, and delete an encrypted vault without plaintext artifacts.
+
+Met on Linux `arm64` and Linux `amd64` (the latter through Docker Desktop
+emulation on Apple Silicon). A native `amd64` host and Docker Desktop on Windows
+remain to be confirmed during Phase 1 CI setup.
 
 ### Phase 1 - Server foundation
 
@@ -1325,6 +1352,11 @@ The first MVP is complete at the end of Phase 5 only when:
 - Tauri 2: <https://v2.tauri.app/>
 - Docker Compose: <https://docs.docker.com/compose/>
 - SQLCipher: <https://www.zetetic.net/sqlcipher/>
+- `@journeyapps/sqlcipher`: <https://www.npmjs.com/package/@journeyapps/sqlcipher>
+- `@node-rs/argon2`: <https://www.npmjs.com/package/@node-rs/argon2>
+- Node.js SQLite (`node:sqlite`): <https://nodejs.org/api/sqlite.html>
+- Node.js native TypeScript type stripping:
+  <https://nodejs.org/api/typescript.html>
 - OWASP Mobile Application Security: <https://mas.owasp.org/>
 - OWASP Application Security Verification Standard:
   <https://owasp.org/www-project-application-security-verification-standard/>

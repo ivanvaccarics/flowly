@@ -95,8 +95,9 @@ work.*
 - **Optional biometrics are planned for native apps** — Face ID, Touch ID,
   Android BiometricPrompt and Windows Hello will be shortcuts, never
   replacements for your passphrase.
-- **Encrypted at rest**: encrypted SQLite on the self-hosted server, with
-  SQLCipher planned for installed apps.
+- **Encrypted at rest**: SQLCipher 4 on the self-hosted server — verified in
+  Phase 0 on Linux `arm64` and `amd64` with no readable data on disk while the
+  vault is locked — and SQLCipher on installed apps.
 - **Auto-lock** on inactivity and when the app goes to the background.
 - **Fails closed**: wrong key or tampered data raises a clear error, never a
   silently empty vault.
@@ -154,12 +155,13 @@ cross-client tests keep the two implementations honest. 🤝
 ## 🚦 Where we are
 
 Flowly is **in early development**. The architecture and security model are
-designed and reviewed; the app itself is being built in the open, and there is
-no release yet.
+designed and reviewed, the Phase 0 server feasibility spike is complete
+(encrypted vault storage, key hierarchy, sessions and portable exports), and the
+app itself is being built in the open. There is no release yet.
 
 | | Milestone | Status |
 | --- | --- | --- |
-| 0️⃣ | Server storage, Docker and private-network security feasibility | 🔜 Up next |
+| 0️⃣ | Server storage, Docker and private-network security feasibility | ✅ Complete |
 | 1️⃣ | Server foundation, contracts and TypeScript domain | ⏳ Planned |
 | 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ⏳ Planned |
 | 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ⏳ Planned |
