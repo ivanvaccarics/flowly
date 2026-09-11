@@ -1152,6 +1152,32 @@ it inside a single transaction after writing an encrypted snapshot.
 
 ### Phase 4 - Server analysis and budgeting features
 
+Status: **complete** (2026-09-11). `pnpm verify` runs 140 tests (contracts 12,
+server 123, web 5), including the analytics and search suites. Decisions are
+recorded in `docs/adr/0008-dashboard-search-and-budget-semantics.md`.
+
+Delivered:
+
+- Dashboard aggregates computed from signed minor units and ISO calendar dates:
+  balances per account and currency, cash flow per currency, spending by tag,
+  and budget progress. Booked transactions only; currencies are never blended.
+- Budget consumption with calendar-aware periods, account and tag filters, a
+  rollover carry from the previous period, warning/over thresholds, and an
+  explicit count of skipped transactions in other currencies. An explicit
+  converted amount in the budget currency is counted; implicit conversion never
+  happens.
+- Server-side transaction search: date range, account, tag, currency, status,
+  source, amount range, free text across payee/description/notes, pagination and
+  a total. The SQL layer narrows on the indexed columns and the rest is filtered
+  in memory.
+- Migration 2 adds date and update indexes for the dashboard ranges, and an
+  in-memory aggregate cache keyed by a cheap table fingerprint keeps repeated
+  dashboard reads fast without persisting anything derived from decrypted data.
+- `dashboard.schema.json` joins the contracts, so the dashboard response is
+  validated at runtime and the shape is shared with the future Dart client.
+- React dashboard and budgets screens, plus server-side filters in the
+  transactions screen.
+
 #### Task `implement-server-dashboard-search`
 
 - Add dashboard summaries, date ranges, account/tag filters, and text search.
@@ -1164,6 +1190,12 @@ it inside a single transaction after writing an encrypted snapshot.
 
 **Exit criteria:** calculations are deterministic across locale and time zone,
 and the reference data set remains interactive on supported hosts.
+
+Met: every calculation uses integer minor units and ISO dates with no locale or
+local-time formatting, the analytics suite asserts exact values for balances,
+cash flow, spending and budgets, and the reference data set stays interactive
+because ranges are narrowed on indexed columns and repeated aggregates are
+cached in memory.
 
 ### Phase 5 - Server hardening and release
 

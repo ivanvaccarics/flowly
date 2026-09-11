@@ -31,7 +31,16 @@ export interface StoredRefs {
 export interface ListOptions {
   /** Filters on the non-sensitive `ref_a` index column. */
   refA?: string;
+  /** Inclusive lower bound on the `ref_b` column (dates for transactions). */
+  refBFrom?: string;
+  /** Inclusive upper bound on the `ref_b` column. */
+  refBTo?: string;
   limit?: number;
+}
+
+export interface TableStats {
+  count: number;
+  updatedAtMax: string | null;
 }
 
 export interface VaultStore {
@@ -55,6 +64,8 @@ export interface VaultStore {
   remove(table: VaultTable, id: string, expectedRevision: number): Promise<void>;
   clear(table: VaultTable): Promise<void>;
   count(table: VaultTable): Promise<number>;
+  /** Cheap aggregate used for cache keys; never loads payloads. */
+  tableStats(table: VaultTable): Promise<TableStats>;
 
   transaction<T>(work: () => Promise<T>): Promise<T>;
   bytesOnDisk(): number;

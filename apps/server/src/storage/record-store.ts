@@ -9,7 +9,7 @@ import {
   type MigrationHooks,
 } from "./migrations.js";
 import { fileSize, updatedAtOf } from "./sqlcipher-store.js";
-import type { ListOptions, StoredRefs, VaultStore } from "./store.js";
+import type { ListOptions, StoredRefs, TableStats, VaultStore } from "./store.js";
 import { createTransactionRunner } from "./transaction-scope.js";
 
 type NodeSqlite = { DatabaseSync: new (path: string) => DatabaseSync };
@@ -121,6 +121,14 @@ export class RecordEncryptionStore implements VaultStore {
       clauses.push("ref_a = ?");
       params.push(options.refA);
     }
+    if (options.refBFrom !== undefined) {
+      clauses.push("ref_b >= ?");
+      params.push(options.refBFrom);
+    }
+    if (options.refBTo !== undefined) {
+      clauses.push("ref_b <= ?");
+      params.push(options.refBTo);
+    }
     const where = clauses.length > 0 ? ` WHERE ${clauses.join(" AND ")}` : "";
     const limit = options.limit !== undefined ? " LIMIT ?" : "";
     if (options.limit !== undefined) params.push(options.limit);
@@ -173,6 +181,13 @@ export class RecordEncryptionStore implements VaultStore {
     const row = this.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as
       { n: number } | undefined;
     return row?.n ?? 0;
+  }
+
+  async tableStats(table: string): Promise<TableStats> {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) AS n, MAX(updated_at) AS m FROM ${table}`)
+      .get() as { n: number; m: string | null } | undefined;
+    return { count: row?.n ?? 0, updatedAtMax: row?.m ?? null };
   }
 
   async clear(table: string): Promise<void> {

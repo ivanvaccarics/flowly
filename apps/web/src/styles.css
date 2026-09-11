@@ -313,3 +313,53 @@ button:disabled {
   border-radius: 1rem;
   padding: 1rem 1.5rem;
 }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: #11141b;
+  border: 1px solid #2b3140;
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+
+.card h3 {
+  margin: 0 0 0.35rem;
+}
+
+.card p {
+  margin: 0.15rem 0;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text);
+}
+
+.filters {
+  border: 1px solid #2b3140;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.budget-on-track {
+  color: #6ee7a8;
+}
+
+.budget-warning {
+  color: #ffd166;
+}
+
+.budget-over {
+  color: var(--danger);
+}

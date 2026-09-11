@@ -2,7 +2,7 @@ import { statSync } from "node:fs";
 import { ConflictError, RecordExistsError, RecordNotFoundError, StorageError } from "./errors.js";
 import { MIGRATIONS, runMigrations, type MigrationHooks } from "./migrations.js";
 import { SqlcipherDatabase } from "./sqlcipher-driver.js";
-import type { ListOptions, StoredRefs, VaultStore } from "./store.js";
+import type { ListOptions, StoredRefs, TableStats, VaultStore } from "./store.js";
 import { createTransactionRunner } from "./transaction-scope.js";
 
 interface StoredRow {
@@ -75,6 +75,14 @@ export class SqlcipherStore implements VaultStore {
       clauses.push("ref_a = ?");
       params.push(options.refA);
     }
+    if (options.refBFrom !== undefined) {
+      clauses.push("ref_b >= ?");
+      params.push(options.refBFrom);
+    }
+    if (options.refBTo !== undefined) {
+      clauses.push("ref_b <= ?");
+      params.push(options.refBTo);
+    }
     const where = clauses.length > 0 ? ` WHERE ${clauses.join(" AND ")}` : "";
     const limit = options.limit !== undefined ? " LIMIT ?" : "";
     if (options.limit !== undefined) params.push(options.limit);
@@ -126,6 +134,13 @@ export class SqlcipherStore implements VaultStore {
   async count(table: string): Promise<number> {
     const row = await this.db.getRow<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table}`);
     return row?.n ?? 0;
+  }
+
+  async tableStats(table: string): Promise<TableStats> {
+    const row = await this.db.getRow<{ n: number; m: string | null }>(
+      `SELECT COUNT(*) AS n, MAX(updated_at) AS m FROM ${table}`,
+    );
+    return { count: row?.n ?? 0, updatedAtMax: row?.m ?? null };
   }
 
   async clear(table: string): Promise<void> {

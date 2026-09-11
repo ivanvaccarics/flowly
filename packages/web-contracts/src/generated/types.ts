@@ -65,6 +65,54 @@ export interface Budget {
 }
 
 /**
+ * Dashboard view computed from the vault. Totals always carry a currency code and never blend currencies.
+ */
+export interface Dashboard {
+  range: {
+    from: string;
+    to: string;
+  };
+  generatedAt: string;
+  balances: {
+    accountId: string;
+    accountName: string;
+    currency: string;
+    balanceMinor: number;
+    isDefaultCurrency: boolean;
+    transactionCount: number;
+  }[];
+  cashFlow: {
+    currency: string;
+    incomeMinor: number;
+    expensesMinor: number;
+    netMinor: number;
+    transactionCount: number;
+  }[];
+  spendingByTag: {
+    tagId: string;
+    tagName: string;
+    currency: string;
+    spentMinor: number;
+    transactionCount: number;
+  }[];
+  budgets: {
+    budgetId: string;
+    name: string;
+    currency: string;
+    period: "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
+    periodStart: string;
+    periodEnd: string;
+    limitMinor: number;
+    rolloverCarryMinor: number;
+    spentMinor: number;
+    remainingMinor: number;
+    percentUsed: number;
+    status: "on-track" | "warning" | "over";
+    skippedOtherCurrencies: number;
+  }[];
+}
+
+/**
  * Calendar-aware recurring transaction template. Occurrence generation is delivered in Phase 7.
  */
 export interface RecurringRule {

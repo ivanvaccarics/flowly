@@ -138,7 +138,7 @@ describe("vault API", () => {
     expect(status.statusCode).toBe(200);
     const body = status.json<{ state: string; schemaVersion: number; storageEngine: string }>();
     expect(body.state).toBe("unlocked");
-    expect(body.schemaVersion).toBe(1);
+    expect(body.schemaVersion).toBe(2);
     expect(body.storageEngine).toBe("sqlcipher");
   });
 

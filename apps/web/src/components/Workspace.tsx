@@ -1,15 +1,19 @@
 import { useState } from "react";
 import type { VaultStatus } from "@flowly/web-contracts";
 import { AccountsPanel } from "./AccountsPanel.js";
+import { BudgetsPanel } from "./BudgetsPanel.js";
 import { DataPanel } from "./DataPanel.js";
+import { DashboardPanel } from "./DashboardPanel.js";
 import { RulesPanel } from "./RulesPanel.js";
 import { TagsPanel } from "./TagsPanel.js";
 import { TransactionsPanel } from "./TransactionsPanel.js";
 
 const TABS = [
+  ["dashboard", "Dashboard"],
   ["accounts", "Accounts"],
   ["transactions", "Transactions"],
   ["tags", "Tags"],
+  ["budgets", "Budgets"],
   ["rules", "Rules"],
   ["data", "Import & export"],
 ] as const;
@@ -35,7 +39,7 @@ export function Workspace({
   onChangePassphrase,
   onClearError,
 }: WorkspaceProps) {
-  const [tab, setTab] = useState<Tab>("accounts");
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [changed, setChanged] = useState(false);
@@ -83,8 +87,10 @@ export function Workspace({
 
       <div role="tabpanel" aria-label={tab}>
         {tab === "accounts" ? <AccountsPanel csrf={csrf} /> : null}
+        {tab === "dashboard" ? <DashboardPanel /> : null}
         {tab === "transactions" ? <TransactionsPanel csrf={csrf} /> : null}
         {tab === "tags" ? <TagsPanel csrf={csrf} /> : null}
+        {tab === "budgets" ? <BudgetsPanel csrf={csrf} /> : null}
         {tab === "rules" ? <RulesPanel csrf={csrf} /> : null}
         {tab === "data" ? <DataPanel csrf={csrf} /> : null}
       </div>

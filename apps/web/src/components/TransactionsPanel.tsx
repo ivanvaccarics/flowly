@@ -1,12 +1,30 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Account, Tag, Transaction } from "@flowly/web-contracts";
+import { api } from "../api/client.js";
 import { useCollection } from "../hooks/use-collection.js";
+import { describeError } from "../hooks/use-workspace.js";
 import { formatMoney, parseAmountToMinor } from "../lib/money.js";
 
+interface Filters {
+  accountId: string;
+  from: string;
+  to: string;
+  tagId: string;
+  status: string;
+  q: string;
+}
+
+const EMPTY_FILTERS: Filters = { accountId: "", from: "", to: "", tagId: "", status: "", q: "" };
+
 export function TransactionsPanel({ csrf }: { csrf: string }) {
-  const transactions = useCollection<Transaction>("transactions", csrf, true);
   const accounts = useCollection<Account>("accounts", csrf, true);
   const tags = useCollection<Tag>("tags", csrf, true);
+
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [items, setItems] = useState<Transaction[]>([]);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
 
   const [accountId, setAccountId] = useState("");
   const [bookingDate, setBookingDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -14,7 +32,6 @@ export function TransactionsPanel({ csrf }: { csrf: string }) {
   const [payee, setPayee] = useState("");
   const [userNote, setUserNote] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [filter, setFilter] = useState("");
   const [editing, setEditing] = useState<{ id: string; note: string } | undefined>(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
 
@@ -25,15 +42,30 @@ export function TransactionsPanel({ csrf }: { csrf: string }) {
     [tags.items],
   );
 
-  const visible = transactions.items.filter((transaction) => {
-    if (filter.trim() === "") return true;
-    const needle = filter.toLowerCase();
-    return (
-      (transaction.payee ?? "").toLowerCase().includes(needle) ||
-      (transaction.userNote ?? "").toLowerCase().includes(needle) ||
-      (transaction.description ?? "").toLowerCase().includes(needle)
-    );
-  });
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await api.searchTransactions({
+        ...(filters.accountId ? { accountId: filters.accountId } : {}),
+        ...(filters.from ? { from: filters.from } : {}),
+        ...(filters.to ? { to: filters.to } : {}),
+        ...(filters.tagId ? { tags: filters.tagId } : {}),
+        ...(filters.status ? { status: filters.status } : {}),
+        ...(filters.q ? { q: filters.q } : {}),
+      });
+      setItems(response.items);
+      setTotal(response.total);
+      setError(undefined);
+    } catch (cause) {
+      setError(describeError(cause));
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -50,39 +82,54 @@ export function TransactionsPanel({ csrf }: { csrf: string }) {
       return;
     }
     const now = new Date().toISOString();
-    const created = await transactions.create({
-      formatVersion: 1,
-      revision: 1,
-      id: crypto.randomUUID(),
-      accountId,
-      bookingDate,
-      amountMinor,
-      currency,
-      status: "booked",
-      source: "manual",
-      tagIds: selectedTags,
-      createdAt: now,
-      updatedAt: now,
-      ...(payee ? { payee } : {}),
-      ...(userNote ? { userNote } : {}),
-    });
-    if (created) {
+    try {
+      await api.create<Transaction>(csrf, "transactions", {
+        formatVersion: 1,
+        revision: 1,
+        id: crypto.randomUUID(),
+        accountId,
+        bookingDate,
+        amountMinor,
+        currency,
+        status: "booked",
+        source: "manual",
+        tagIds: selectedTags,
+        createdAt: now,
+        updatedAt: now,
+        ...(payee ? { payee } : {}),
+        ...(userNote ? { userNote } : {}),
+      });
       setAmount("");
       setPayee("");
       setUserNote("");
       setSelectedTags([]);
-      // Rules may have added tags, so reload once more after the write.
-      await transactions.reload();
+      await load();
+    } catch (cause) {
+      setFormError(describeError(cause));
     }
   }
 
   async function saveNote(transaction: Transaction) {
     if (!editing) return;
-    const saved = await transactions.update({
-      ...transaction,
-      userNote: editing.note,
-    } as Transaction & { id: string });
-    if (saved) setEditing(undefined);
+    try {
+      await api.update<Transaction>(csrf, "transactions", transaction.id, {
+        ...transaction,
+        userNote: editing.note,
+      });
+      setEditing(undefined);
+      await load();
+    } catch (cause) {
+      setError(describeError(cause));
+    }
+  }
+
+  async function remove(transaction: Transaction) {
+    try {
+      await api.remove(csrf, "transactions", transaction.id, transaction.revision);
+      await load();
+    } catch (cause) {
+      setError(describeError(cause));
+    }
   }
 
   return (
@@ -149,21 +196,84 @@ export function TransactionsPanel({ csrf }: { csrf: string }) {
         <button type="submit">Add transaction</button>
       </form>
 
-      {formError ? (
-        <p role="alert" className="error">
-          {formError}
-        </p>
-      ) : null}
-      {transactions.error ? (
-        <p role="alert" className="error">
-          {transactions.error}
-        </p>
-      ) : null}
+      <fieldset className="filters">
+        <legend>Filters</legend>
+        <label>
+          Filter by account
+          <select
+            value={filters.accountId}
+            onChange={(event) => setFilters({ ...filters, accountId: event.target.value })}
+          >
+            <option value="">Any</option>
+            {accounts.items.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          From
+          <input
+            type="date"
+            value={filters.from}
+            onChange={(event) => setFilters({ ...filters, from: event.target.value })}
+          />
+        </label>
+        <label>
+          To
+          <input
+            type="date"
+            value={filters.to}
+            onChange={(event) => setFilters({ ...filters, to: event.target.value })}
+          />
+        </label>
+        <label>
+          Tag
+          <select
+            value={filters.tagId}
+            onChange={(event) => setFilters({ ...filters, tagId: event.target.value })}
+          >
+            <option value="">Any</option>
+            {tags.items.map((tag) => (
+              <option key={tag.id} value={tag.id}>
+                {tag.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Status
+          <select
+            value={filters.status}
+            onChange={(event) => setFilters({ ...filters, status: event.target.value })}
+          >
+            <option value="">Any</option>
+            <option value="booked">booked</option>
+            <option value="pending">pending</option>
+          </select>
+        </label>
+        <label>
+          Search
+          <input
+            value={filters.q}
+            onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+            placeholder="payee, note, description"
+          />
+        </label>
+        <button type="button" onClick={() => setFilters(EMPTY_FILTERS)}>
+          Clear
+        </button>
+      </fieldset>
 
-      <label className="filter">
-        Filter
-        <input value={filter} onChange={(event) => setFilter(event.target.value)} />
-      </label>
+      {(formError ?? error) ? (
+        <p role="alert" className="error">
+          {formError ?? error}
+        </p>
+      ) : null}
+      <p className="muted" role="status">
+        {loading ? "Searching…" : `${total} transactions match`}
+      </p>
 
       <table className="table">
         <thead>
@@ -177,7 +287,7 @@ export function TransactionsPanel({ csrf }: { csrf: string }) {
           </tr>
         </thead>
         <tbody>
-          {visible.map((transaction) => (
+          {items.map((transaction) => (
             <tr key={transaction.id}>
               <td>{transaction.bookingDate}</td>
               <td>{transaction.payee ?? "—"}</td>
@@ -218,10 +328,7 @@ export function TransactionsPanel({ csrf }: { csrf: string }) {
                     Edit note
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => void transactions.remove(transaction.id, transaction.revision)}
-                >
+                <button type="button" onClick={() => void remove(transaction)}>
                   Delete
                 </button>
               </td>
@@ -229,7 +336,7 @@ export function TransactionsPanel({ csrf }: { csrf: string }) {
           ))}
         </tbody>
       </table>
-      {visible.length === 0 ? <p className="muted">No transactions match yet.</p> : null}
+      {!loading && items.length === 0 ? <p className="muted">No transactions match.</p> : null}
     </section>
   );
 }

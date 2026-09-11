@@ -67,7 +67,7 @@ export function useCollection<T extends { id: string; revision: number }>(
     ),
     update: useCallback(
       (entity: T & { id: string }) =>
-        csrf ? mutate(() => api.update(csrf, kind, entity)) : Promise.resolve(false),
+        csrf ? mutate(() => api.update(csrf, kind, entity.id, entity)) : Promise.resolve(false),
       [csrf, kind, mutate],
     ),
     remove: useCallback(

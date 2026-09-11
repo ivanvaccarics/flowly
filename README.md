@@ -73,15 +73,18 @@ to blend unlike currencies into one fake number without a real exchange rate.
 ### 📊 A dashboard worth opening
 Balances per account, net cash flow, income vs. expenses, spending by tag,
 budget consumption and upcoming recurring transactions — all computed on your
-self-hosted server, without an Internet dependency.
+self-hosted server, without an Internet dependency. Totals always carry their
+currency, and only booked transactions move a balance.
 
 ### 🔎 Search that actually finds it
 Filter by date range, account, tag, amount, currency, status or source — and
-free-text search across payee, description and your notes.
+free-text search across payee, description and your notes. Filtering runs on the
+server, so a large vault stays quick.
 
 ### 🎯 Budgets
 Weekly, monthly, quarterly, yearly or custom periods. Scope them to accounts or
-tags. Turn rollover on or off. Watch the bar fill up (or not 😅).
+tags. Turn rollover on or off. Watch the bar fill up (or not 😅). Transactions in
+another currency are skipped unless they carry an explicit converted amount.
 
 ### 🔁 Recurring transactions
 Real calendar arithmetic — not "every 30 days". Rent on the 31st behaves the way
@@ -215,8 +218,9 @@ designed and reviewed, Phase 0 proved the encrypted storage and session
 feasibility, Phase 1 stands up the real workspace with canonical contracts, and
 Phase 2 delivers the encrypted vault itself: Argon2id unlock, SQLCipher storage,
 browser sessions with auto-lock and revision-checked writes, and Phase 3 adds the
-daily finance flows with tagging rules and file-based portability. The app itself
-is being built in the open and there is no release yet.
+daily finance flows with tagging rules and file-based portability. Phase 4 adds
+the dashboard, server-side search and budgets. The app itself is being built in
+the open and there is no release yet.
 
 | | Milestone | Status |
 | --- | --- | --- |
@@ -224,7 +228,7 @@ is being built in the open and there is no release yet.
 | 1️⃣ | Server foundation, contracts and TypeScript domain | ✅ Complete |
 | 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ✅ Complete |
 | 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ✅ Complete |
-| 4️⃣ | Server dashboard, search and budgets | ⏳ Planned |
+| 4️⃣ | Server dashboard, search and budgets | ✅ Complete |
 | 5️⃣ | Server hardening and release | ⏳ Planned |
 | 6️⃣ | Enable Banking for Server | 🔮 Post-MVP |
 | 7️⃣ | Recurring transactions — the next feature after banking | 🔮 Post-MVP |

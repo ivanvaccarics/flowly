@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowly.local/contracts/schemas/dashboard.schema.json",
+  "title": "Dashboard",
+  "description": "Dashboard view computed from the vault. Totals always carry a currency code and never blend currencies.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["range", "generatedAt", "balances", "cashFlow", "spendingByTag", "budgets"],
+  "properties": {
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string", "format": "date" },
+        "to": { "type": "string", "format": "date" }
+      }
+    },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "balances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "accountId",
+          "accountName",
+          "currency",
+          "balanceMinor",
+          "isDefaultCurrency",
+          "transactionCount"
+        ],
+        "properties": {
+          "accountId": { "type": "string", "format": "uuid" },
+          "accountName": { "type": "string" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "balanceMinor": { "type": "integer" },
+          "isDefaultCurrency": { "type": "boolean" },
+          "transactionCount": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "cashFlow": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["currency", "incomeMinor", "expensesMinor", "netMinor", "transactionCount"],
+        "properties": {
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "incomeMinor": { "type": "integer" },
+          "expensesMinor": { "type": "integer" },
+          "netMinor": { "type": "integer" },
+          "transactionCount": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "spendingByTag": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tagId", "tagName", "currency", "spentMinor", "transactionCount"],
+        "properties": {
+          "tagId": { "type": "string", "format": "uuid" },
+          "tagName": { "type": "string" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "spentMinor": { "type": "integer" },
+          "transactionCount": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "budgets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "budgetId",
+          "name",
+          "currency",
+          "period",
+          "periodStart",
+          "periodEnd",
+          "limitMinor",
+          "rolloverCarryMinor",
+          "spentMinor",
+          "remainingMinor",
+          "percentUsed",
+          "status",
+          "skippedOtherCurrencies"
+        ],
+        "properties": {
+          "budgetId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "period": { "enum": ["weekly", "monthly", "quarterly", "yearly", "custom"] },
+          "periodStart": { "type": "string", "format": "date" },
+          "periodEnd": { "type": "string", "format": "date" },
+          "limitMinor": { "type": "integer" },
+          "rolloverCarryMinor": { "type": "integer" },
+          "spentMinor": { "type": "integer" },
+          "remainingMinor": { "type": "integer" },
+          "percentUsed": { "type": "number", "minimum": 0 },
+          "status": { "enum": ["on-track", "warning", "over"] },
+          "skippedOtherCurrencies": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

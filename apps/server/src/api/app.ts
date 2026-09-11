@@ -2,13 +2,16 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
-import type { VaultStatus } from "@flowly/web-contracts";
+import { validateContract, type VaultStatus } from "@flowly/web-contracts";
 import { ImportExportService } from "../application/import-export-service.js";
+import { AnalyticsService } from "../application/analytics.js";
+import { parseTransactionQuery, TransactionSearchService } from "../application/search.js";
 import { TaggingRuleService } from "../application/tagging-rule-service.js";
 import type { ServerConfig } from "../config.js";
 import { VaultCorruptError, VaultKeyError } from "../crypto/errors.js";
 import { DomainError } from "../domain/errors.js";
 import { generateId } from "../domain/ids.js";
+import { isIsoDate } from "../domain/values.js";
 import { ArchiveIntegrityError, ArchivePasswordError, ImportError } from "../portability/errors.js";
 import { AttemptLimiter, SessionStore, type Session } from "../session/session-store.js";
 import {
@@ -235,6 +238,17 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       const rules = await taggingRules.rules();
       return taggingRules.withRuleTags(transaction, rules).transaction;
     },
+    undefined,
+    async (context, request) => {
+      const query = parseTransactionQuery(request.query as Record<string, unknown>);
+      const result = await new TransactionSearchService(context.vault).search(query);
+      return {
+        items: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+      };
+    },
   );
   registerCollection(
     app,
@@ -250,6 +264,44 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     requireContext,
     (context) => context.vault.taggingRules,
   );
+  registerCollection(app, "/api/budgets", requireContext, (context) => context.vault.budgets);
+
+  // --- dashboard, search and budget consumption -----------------------------
+
+  app.get("/api/dashboard", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    const query = request.query as Record<string, unknown>;
+    const today = new Date().toISOString().slice(0, 10);
+    const from = typeof query["from"] === "string" ? query["from"] : `${today.slice(0, 7)}-01`;
+    const to = typeof query["to"] === "string" ? query["to"] : today;
+    const reference = typeof query["reference"] === "string" ? query["reference"] : to;
+    if (!isIsoDate(from) || !isIsoDate(to) || !isIsoDate(reference) || from > to) {
+      reply.code(400);
+      return { error: "invalid_date_range" };
+    }
+    const dashboard = await new AnalyticsService(context.vault).dashboard({ from, to }, reference);
+    const validation = validateContract("dashboard", dashboard);
+    if (!validation.valid) {
+      reply.code(500);
+      return { error: "contract_violation", details: validation.errors };
+    }
+    return dashboard;
+  });
+
+  app.get("/api/budgets/consumption", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    const query = request.query as Record<string, unknown>;
+    const reference = typeof query["reference"] === "string" ? query["reference"] : undefined;
+    if (reference !== undefined && !isIsoDate(reference)) {
+      reply.code(400);
+      return { error: "invalid_reference_date" };
+    }
+    const service = new AnalyticsService(context.vault);
+    const items = await (reference ? service.budgetProgress(reference) : service.budgetProgress());
+    return { items };
+  });
 
   // --- destructive operations, cascades and tagging backfill -----------------
 
@@ -431,6 +483,10 @@ function registerCollection<T extends RepositoryEntity>(
     revision: number,
     cascade: boolean,
   ) => Promise<unknown>,
+  listEntities?: (
+    context: RequestContext,
+    request: FastifyRequest,
+  ) => Promise<Record<string, unknown>>,
 ): void {
   const resolve = (request: FastifyRequest, reply: FastifyReply) => {
     const context = guard(request, reply);
@@ -440,6 +496,7 @@ function registerCollection<T extends RepositoryEntity>(
   instance.get(path, async (request, reply) => {
     const resolved = resolve(request, reply);
     if (!resolved) return errorBody(reply);
+    if (listEntities) return listEntities(resolved.context, request);
     return { items: await resolved.repository.list() };
   });
 

@@ -1,4 +1,14 @@
-import type { VaultStatus } from "@flowly/web-contracts";
+import type { Dashboard, Transaction, VaultStatus } from "@flowly/web-contracts";
+
+function queryString(params: Record<string, string | number | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === "") continue;
+    search.set(key, String(value));
+  }
+  const encoded = search.toString();
+  return encoded === "" ? "" : `?${encoded}`;
+}
 
 export class ApiError extends Error {
   readonly status: number;
@@ -73,10 +83,32 @@ export const api = {
       body: { currentPassphrase, nextPassphrase },
     }),
   list: <T>(kind: string) => request<{ items: T[] }>(`/api/${kind}`),
+  dashboard: (params: { from?: string; to?: string; reference?: string } = {}) =>
+    request<Dashboard>(`/api/dashboard${queryString(params)}`),
+  searchTransactions: (params: {
+    accountId?: string;
+    from?: string;
+    to?: string;
+    tags?: string;
+    currency?: string;
+    status?: string;
+    q?: string;
+    minAmountMinor?: number;
+    maxAmountMinor?: number;
+    limit?: number;
+    offset?: number;
+  }) =>
+    request<{ items: Transaction[]; total: number; limit: number; offset: number }>(
+      `/api/transactions${queryString(params)}`,
+    ),
+  budgetConsumption: (reference?: string) =>
+    request<{ items: Dashboard["budgets"] }>(
+      `/api/budgets/consumption${queryString({ reference })}`,
+    ),
   create: <T>(csrf: string, kind: string, entity: unknown) =>
     request<{ entity: T }>(`/api/${kind}`, { method: "POST", csrf, body: { entity } }),
-  update: <T>(csrf: string, kind: string, entity: { id: string }) =>
-    request<{ entity: T }>(`/api/${kind}/${entity.id}`, { method: "PUT", csrf, body: { entity } }),
+  update: <T>(csrf: string, kind: string, id: string, entity: unknown) =>
+    request<{ entity: T }>(`/api/${kind}/${id}`, { method: "PUT", csrf, body: { entity } }),
   remove: (csrf: string, kind: string, id: string, revision: number) =>
     request<{ deleted: boolean }>(`/api/${kind}/${id}?revision=${revision}`, {
       method: "DELETE",

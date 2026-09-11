@@ -43,6 +43,16 @@ export const MIGRATIONS: Migration[] = [
       recordTable("settings"),
     ],
   },
+  {
+    version: 2,
+    name: "dashboard-and-search-indexes",
+    statements: [
+      // Date-only searches (dashboard ranges) get their own index; the account
+      // index from version 1 stays the better choice when an account is known.
+      `CREATE INDEX IF NOT EXISTS transactions_booking_idx ON transactions(ref_b)`,
+      `CREATE INDEX IF NOT EXISTS transactions_updated_idx ON transactions(updated_at)`,
+    ],
+  },
 ];
 
 export const SCHEMA_VERSION = Math.max(...MIGRATIONS.map((migration) => migration.version));

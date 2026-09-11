@@ -442,6 +442,11 @@ export class Vault {
     };
   }
 
+  /** Cheap aggregates used for cache keys and dashboards. */
+  async tableStats(table: VaultTable): Promise<{ count: number; updatedAtMax: string | null }> {
+    return this.store().tableStats(table);
+  }
+
   /** Stable, non-secret digest used to detect header tampering across restarts. */
   headerDigest(): string {
     return createHash("sha256")

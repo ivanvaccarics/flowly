@@ -15,6 +15,56 @@ const lockedStatus = {
 
 const unlockedStatus = { ...lockedStatus, state: "unlocked", schemaVersion: 1 };
 
+const dashboard = {
+  range: { from: "2026-09-01", to: "2026-09-30" },
+  generatedAt: "2026-09-30T18:00:00.000Z",
+  balances: [
+    {
+      accountId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+      accountName: "Everyday",
+      currency: "EUR",
+      balanceMinor: 149500,
+      isDefaultCurrency: true,
+      transactionCount: 4,
+    },
+  ],
+  cashFlow: [
+    {
+      currency: "EUR",
+      incomeMinor: 250000,
+      expensesMinor: 103000,
+      netMinor: 147000,
+      transactionCount: 5,
+    },
+  ],
+  spendingByTag: [
+    {
+      tagId: "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082",
+      tagName: "Rent",
+      currency: "EUR",
+      spentMinor: 95000,
+      transactionCount: 1,
+    },
+  ],
+  budgets: [
+    {
+      budgetId: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7081",
+      name: "Groceries",
+      currency: "EUR",
+      period: "monthly",
+      periodStart: "2026-09-01",
+      periodEnd: "2026-09-30",
+      limitMinor: 10000,
+      rolloverCarryMinor: 0,
+      spentMinor: 8000,
+      remainingMinor: 2000,
+      percentUsed: 80,
+      status: "warning",
+      skippedOtherCurrencies: 0,
+    },
+  ],
+};
+
 interface RouteMap {
   [path: string]: (init?: RequestInit) => Response;
 }
@@ -30,9 +80,9 @@ function mockFetch(routes: RouteMap) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url =
-        typeof input === "string" ? input : input instanceof URL ? input.pathname : input.url;
-      const path = url.replace(/^https?:\/\/[^/]+/, "");
+      const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      // Route on the pathname so query strings (filters, ranges) still match.
+      const path = new URL(raw, "http://localhost").pathname;
       const handler = routes[path];
       if (!handler) return json({ error: "not_found" }, 404);
       return handler(init);
@@ -84,6 +134,7 @@ describe("Flowly web client", () => {
       "/api/transactions": () => json({ items: [] }),
       "/api/tags": () => json({ items: [] }),
       "/api/tagging-rules": () => json({ items: [] }),
+      "/api/dashboard": () => json(dashboard),
     });
     render(<App />);
 
@@ -100,6 +151,10 @@ describe("Flowly web client", () => {
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Your vault" })).toBeTruthy());
     expect(screen.getByRole("tab", { name: "Transactions" })).toBeTruthy();
+    expect(await screen.findByText("1470.00 EUR net")).toBeTruthy();
+    expect(screen.getByText("Rent")).toBeTruthy();
+
+    screen.getByRole("tab", { name: "Accounts" }).click();
     expect(await screen.findByText("No accounts yet. Add the first one above.")).toBeTruthy();
   });
 

@@ -20,6 +20,7 @@ const fixtureFor: Record<string, ContractKey> = {
   budget: "budget",
   "recurring-rule": "recurringRule",
   "vault-status": "vaultStatus",
+  dashboard: "dashboard",
 };
 
 describe("canonical contracts", () => {
