@@ -180,9 +180,14 @@ The vault is real now. `POST /api/vault/create` builds an encrypted vault,
 every session. Sessions live in an `HttpOnly` cookie with a CSRF token, expire
 after an idle window, and the vault locks itself when the last session goes
 away. Writes carry the revision they read, so two browsers can never overwrite
-each other silently: a stale write gets `409 revision_conflict`. The browser UI
-still shows the locked shell with a disabled form, because the vault screens
-arrive in Phase 3.
+each other silently: a stale write gets `409 revision_conflict`.
+
+The browser UI covers the whole daily flow: unlock or create the vault, manage
+accounts, add transactions with notes and tags, curate tags, write tagging rules
+and backfill them, and move data in and out. Deleting an account or a tag asks
+for a cascade and tells you how many records are affected; importing a complete
+archive always replaces the vault after an explicit confirmation and an
+encrypted safety snapshot.
 
 You can drive the whole lifecycle against a running server with
 `node tooling/scripts/vault-smoke.mjs create` and then
@@ -206,7 +211,7 @@ being built in the open and there is no release yet.
 | 0️⃣ | Server storage, Docker and private-network security feasibility | ✅ Complete |
 | 1️⃣ | Server foundation, contracts and TypeScript domain | ✅ Complete |
 | 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ✅ Complete |
-| 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ⏳ Planned |
+| 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ✅ Complete |
 | 4️⃣ | Server dashboard, search and budgets | ⏳ Planned |
 | 5️⃣ | Server hardening and release | ⏳ Planned |
 | 6️⃣ | Enable Banking for Server | 🔮 Post-MVP |

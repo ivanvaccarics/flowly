@@ -77,6 +77,61 @@ export const schemas = {
       }
     }
   },
+  "archiveManifest": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://flowly.local/contracts/schemas/archive-manifest.schema.json",
+    "title": "ArchiveManifest",
+    "description": "Checksum manifest of a complete portable archive (export format version 1).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "formatVersion",
+      "createdAt",
+      "vaultId",
+      "entries"
+    ],
+    "properties": {
+      "formatVersion": {
+        "const": 1
+      },
+      "createdAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "vaultId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "entries": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "bytes",
+            "sha256"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    }
+  },
   "budget": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowly.local/contracts/schemas/budget.schema.json",
@@ -713,6 +768,11 @@ export const schemaIndex = [
     "key": "account",
     "title": "Account",
     "id": "https://flowly.local/contracts/schemas/account.schema.json"
+  },
+  {
+    "key": "archiveManifest",
+    "title": "ArchiveManifest",
+    "id": "https://flowly.local/contracts/schemas/archive-manifest.schema.json"
   },
   {
     "key": "budget",

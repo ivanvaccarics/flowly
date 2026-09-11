@@ -3,6 +3,7 @@ import { ConflictError, RecordExistsError, RecordNotFoundError, StorageError } f
 import { MIGRATIONS, runMigrations, type MigrationHooks } from "./migrations.js";
 import { SqlcipherDatabase } from "./sqlcipher-driver.js";
 import type { ListOptions, StoredRefs, VaultStore } from "./store.js";
+import { createTransactionRunner } from "./transaction-scope.js";
 
 interface StoredRow {
   id: string;
@@ -20,10 +21,12 @@ export class SqlcipherStore implements VaultStore {
 
   private readonly db: SqlcipherDatabase;
   private readonly file: string;
+  private readonly txRunner: <T>(work: () => Promise<T>) => Promise<T>;
 
   private constructor(db: SqlcipherDatabase, file: string) {
     this.db = db;
     this.file = file;
+    this.txRunner = createTransactionRunner(db);
     this.details = {
       driver: `@journeyapps/sqlcipher ${db.driverVersion}`,
       cipher: `SQLCipher ${db.cipherVersion}`,
@@ -125,20 +128,12 @@ export class SqlcipherStore implements VaultStore {
     return row?.n ?? 0;
   }
 
+  async clear(table: string): Promise<void> {
+    await this.db.run(`DELETE FROM ${table}`);
+  }
+
   async transaction<T>(work: () => Promise<T>): Promise<T> {
-    await this.db.exec("BEGIN IMMEDIATE");
-    try {
-      const result = await work();
-      await this.db.exec("COMMIT");
-      return result;
-    } catch (error) {
-      try {
-        await this.db.exec("ROLLBACK");
-      } catch {
-        // The connection may already be unusable; the caller reports the error.
-      }
-      throw error;
-    }
+    return this.txRunner(work);
   }
 
   bytesOnDisk(): number {

@@ -139,6 +139,9 @@ importers:
       fastify:
         specifier: ^5.12.4
         version: 5.12.4
+      tar:
+        specifier: ^7.5.22
+        version: 7.5.22
       zod:
         specifier: ^4.6.2
         version: 4.6.2

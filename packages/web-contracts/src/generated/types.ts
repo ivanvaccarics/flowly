@@ -22,6 +22,30 @@ export interface Account {
   updatedAt: string;
 }
 
+/**
+ * Checksum manifest of a complete portable archive (export format version 1).
+ */
+export interface ArchiveManifest {
+  formatVersion: 1;
+  createdAt: string;
+  vaultId: string;
+  /**
+   * @minItems 1
+   */
+  entries: [
+    {
+      name: string;
+      bytes: number;
+      sha256: string;
+    },
+    ...{
+      name: string;
+      bytes: number;
+      sha256: string;
+    }[]
+  ];
+}
+
 export interface Budget {
   formatVersion: 1;
   revision: number;

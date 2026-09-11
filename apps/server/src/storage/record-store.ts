@@ -10,6 +10,7 @@ import {
 } from "./migrations.js";
 import { fileSize, updatedAtOf } from "./sqlcipher-store.js";
 import type { ListOptions, StoredRefs, VaultStore } from "./store.js";
+import { createTransactionRunner } from "./transaction-scope.js";
 
 type NodeSqlite = { DatabaseSync: new (path: string) => DatabaseSync };
 
@@ -34,11 +35,15 @@ export class RecordEncryptionStore implements VaultStore {
   private readonly db: DatabaseSync;
   private readonly file: string;
   private readonly recordKey: Buffer;
+  private readonly txRunner: <T>(work: () => Promise<T>) => Promise<T>;
 
   private constructor(db: DatabaseSync, file: string, recordKey: Buffer) {
     this.db = db;
     this.file = file;
     this.recordKey = recordKey;
+    this.txRunner = createTransactionRunner({
+      exec: async (sql: string) => void this.db.exec(sql),
+    });
     this.details = {
       driver: `node:sqlite ${process.versions.node}`,
       cipher: "AES-256-GCM per record (HKDF-SHA256 subkey)",
@@ -170,20 +175,12 @@ export class RecordEncryptionStore implements VaultStore {
     return row?.n ?? 0;
   }
 
+  async clear(table: string): Promise<void> {
+    this.db.prepare(`DELETE FROM ${table}`).run();
+  }
+
   async transaction<T>(work: () => Promise<T>): Promise<T> {
-    this.db.exec("BEGIN IMMEDIATE");
-    try {
-      const result = await work();
-      this.db.exec("COMMIT");
-      return result;
-    } catch (error) {
-      try {
-        this.db.exec("ROLLBACK");
-      } catch {
-        // The caller reports the original error.
-      }
-      throw error;
-    }
+    return this.txRunner(work);
   }
 
   bytesOnDisk(): number {

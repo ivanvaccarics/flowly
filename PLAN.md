@@ -61,8 +61,8 @@ foundation:
   the workspace, lint and formatting surface.
 - CI (`.github/workflows/ci.yml`) verifies formatting, lint, types, tests,
   contract freshness, builds, and both container architectures.
-- The vault is implemented and encrypted at rest; the browser UI still shows a
-  locked shell with a disabled unlock form because Phase 3 owns the vault UX.
+- The vault is implemented and encrypted at rest, and the browser UI covers the
+  unlock flow, accounts, transactions, tags, tagging rules and import/export.
 - `.python-version` selects Python 3.14, and `enable_banking.py` is a standalone
   Enable Banking exploration script.
 - Local `data/`, `secrets/`, `.venv/`, and `node_modules/` paths are ignored.
@@ -1079,6 +1079,33 @@ returns `409 revision_conflict` with the current revision.
 
 ### Phase 3 - Server core finance and portability
 
+Status: **complete** (2026-09-11). `pnpm verify` runs 119 tests (contracts 11,
+server 104, web 4), including CSV round trips, archive replacement, cascade
+rules, tagging backfill and the API routes. The container smoke test still
+creates a vault, restarts the container and unlocks it. Decisions are recorded
+in `docs/adr/0007-finance-cascades-and-portability.md`.
+
+Delivered:
+
+- Account, transaction, tag and note CRUD over the repository layer with
+  revision-checked writes, archive-instead-of-delete for accounts, and explicit
+  cascade confirmations for accounts and tags. `409` responses carry the counts
+  the user is about to remove.
+- Tagging rules: CRUD, evaluation on manual creation and CSV merge, and an
+  explicit idempotent backfill with an evaluated/changed report.
+- Transaction CSV export and import following
+  `contracts/csv/export-format-v1.md`: RFC 4180, canonical decimal amounts,
+  formula-injection protection, preview with duplicates/new tags/unknown
+  accounts, and an additive merge that reports created, skipped, invalid and
+  rule-tagged rows.
+- Complete portable archive: gzipped tar with a checksum manifest validated
+  against `archive-manifest.schema.json`, AES-256-GCM under an Argon2id-derived
+  key, encrypted safety snapshot before replacement, atomic replace, and loud
+  failures for a wrong password, tampering or an inconsistent archive.
+- React workspace with unlock/create, accounts, transactions (notes and tags),
+  tags, tagging rules and the import/export screen, with accessible forms and
+  plain-language error states including revision conflicts.
+
 #### Task `implement-server-core-finance`
 
 - Build account, transaction, tag, and note CRUD in the server and React UI.
@@ -1111,6 +1138,11 @@ returns `409 revision_conflict` with the current revision.
 **Exit criteria:** server exports round-trip without changing IDs, amounts,
 dates, relationships, notes, or tagging rules; complete imports always replace
 atomically.
+
+Met: the CSV and archive round-trip tests assert stable ids, amounts, dates,
+notes, tag links and tagging rules across vaults; a failed or inconsistent
+archive leaves the destination vault untouched, and a successful one replaces
+it inside a single transaction after writing an encrypted snapshot.
 
 ### Phase 4 - Server analysis and budgeting features
 

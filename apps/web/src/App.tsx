@@ -1,33 +1,37 @@
-import { useEffect, useState } from "react";
-import type { VaultStatus } from "@flowly/web-contracts";
-import { fetchVaultStatus } from "./api/vault-status.js";
 import { LockedVaultShell } from "./components/LockedVaultShell.js";
+import { UnlockScreen } from "./components/UnlockScreen.js";
+import { Workspace } from "./components/Workspace.js";
+import { useWorkspace } from "./hooks/use-workspace.js";
 
 export function App() {
-  const [status, setStatus] = useState<VaultStatus | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const workspace = useWorkspace();
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchVaultStatus(controller.signal)
-      .then((value) => {
-        setStatus(value);
-        setError(undefined);
-      })
-      .catch((cause: unknown) => {
-        if (controller.signal.aborted) return;
-        setError(
-          cause instanceof Error
-            ? `Cannot reach the Flowly server: ${cause.message}`
-            : "Cannot reach the Flowly server.",
-        );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, []);
+  if (workspace.loading) {
+    return <LockedVaultShell status={undefined} loading error={undefined} />;
+  }
 
-  return <LockedVaultShell status={status} loading={loading} error={error} />;
+  if (workspace.status?.state !== "unlocked" || !workspace.csrf) {
+    return (
+      <UnlockScreen
+        status={workspace.status}
+        busy={workspace.busy}
+        error={workspace.error}
+        onUnlock={workspace.unlock}
+        onCreate={workspace.createVault}
+        onClearError={workspace.clearError}
+      />
+    );
+  }
+
+  return (
+    <Workspace
+      csrf={workspace.csrf}
+      status={workspace.status}
+      busy={workspace.busy}
+      error={workspace.error}
+      onLock={workspace.lock}
+      onChangePassphrase={workspace.changePassphrase}
+      onClearError={workspace.clearError}
+    />
+  );
 }

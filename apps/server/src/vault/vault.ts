@@ -58,6 +58,39 @@ export class VaultExistsError extends Error {
   }
 }
 
+export class AccountNotFoundError extends Error {
+  constructor(id: string) {
+    super(`account ${id} does not exist`);
+    this.name = "AccountNotFoundError";
+  }
+}
+
+export class AccountInUseError extends Error {
+  readonly transactionCount: number;
+
+  constructor(id: string, transactionCount: number) {
+    super(
+      `account ${id} still has ${transactionCount} transactions; archive it or confirm a cascade delete`,
+    );
+    this.name = "AccountInUseError";
+    this.transactionCount = transactionCount;
+  }
+}
+
+export class TagInUseError extends Error {
+  readonly transactionCount: number;
+  readonly ruleCount: number;
+
+  constructor(id: string, transactionCount: number, ruleCount: number) {
+    super(
+      `tag ${id} is still used by ${transactionCount} transactions and ${ruleCount} rules; confirm a cascade delete`,
+    );
+    this.name = "TagInUseError";
+    this.transactionCount = transactionCount;
+    this.ruleCount = ruleCount;
+  }
+}
+
 export interface VaultOptions {
   engine?: StorageEngine;
   kdf?: KdfParams;
@@ -226,6 +259,124 @@ export class Vault {
 
   async migrate(hooks: MigrationHooks = {}): Promise<number[]> {
     return this.store().migrate(hooks);
+  }
+
+  /** Runs a multi-record write atomically; used by imports and cascades. */
+  async transaction<T>(work: () => Promise<T>): Promise<T> {
+    return this.store().transaction(work);
+  }
+
+  /** Replaces the entire vault content in one transaction (archive import). */
+  async replaceAllContent(data: {
+    accounts?: Account[];
+    transactions?: Transaction[];
+    tags?: Tag[];
+    taggingRules?: TaggingRule[];
+    budgets?: Budget[];
+    recurringRules?: RecurringRule[];
+  }): Promise<void> {
+    const store = this.store();
+    await store.transaction(async () => {
+      for (const table of [
+        "accounts",
+        "transactions",
+        "tags",
+        "tagging_rules",
+        "budgets",
+        "recurring_rules",
+      ] as const) {
+        await store.clear(table);
+      }
+      for (const account of data.accounts ?? []) {
+        await store.insert("accounts", account.id, account);
+      }
+      for (const tag of data.tags ?? []) {
+        await store.insert("tags", tag.id, tag, { refA: tag.normalizedName });
+      }
+      for (const transaction of data.transactions ?? []) {
+        await store.insert("transactions", transaction.id, transaction, {
+          refA: transaction.accountId,
+          refB: transaction.bookingDate,
+        });
+      }
+      for (const rule of data.taggingRules ?? []) {
+        await store.insert("tagging_rules", rule.id, rule);
+      }
+      for (const budget of data.budgets ?? []) {
+        await store.insert("budgets", budget.id, budget);
+      }
+      for (const rule of data.recurringRules ?? []) {
+        await store.insert("recurring_rules", rule.id, rule);
+      }
+    });
+  }
+
+  async archiveAccount(id: string, revision: number): Promise<Account> {
+    const account = await this.accounts.get(id);
+    if (!account) throw new AccountNotFoundError(id);
+    return this.accounts.update({ ...account, archivedAt: this.clock.nowIso() }, revision);
+  }
+
+  /** Deletes an account; without `cascade` it refuses when transactions exist. */
+  async deleteAccount(
+    id: string,
+    revision: number,
+    options: { cascade?: boolean } = {},
+  ): Promise<{ deletedTransactions: number }> {
+    const transactions = await this.transactions.list({ refA: id });
+    if (transactions.length > 0 && !options.cascade) {
+      throw new AccountInUseError(id, transactions.length);
+    }
+    let deletedTransactions = 0;
+    await this.transaction(async () => {
+      if (options.cascade) {
+        for (const transaction of transactions) {
+          await this.transactions.delete(transaction.id, transaction.revision);
+          deletedTransactions += 1;
+        }
+      }
+      await this.accounts.delete(id, revision);
+    });
+    return { deletedTransactions };
+  }
+
+  /** Deletes a tag and, with `cascade`, detaches it from transactions and rules. */
+  async deleteTag(
+    id: string,
+    revision: number,
+    options: { cascade?: boolean } = {},
+  ): Promise<{ updatedTransactions: number; updatedRules: number }> {
+    const [transactions, rules] = await Promise.all([
+      this.transactions.list(),
+      this.taggingRules.list(),
+    ]);
+    const usingTransactions = transactions.filter((transaction) => transaction.tagIds.includes(id));
+    const usingRules = rules.filter((rule) => rule.tagIds.includes(id));
+    if ((usingTransactions.length > 0 || usingRules.length > 0) && !options.cascade) {
+      throw new TagInUseError(id, usingTransactions.length, usingRules.length);
+    }
+    let updatedTransactions = 0;
+    let updatedRules = 0;
+    await this.transaction(async () => {
+      if (options.cascade) {
+        for (const transaction of usingTransactions) {
+          await this.transactions.update(
+            { ...transaction, tagIds: transaction.tagIds.filter((tagId) => tagId !== id) },
+            transaction.revision,
+          );
+          updatedTransactions += 1;
+        }
+        for (const rule of usingRules) {
+          await this.taggingRules.update(
+            { ...rule, tagIds: rule.tagIds.filter((tagId) => tagId !== id) },
+            rule.revision,
+          );
+          updatedRules += 1;
+        }
+      }
+      await this.tags.delete(id, revision);
+    });
+    return { updatedTransactions, updatedRules };
   }
 
   async appliedMigrations(): Promise<number[]> {

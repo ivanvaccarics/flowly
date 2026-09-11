@@ -53,6 +53,7 @@ export interface VaultStore {
     refs?: StoredRefs,
   ): Promise<number>;
   remove(table: VaultTable, id: string, expectedRevision: number): Promise<void>;
+  clear(table: VaultTable): Promise<void>;
   count(table: VaultTable): Promise<number>;
 
   transaction<T>(work: () => Promise<T>): Promise<T>;
