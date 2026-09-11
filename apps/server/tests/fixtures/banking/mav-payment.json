@@ -1,0 +1,34 @@
+{
+  "entry_reference": "MAVIB-35INTER20260831MAVIB556072938SAMPLE",
+  "merchant_category_code": null,
+  "transaction_amount": {
+    "currency": "EUR",
+    "amount": "431.34"
+  },
+  "creditor": null,
+  "creditor_account": null,
+  "creditor_agent": null,
+  "debtor": null,
+  "debtor_account": {
+    "iban": "IT60X0542811101000000123456",
+    "other": null
+  },
+  "debtor_agent": null,
+  "bank_transaction_code": null,
+  "credit_debit_indicator": "DBIT",
+  "status": "BOOK",
+  "booking_date": "2026-08-31",
+  "value_date": "2026-08-31",
+  "transaction_date": null,
+  "balance_after_transaction": null,
+  "reference_number": null,
+  "reference_number_schema": null,
+  "remittance_information": [
+    "PAGAMENTO MAV SECONDA RATA AMMINISTRAZIONE PFM:INTER: INTER20260831MAVIB556072938"
+  ],
+  "debtor_account_additional_identification": null,
+  "creditor_account_additional_identification": null,
+  "exchange_rate": null,
+  "note": null,
+  "transaction_id": null
+}

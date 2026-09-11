@@ -41,7 +41,7 @@ describe.each(engines)("vault store contract (%s)", (engine) => {
   });
 
   it("applies migrations once and reports the schema version", async () => {
-    expect(await store.appliedMigrations()).toEqual([1, 2, 3, 4]);
+    expect(await store.appliedMigrations()).toEqual([1, 2, 3, 4, 5]);
     expect(await store.migrate()).toEqual([]);
   });
 
@@ -108,7 +108,7 @@ describe.each(engines)("vault store contract (%s)", (engine) => {
     await store.checkpoint();
     await store.close();
     store = await openStore(engine, join(dir, "vault.db"), dek);
-    expect(await store.appliedMigrations()).toEqual([1, 2, 3, 4]);
+    expect(await store.appliedMigrations()).toEqual([1, 2, 3, 4, 5]);
     expect(await store.count("transactions")).toBe(2);
   });
 });
@@ -141,7 +141,7 @@ describe("migration atomicity", () => {
 
     const store = await openStore("sqlcipher", file, Buffer.from(key));
     try {
-      expect(await store.migrate()).toEqual([3, 4]);
+      expect(await store.migrate()).toEqual([3, 4, 5]);
       expect((await store.migrate()).length, "migrations stay idempotent after the drop").toBe(0);
       expect(await store.count("accounts")).toBe(1);
       const remaining = await store.list<{ name: string }>("accounts");
@@ -176,9 +176,9 @@ describe("migration atomicity", () => {
     const db = await SqlcipherDatabase.open(join(dir, "custom.db"), randomBytes(32));
     const custom: Migration[] = [
       ...MIGRATIONS,
-      { version: 5, name: "later", statements: ["CREATE TABLE later(id TEXT PRIMARY KEY)"] },
+      { version: 6, name: "later", statements: ["CREATE TABLE later(id TEXT PRIMARY KEY)"] },
     ];
-    expect(await runMigrations(db, custom)).toEqual([1, 2, 3, 4, 5]);
+    expect(await runMigrations(db, custom)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(await runMigrations(db, custom)).toEqual([]);
     await db.close();
     cleanup(dir);

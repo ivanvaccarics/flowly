@@ -69,6 +69,24 @@ export const MIGRATIONS: Migration[] = [
     name: "drop-recurring-rules",
     statements: [`DROP TABLE IF EXISTS recurring_rules`],
   },
+  {
+    // Enable Banking (Phase 6). Credentials live in the encrypted vault, and
+    // raw provider responses get their own store so a refresh can be audited
+    // and re-normalized without calling the bank again.
+    version: 5,
+    name: "enable-banking",
+    statements: [
+      recordTable("bank_connections"),
+      recordTable("bank_links"),
+      `CREATE INDEX IF NOT EXISTS bank_links_connection_idx ON bank_links(ref_a)`,
+      recordTable("bank_accounts"),
+      `CREATE INDEX IF NOT EXISTS bank_accounts_link_idx ON bank_accounts(ref_a)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS bank_accounts_provider_uid_idx
+         ON bank_accounts(ref_a, ref_b)`,
+      recordTable("bank_payloads"),
+      `CREATE INDEX IF NOT EXISTS bank_payloads_account_idx ON bank_payloads(ref_a, ref_b)`,
+    ],
+  },
 ];
 
 export const SCHEMA_VERSION = Math.max(...MIGRATIONS.map((migration) => migration.version));

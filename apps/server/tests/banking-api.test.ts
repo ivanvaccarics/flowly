@@ -1,0 +1,325 @@
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  FakeBank,
+  TEST_APP_ID,
+  TEST_REDIRECT_URL,
+  connectBank,
+  get,
+  post,
+  put,
+  sampleTransaction,
+  startBankingHarness,
+  testPrivateKeyPem,
+  type BankingHarness,
+} from "./helpers/banking.js";
+import { makeConfig } from "./helpers/api.js";
+
+const openHarnesses: BankingHarness[] = [];
+
+async function harness(bank = new FakeBank()): Promise<BankingHarness> {
+  const created = await startBankingHarness(makeConfig().config, bank);
+  openHarnesses.push(created);
+  return created;
+}
+
+afterEach(async () => {
+  for (const open of openHarnesses.splice(0)) await open.close();
+});
+
+interface ConnectionStatus {
+  configured: boolean;
+  connection?: {
+    appId: string;
+    appName?: string;
+    environment: string;
+    redirectUrl: string;
+    keyFingerprint: string;
+    autoSync: boolean;
+  };
+  links: Array<{
+    id: string;
+    aspspName: string;
+    status: string;
+    accounts: Array<{
+      id: string;
+      providerAccountUid: string;
+      status: string;
+      accountId?: string;
+      accountName?: string;
+      currency?: string;
+    }>;
+  }>;
+  sync: { running: boolean; lastSyncAt?: string };
+}
+
+describe("Enable Banking API", () => {
+  it("starts unconfigured and never leaks the private key", async () => {
+    const { app, client } = await harness();
+    const before = await get({ app, client } as BankingHarness, "/api/banking/status");
+    expect(before.json<ConnectionStatus>().configured).toBe(false);
+
+    const saved = await put(
+      { app, client } as BankingHarness,
+      "/api/banking/enable-banking/config",
+      {
+        appId: TEST_APP_ID,
+        privateKeyPem: testPrivateKeyPem(),
+        redirectUrl: TEST_REDIRECT_URL,
+        environment: "SANDBOX",
+        country: "IT",
+      },
+    );
+    expect(saved.statusCode).toBe(200);
+    expect(saved.body).not.toContain("PRIVATE KEY");
+
+    const status = await get({ app, client } as BankingHarness, "/api/banking/status");
+    const body = status.json<ConnectionStatus>();
+    expect(body.configured).toBe(true);
+    expect(body.connection).toMatchObject({
+      appId: TEST_APP_ID,
+      appName: "mytest-app",
+      environment: "SANDBOX",
+      redirectUrl: TEST_REDIRECT_URL,
+      autoSync: true,
+    });
+    expect(body.connection?.keyFingerprint).toMatch(/^[0-9a-f]{32}$/);
+    expect(status.body).not.toContain("PRIVATE KEY");
+  });
+
+  it("rejects credentials whose redirect URL is not registered", async () => {
+    const { app, client } = await harness();
+    const response = await put(
+      { app, client } as BankingHarness,
+      "/api/banking/enable-banking/config",
+      {
+        appId: TEST_APP_ID,
+        privateKeyPem: testPrivateKeyPem(),
+        redirectUrl: "https://elsewhere.test/callback",
+        environment: "SANDBOX",
+      },
+    );
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ error: string; detail?: { redirectUrls?: string[] } }>().error).toBe(
+      "bank_redirect_not_registered",
+    );
+  });
+
+  it("rejects a key that belongs to the other environment", async () => {
+    const bank = new FakeBank({ application: { environment: "PRODUCTION" } });
+    const { app, client } = await harness(bank);
+    const response = await put(
+      { app, client } as BankingHarness,
+      "/api/banking/enable-banking/config",
+      {
+        appId: TEST_APP_ID,
+        privateKeyPem: testPrivateKeyPem(),
+        redirectUrl: TEST_REDIRECT_URL,
+        environment: "SANDBOX",
+      },
+    );
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ error: string }>().error).toBe("bank_environment_mismatch");
+  });
+
+  it("lists the banks the user can connect, with sandbox credentials", async () => {
+    const { app, client } = await harness();
+    await connectBank({ app, client } as BankingHarness);
+    const response = await get(
+      { app, client } as BankingHarness,
+      "/api/banking/enable-banking/aspsps?country=IT",
+    );
+    expect(response.statusCode).toBe(200);
+    const items = response.json<{
+      items: Array<{
+        name: string;
+        country: string;
+        psuTypes: string[];
+        maximumConsentDays?: number;
+        sandboxUsers: Array<{ username?: string; otp?: string }>;
+        methods: Array<{ approach: string; credentials: unknown[] }>;
+      }>;
+    }>().items;
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      name: "UniCredit",
+      country: "IT",
+      psuTypes: ["personal", "business"],
+      maximumConsentDays: 90,
+    });
+    expect(items[0]?.sandboxUsers[0]?.username).toBe("customera");
+  });
+
+  it("walks the authorization flow and pairs the discovered account", async () => {
+    const { app, client } = await harness();
+    const { linkId } = await connectBank({ app, client } as BankingHarness);
+
+    const status = await get({ app, client } as BankingHarness, "/api/banking/status");
+    const body = status.json<ConnectionStatus>();
+    expect(body.links).toHaveLength(1);
+    expect(body.links[0]).toMatchObject({
+      id: linkId,
+      aspspName: "UniCredit",
+      status: "authorized",
+    });
+    expect(body.links[0]?.accounts[0]).toMatchObject({
+      status: "unmapped",
+      currency: "EUR",
+    });
+
+    const uid = body.links[0]?.accounts[0]?.providerAccountUid as string;
+    const mapped = await post(
+      { app, client } as BankingHarness,
+      `/api/banking/enable-banking/links/${linkId}/accounts`,
+      { providerAccountUid: uid, mode: "create", name: "Conto UniCredit", type: "checking" },
+    );
+    expect(mapped.statusCode).toBe(200);
+    const accountId = mapped.json<ConnectionStatus["links"][number]>().accounts[0]
+      ?.accountId as string;
+    expect(accountId).toMatch(/^[0-9a-f-]{36}$/);
+
+    const accounts = await get({ app, client } as BankingHarness, "/api/accounts");
+    const created = accounts.json<{
+      items: Array<{ id: string; name: string; institutionName?: string }>;
+    }>().items;
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      id: accountId,
+      name: "Conto UniCredit",
+      institutionName: "UniCredit",
+    });
+  });
+
+  it("pairs an existing Flowly account instead of creating one", async () => {
+    const { app, client } = await harness();
+    const { linkId } = await connectBank({ app, client } as BankingHarness);
+    const existing = await post({ app, client } as BankingHarness, "/api/accounts", {
+      entity: {
+        formatVersion: 1,
+        revision: 1,
+        id: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        name: "Everyday",
+        type: "checking",
+        defaultCurrency: "EUR",
+        createdAt: "2026-09-01T08:00:00.000Z",
+        updatedAt: "2026-09-01T08:00:00.000Z",
+      },
+    });
+    expect(existing.statusCode).toBe(201);
+
+    const status = await get({ app, client } as BankingHarness, "/api/banking/status");
+    const uid = status.json<ConnectionStatus>().links[0]?.accounts[0]?.providerAccountUid as string;
+    const mapped = await post(
+      { app, client } as BankingHarness,
+      `/api/banking/enable-banking/links/${linkId}/accounts`,
+      { providerAccountUid: uid, mode: "pair", accountId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f" },
+    );
+    expect(mapped.statusCode).toBe(200);
+    const account = mapped.json<ConnectionStatus["links"][number]>().accounts[0];
+    expect(account).toMatchObject({
+      status: "mapped",
+      accountId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+      accountName: "Everyday",
+    });
+  });
+
+  it("refuses a bank account whose currency Flowly cannot store", async () => {
+    const bank = new FakeBank({
+      accounts: [
+        {
+          uid: "0f7d3d1c-3f4e-4b0e-9f1a-2b3c4d5e6f71",
+          cash_account_type: "CACC",
+          currency: "RON",
+          details: "Conto in lei",
+        },
+      ],
+    });
+    const { app, client } = await harness(bank);
+    const { linkId } = await connectBank({ app, client } as BankingHarness);
+    const response = await post(
+      { app, client } as BankingHarness,
+      `/api/banking/enable-banking/links/${linkId}/accounts`,
+      { providerAccountUid: "0f7d3d1c-3f4e-4b0e-9f1a-2b3c4d5e6f71", mode: "create" },
+    );
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ error: string }>().error).toBe("bank_currency_required");
+  });
+
+  it("rejects a replayed callback and unlinks without touching transactions", async () => {
+    const bank = new FakeBank();
+    const { app, client } = await harness(bank);
+    const { linkId, state } = await connectBank({ app, client } as BankingHarness);
+
+    const replay = await post(
+      { app, client } as BankingHarness,
+      "/api/banking/enable-banking/callback",
+      { code: "sandbox-code", state },
+    );
+    expect(replay.statusCode).toBe(400);
+    expect(replay.json<{ error: string }>().error).toBe("bank_state_invalid");
+
+    const status = await get({ app, client } as BankingHarness, "/api/banking/status");
+    const uid = status.json<ConnectionStatus>().links[0]?.accounts[0]?.providerAccountUid as string;
+    await post(
+      { app, client } as BankingHarness,
+      `/api/banking/enable-banking/links/${linkId}/accounts`,
+      { providerAccountUid: uid, mode: "create" },
+    );
+    await post({ app, client } as BankingHarness, "/api/banking/sync", {});
+    const transactions = await get({ app, client } as BankingHarness, "/api/transactions");
+    expect(transactions.json<{ items: unknown[] }>().items).toHaveLength(1);
+
+    const removed = await app.inject({
+      method: "DELETE",
+      url: `/api/banking/enable-banking/links/${linkId}`,
+      headers: { cookie: client.cookie, "x-flowly-csrf": client.csrf },
+    });
+    expect(removed.statusCode).toBe(200);
+    expect(removed.json<{ deletedAccounts: number }>().deletedAccounts).toBe(1);
+    expect(bank.deletedSessions).toHaveLength(1);
+
+    const after = await get({ app, client } as BankingHarness, "/api/banking/status");
+    expect(after.json<ConnectionStatus>().links).toHaveLength(0);
+    const kept = await get({ app, client } as BankingHarness, "/api/transactions");
+    expect(kept.json<{ items: unknown[] }>().items).toHaveLength(1);
+  });
+
+  it("auto-syncs nothing when no bank is linked and reports a clear sync state", async () => {
+    const { app, client } = await harness();
+    const response = await post({ app, client } as BankingHarness, "/api/banking/sync", {});
+    expect(response.statusCode).toBe(200);
+    expect(response.json<{ report: { created: number } }>().report.created).toBe(0);
+    const state = await get({ app, client } as BankingHarness, "/api/banking/sync");
+    expect(state.json<{ running: boolean; lastSyncAt?: string }>().running).toBe(false);
+    expect(state.json<{ lastSyncAt?: string }>().lastSyncAt).toBeDefined();
+  });
+
+  it("requires an unlocked vault session", async () => {
+    const { app } = await harness();
+    const response = await app.inject({ method: "GET", url: "/api/banking/status" });
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("updates settings without re-uploading the private key", async () => {
+    const { app, client } = await harness();
+    const session = { app, client } as BankingHarness;
+    await connectBank(session);
+
+    const updated = await put(session, "/api/banking/enable-banking/config", {
+      appId: TEST_APP_ID,
+      redirectUrl: TEST_REDIRECT_URL,
+      environment: "SANDBOX",
+      psuType: "business",
+      country: "IT",
+      autoSync: false,
+    });
+    expect(updated.statusCode).toBe(200);
+    const status = updated.json<ConnectionStatus>();
+    expect(status.connection).toMatchObject({ autoSync: false, psuType: "business" });
+    // The stored key is reused, so the fingerprint does not change.
+    expect(status.connection?.keyFingerprint).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  it("keeps the transaction fixture helper honest", () => {
+    expect(sampleTransaction().status).toBe("BOOK");
+  });
+});

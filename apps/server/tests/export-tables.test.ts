@@ -112,6 +112,7 @@ describe("plain-text table export", () => {
         [
           "README.txt",
           "accounts.csv",
+          "banking.json",
           "manifest.json",
           "tagging_rules.csv",
           "tags.csv",
@@ -138,6 +139,10 @@ describe("plain-text table export", () => {
         transactions: 1,
         tags: 1,
         taggingRules: 1,
+        bankConnections: 0,
+        bankLinks: 0,
+        bankAccounts: 0,
+        bankPayloads: 0,
       });
       expect(manifest.files[0].sha256).toMatch(/^[0-9a-f]{64}$/);
 

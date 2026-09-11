@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createAccount } from "../src/domain/account.js";
 import { createTransaction } from "../src/domain/transaction.js";
 import { Vault } from "../src/vault/vault.js";
+import { testPrivateKeyPem } from "./helpers/banking.js";
 import { cleanup, tempDir, TEST_KDF } from "./helpers/test-utils.js";
 
 const SECRETS = ["Acme Corp", "Bar Centrale", "espresso with Luca", "CARD PURCHASE"];
@@ -46,6 +47,52 @@ async function seedVault(engine: "sqlcipher" | "record-encryption", dir: string)
 }
 
 describe("vault on disk", () => {
+  it("keeps Enable Banking credentials and raw payloads encrypted", async () => {
+    const dir = tempDir();
+    try {
+      const vault = await Vault.create(dir, "correct horse battery staple", {
+        engine: "sqlcipher",
+        kdf: TEST_KDF,
+      });
+      await vault.bankConnections.create({
+        formatVersion: 1,
+        revision: 1,
+        id: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        provider: "enable-banking",
+        appId: "11111111-1111-4111-8111-111111111111",
+        privateKeyPem: testPrivateKeyPem(),
+        redirectUrl: "https://flowly.test/enablebanking/auth_callback",
+        environment: "SANDBOX",
+        psuType: "personal",
+        country: "IT",
+        autoSync: true,
+        createdAt: NOW,
+        updatedAt: NOW,
+      });
+      await vault.bankPayloads.create({
+        formatVersion: 1,
+        revision: 1,
+        id: "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f70",
+        connectionId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        linkId: "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081",
+        providerAccountUid: "0f7d3d1c-3f4e-4b0e-9f1a-2b3c4d5e6f70",
+        kind: "transactions",
+        fetchedAt: NOW,
+        json: { remittance_information: ["PAGAMENTO MAV Bar Centrale"] },
+        createdAt: NOW,
+        updatedAt: NOW,
+      });
+      await vault.lock();
+
+      for (const file of readAllFiles(dir)) {
+        expect(file.includes(Buffer.from("BEGIN PRIVATE KEY", "utf8"))).toBe(false);
+        expect(file.includes(Buffer.from("BAR CENTRALE MAV", "utf8"))).toBe(false);
+      }
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it("stores no plaintext and no SQLite header with SQLCipher", async () => {
     const dir = tempDir();
     try {

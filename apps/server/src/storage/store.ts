@@ -4,7 +4,16 @@ import { SqlcipherStore } from "./sqlcipher-store.js";
 
 export type StorageEngine = "sqlcipher" | "record-encryption";
 
-export type VaultTable = "accounts" | "transactions" | "tags" | "tagging_rules" | "settings";
+export type VaultTable =
+  | "accounts"
+  | "transactions"
+  | "tags"
+  | "tagging_rules"
+  | "settings"
+  | "bank_connections"
+  | "bank_links"
+  | "bank_accounts"
+  | "bank_payloads";
 
 export const VAULT_TABLES: readonly VaultTable[] = [
   "accounts",
@@ -12,6 +21,10 @@ export const VAULT_TABLES: readonly VaultTable[] = [
   "tags",
   "tagging_rules",
   "settings",
+  "bank_connections",
+  "bank_links",
+  "bank_accounts",
+  "bank_payloads",
 ];
 
 export interface StoredRefs {

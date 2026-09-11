@@ -7,6 +7,11 @@ import { ImportExportService } from "../application/import-export-service.js";
 import { AnalyticsService } from "../application/analytics.js";
 import { parseTransactionQuery, TransactionSearchService } from "../application/search.js";
 import { TaggingRuleService } from "../application/tagging-rule-service.js";
+import { BankingService } from "../banking/banking-service.js";
+import { BankingError } from "../banking/errors.js";
+import type { EnableBankingClient } from "../banking/enable-banking-client.js";
+import type { Clock } from "../domain/clock.js";
+import type { BankConnection } from "../domain/banking.js";
 import type { ServerConfig } from "../config.js";
 import { VaultCorruptError, VaultKeyError } from "../crypto/errors.js";
 import { DomainError } from "../domain/errors.js";
@@ -25,6 +30,7 @@ import type { Repository, RepositoryEntity } from "../storage/repositories.js";
 import { Vault, VaultExistsError, VaultLockedError, VaultNotFoundError } from "../vault/vault.js";
 import { AccountInUseError, AccountNotFoundError, TagInUseError } from "../vault/vault.js";
 import { EXPORT_FORMAT_VERSION, SERVER_VERSION, VAULT_FORMAT_VERSION } from "../version.js";
+import { registerBankingRoutes, psuFrom } from "./banking-routes.js";
 import { registerStaticApp } from "./static-app.js";
 
 const COOKIE_NAME = "flowly_sid";
@@ -40,6 +46,13 @@ export interface BuildAppOptions {
   /** Pre-opened vault, used by tests; normally the app opens it on unlock. */
   vault?: Vault | null;
   startedAt?: number;
+  /** Test seam for the Enable Banking HTTP client. */
+  banking?: {
+    clientFor?: (connection: BankConnection) => EnableBankingClient;
+    fetch?: typeof globalThis.fetch;
+    sleep?: (ms: number) => Promise<void>;
+    clock?: Clock;
+  };
 }
 
 interface RequestContext {
@@ -63,6 +76,30 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   });
   const limiter = new AttemptLimiter(config.unlockAttemptsPerMinute);
   let lastSessionEndedAt = 0;
+  let bankingVault: Vault | null = null;
+  let bankingService: BankingService | null = null;
+
+  // One service per unlocked vault keeps sync state in memory without ever
+  // holding a key after the vault locks.
+  const bankingFor = (opened: Vault): BankingService => {
+    if (bankingVault !== opened || !bankingService) {
+      bankingService = new BankingService({
+        vault: opened,
+        newId: generateId,
+        ...(options.banking?.clientFor ? { clientFor: options.banking.clientFor } : {}),
+        ...(options.banking?.fetch ? { fetch: options.banking.fetch } : {}),
+        ...(options.banking?.sleep ? { sleep: options.banking.sleep } : {}),
+        ...(options.banking?.clock ? { clock: options.banking.clock } : {}),
+      });
+      bankingVault = opened;
+    }
+    return bankingService;
+  };
+
+  /** Refreshes linked banks after an unlock, without delaying the response. */
+  const autoSync = (opened: Vault, request: FastifyRequest): void => {
+    void bankingFor(opened).autoSync(psuFrom(request));
+  };
 
   const app = Fastify({
     logger: config.logLevel === "silent" ? false : { level: config.logLevel },
@@ -164,6 +201,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       engine: config.storageEngine,
     });
     vault = created;
+    autoSync(created, request);
     const session = sessions.create(clientAddress(request));
     lastSessionEndedAt = 0;
     reply.code(201);
@@ -194,6 +232,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       engine: config.storageEngine,
     });
     vault = opened;
+    autoSync(opened, request);
     limiter.reset(address);
     const session = sessions.create(address);
     lastSessionEndedAt = 0;
@@ -301,6 +340,13 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     requireContext,
     (context) => context.vault.taggingRules,
   );
+  registerBankingRoutes(app, {
+    guard: (request, reply) => {
+      const context = requireContext(request, reply);
+      return context ? { service: bankingFor(context.vault) } : undefined;
+    },
+    errorBody,
+  });
   // --- dashboard and search -------------------------------------------------
 
   app.get("/api/dashboard", async (request, reply) => {
@@ -727,6 +773,16 @@ function readCookie(request: FastifyRequest, name: string): string | undefined {
 }
 
 function mapError(error: unknown): { status: number; body: Record<string, unknown> } {
+  if (error instanceof BankingError) {
+    return {
+      status: error.status,
+      body: {
+        error: error.code,
+        message: error.message,
+        ...(error.detail === undefined ? {} : { detail: error.detail }),
+      },
+    };
+  }
   if (error instanceof VaultLockedError) return { status: 423, body: { error: "vault_locked" } };
   if (error instanceof VaultKeyError) return { status: 401, body: { error: "invalid_passphrase" } };
   if (error instanceof VaultNotFoundError) {

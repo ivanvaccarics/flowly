@@ -1,0 +1,62 @@
+{
+  "entry_reference": "11112222-3333-4444-5555-666677778888",
+  "merchant_category_code": null,
+  "transaction_amount": {
+    "currency": "EUR",
+    "amount": "3.75"
+  },
+  "creditor": {
+    "name": "Bar Centrale",
+    "postal_address": null,
+    "organisation_id": null,
+    "private_id": null,
+    "contact_details": null
+  },
+  "creditor_account": null,
+  "creditor_agent": null,
+  "debtor": {
+    "name": "MARIO ROSSI",
+    "postal_address": null,
+    "organisation_id": null,
+    "private_id": null,
+    "contact_details": null
+  },
+  "debtor_account": null,
+  "debtor_agent": null,
+  "bank_transaction_code": {
+    "description": null,
+    "code": "CARD_PAYMENT",
+    "sub_code": null
+  },
+  "credit_debit_indicator": "DBIT",
+  "status": "BOOK",
+  "booking_date": "2026-09-01",
+  "value_date": "2026-09-02",
+  "transaction_date": null,
+  "balance_after_transaction": null,
+  "reference_number": null,
+  "reference_number_schema": null,
+  "remittance_information": ["Bar Centrale Mas"],
+  "debtor_account_additional_identification": [
+    {
+      "identification": "1061",
+      "scheme_name": "CPAN",
+      "issuer": "VISA"
+    }
+  ],
+  "creditor_account_additional_identification": null,
+  "exchange_rate": null,
+  "note": null,
+  "transaction_id": null,
+  "transactionId": "11112222-3333-4444-5555-666677778888",
+  "date": "2026-09-01",
+  "bookingDate": "2026-09-01",
+  "valueDate": "2026-09-02",
+  "transactionAmount": {
+    "amount": "-3.75",
+    "currency": "EUR"
+  },
+  "booked": true,
+  "cleared": true,
+  "amount": "-3.75"
+}

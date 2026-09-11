@@ -30,6 +30,16 @@ import {
   type VaultTable,
 } from "../storage/store.js";
 import { validateAccount, type Account } from "../domain/account.js";
+import {
+  validateBankAccountLink,
+  validateBankConnection,
+  validateBankLink,
+  validateBankPayload,
+  type BankAccountLink,
+  type BankConnection,
+  type BankLink,
+  type BankPayload,
+} from "../domain/banking.js";
 import { validateTag, type Tag } from "../domain/tag.js";
 import { validateTaggingRule, type TaggingRule } from "../domain/tagging-rule.js";
 import { validateTransaction, type Transaction } from "../domain/transaction.js";
@@ -117,6 +127,10 @@ export class Vault {
   readonly transactions: StoreRepository<Transaction>;
   readonly tags: StoreRepository<Tag>;
   readonly taggingRules: StoreRepository<TaggingRule>;
+  readonly bankConnections: StoreRepository<BankConnection>;
+  readonly bankLinks: StoreRepository<BankLink>;
+  readonly bankAccounts: StoreRepository<BankAccountLink>;
+  readonly bankPayloads: StoreRepository<BankPayload>;
 
   private readonly clock: Clock;
   private readonly headerValue: VaultHeader;
@@ -162,6 +176,24 @@ export class Vault {
         refA: transaction.accountId,
         refB: transaction.bookingDate,
       }),
+    );
+    this.bankConnections = repository<BankConnection>(
+      "bank_connections",
+      validateBankConnection,
+      (connection) => ({ refA: connection.provider }),
+    );
+    this.bankLinks = repository<BankLink>("bank_links", validateBankLink, (link) => ({
+      refA: link.connectionId,
+    }));
+    this.bankAccounts = repository<BankAccountLink>(
+      "bank_accounts",
+      validateBankAccountLink,
+      (account) => ({ refA: account.linkId, refB: account.providerAccountUid }),
+    );
+    this.bankPayloads = repository<BankPayload>(
+      "bank_payloads",
+      validateBankPayload,
+      (payload) => ({ refA: payload.providerAccountUid, refB: payload.fetchedAt }),
     );
   }
 
@@ -270,12 +302,22 @@ export class Vault {
     return this.store().transaction(work);
   }
 
-  /** Replaces the entire vault content in one transaction (archive import). */
+  /**
+   * Replaces the entire vault content in one transaction (archive import).
+   * Banking data is only touched when the archive actually carries it, so an
+   * older archive never wipes a connector the destination vault had configured.
+   */
   async replaceAllContent(data: {
     accounts?: Account[];
     transactions?: Transaction[];
     tags?: Tag[];
     taggingRules?: TaggingRule[];
+    banking?: {
+      connections: BankConnection[];
+      links: BankLink[];
+      accounts: BankAccountLink[];
+      payloads: BankPayload[];
+    };
   }): Promise<void> {
     const store = this.store();
     await store.transaction(async () => {
@@ -296,6 +338,35 @@ export class Vault {
       }
       for (const rule of data.taggingRules ?? []) {
         await store.insert("tagging_rules", rule.id, rule);
+      }
+      if (!data.banking) return;
+      for (const table of [
+        "bank_connections",
+        "bank_links",
+        "bank_accounts",
+        "bank_payloads",
+      ] as const) {
+        await store.clear(table);
+      }
+      for (const connection of data.banking.connections) {
+        await store.insert("bank_connections", connection.id, connection, {
+          refA: connection.provider,
+        });
+      }
+      for (const link of data.banking.links) {
+        await store.insert("bank_links", link.id, link, { refA: link.connectionId });
+      }
+      for (const account of data.banking.accounts) {
+        await store.insert("bank_accounts", account.id, account, {
+          refA: account.linkId,
+          refB: account.providerAccountUid,
+        });
+      }
+      for (const payload of data.banking.payloads) {
+        await store.insert("bank_payloads", payload.id, payload, {
+          refA: payload.providerAccountUid,
+          refB: payload.fetchedAt,
+        });
       }
     });
   }
@@ -423,18 +494,41 @@ export class Vault {
 
   async stats(): Promise<VaultStats> {
     const store = this.store();
-    const [accounts, transactions, tags, taggingRules, applied] = await Promise.all([
+    const [
+      accounts,
+      transactions,
+      tags,
+      taggingRules,
+      bankConnections,
+      bankLinks,
+      bankAccounts,
+      bankPayloads,
+      applied,
+    ] = await Promise.all([
       store.count("accounts"),
       store.count("transactions"),
       store.count("tags"),
       store.count("tagging_rules"),
+      store.count("bank_connections"),
+      store.count("bank_links"),
+      store.count("bank_accounts"),
+      store.count("bank_payloads"),
       store.appliedMigrations(),
     ]);
     return {
       engine: store.engine,
       details: store.details,
       schemaVersion: applied.length > 0 ? Math.max(...applied) : 0,
-      counts: { accounts, transactions, tags, taggingRules },
+      counts: {
+        accounts,
+        transactions,
+        tags,
+        taggingRules,
+        bankConnections,
+        bankLinks,
+        bankAccounts,
+        bankPayloads,
+      },
       bytesOnDisk: store.bytesOnDisk(),
     };
   }
