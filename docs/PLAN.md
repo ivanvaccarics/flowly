@@ -63,17 +63,20 @@ foundation:
 - CI (`.github/workflows/ci.yml`) verifies formatting, lint, types, tests,
   contract freshness, builds, and both container architectures.
 - The vault is implemented and encrypted at rest, and the browser UI covers the
-  unlock flow, accounts, transactions, tags, tagging rules and import/export. It
-  is aligned with the Sovereign Ledger mockups (`docs/adr/0012`).
+  unlock flow, accounts, transactions, tags, tagging rules, import/export and
+  the Enable Banking connection. It is aligned with the Sovereign Ledger
+  mockups (`docs/adr/0012`).
+- `apps/server/src/banking/` is the Enable Banking connector: signed JWT
+  requests, normalization, the sync engine and the bank tables
+  (`docs/adr/0016`).
 - Local `data/`, `secrets/` and `node_modules/` paths are ignored.
 - Local SQLite and JSON files exist under the ignored `data/` directory. Their
   financial contents are not required for architecture planning and should be
   treated as sensitive local data.
 
-The prototype should be retained only as a reference until the future banking
-connector is implemented, then either removed or moved under an explicitly
-non-production `prototypes/` directory after its secret and token handling is
-hardened.
+The prototype kept under the ignored `data_bank/` directory is now superseded by
+`apps/server/src/banking/`; it stays only as a local reference and is not part of
+the build, the tests or the release.
 
 ## 3. Confirmed Product Decisions
 
@@ -97,10 +100,10 @@ hardened.
 | Server HTTP layer | Fastify 5 serving a same-origin JSON API; the domain imports no HTTP or storage API |
 | Contract tooling | JSON Schema 2020-12 as the source of truth, generated TypeScript types, and Ajv runtime validation that always accompanies them |
 | Delivery order | Release the server, then Enable Banking for Server, then Flutter |
-| Future bank integration | A separate trusted backend/connector is allowed |
+| Bank integration | Enable Banking, implemented inside the server (`docs/adr/0016`): credentials live in the encrypted vault, raw provider JSON is stored per account, and the vault keeps the canonical ledger |
 | Additional MVP scope | Dashboard, advanced search, multi-currency, manual tagging rules |
 | Auto-tagging rules | Server MVP, Phase 3: one AND/OR condition group over note, description, payee, amount, or account, adding one or more tags; tags are only added, provenance is not tracked, and editing a transaction does not re-run rules |
-| Next feature after the MVP | Enable Banking for Server in Phase 6, then Flutter |
+| Next feature after the MVP | Flutter foundation in Phase 8; Enable Banking for Server (Phase 6) is delivered |
 
 ## 4. Architecture Options Considered
 
@@ -123,8 +126,10 @@ Use a polyglot monorepo with two application implementations:
   clients and persist no financial records.
 - **Installed application:** one Flutter/Dart codebase compiled for iOS,
   Android, macOS, and Windows.
-- **Future connector:** a separate TypeScript service that owns Enable Banking
-  credentials and API sessions.
+- **Bank connector:** a module inside the self-hosted TypeScript service
+  (`apps/server/src/banking/`) that owns Enable Banking credentials and API
+  sessions, keeps them inside the encrypted vault, and serves both the web UI
+  and, from Phase 11, the native clients (`docs/adr/0016`).
 
 Delivery is intentionally sequential: implement and release the TypeScript
 server first, then use its stable contracts and golden fixtures to implement
@@ -161,8 +166,9 @@ flowly/
       src/
         api/                     # Fastify routes and contract validation
         application/             # Repository and platform-service interfaces
+        banking/                 # Enable Banking: JWT, client, normalize, sync
         crypto/                  # Argon2id KDF, DEK envelope, record encryption
-        domain/                  # Money, accounts, transactions, tags, rules
+        domain/                  # Money, accounts, transactions, tags, rules, banking
         session/                 # Browser sessions and unlock rate limiting
         storage/                 # SQLCipher adapter, migrations, repositories
         vault/                   # Vault lifecycle service
@@ -173,7 +179,6 @@ flowly/
         api/                     # Same-origin API client
         components/              # Locked-vault shell and future screens
     native/                      # Flutter app for iOS/Android/macOS/Windows
-    banking-connector/           # Future TypeScript Enable Banking service
   contracts/
     schemas/                     # Canonical JSON Schema definitions
     fixtures/                    # Valid instances every client must accept
@@ -194,12 +199,10 @@ flowly/
   spikes/
     server-architecture/         # Phase 0 proof-of-concepts, retained as evidence
   .github/workflows/             # CI: verify + multi-arch container build
-  prototypes/
-    enable-banking/              # Temporary, sanitized prototype only
 ```
 
-Use `pnpm` workspaces for the React client, generated TypeScript packages, and
-future connector, on Node.js 22.12 or newer. Use the Flutter SDK and Dart
+Use `pnpm` workspaces for the React client and the generated TypeScript
+packages, on Node.js 22.12 or newer. Use the Flutter SDK and Dart
 packages for the native client. Root scripts provide one command surface:
 `pnpm verify` (format, lint, secret scan, types, tests), `pnpm build`,
 `pnpm dev`, and `pnpm contracts:generate` / `pnpm contracts:check`. Add a Flutter
@@ -436,6 +439,31 @@ Persist:
 
 Never place passphrases, unwrapped keys, Enable Banking private keys, access
 tokens, or complete sensitive payloads in logs or telemetry.
+
+### 7.7 Enable Banking tables
+
+The connector adds four tables, all inside the same encrypted vault and all
+covered by the portable exports:
+
+- `bank_connections`: the Enable Banking application (id, app id, private key
+  PEM, callback URL, environment, default country and PSU type, automatic
+  refresh). One row per vault.
+- `bank_links`: one row per authorized bank. Holds the ASPSP name and country,
+  PSU type, the single-use OAuth state and its expiry, the session id, the
+  consent validity, the status (`pending`, `authorized`, `expired`, `revoked`,
+  `failed`, `closed`) and the last sync result.
+- `bank_accounts`: one row per provider account discovered in a link, with the
+  identification hash, IBAN, currency and cash-account type, the mapping status
+  (`unmapped`, `mapped`, `ignored`), the Flowly account it feeds, the sync
+  cursor and the last booked balance.
+- `bank_payloads`: the raw JSON store. One row per response per account —
+  session, account details, balances and each page of transactions — with the
+  request window, the fetch timestamp and the provider JSON untouched.
+
+Provider timestamps arrive as RFC 3339 with a `+00:00` offset and up to six
+fractional digits, so they are normalized to Flowly's canonical UTC form before
+they are stored. Amounts keep the provider sign convention (`CRDT`/`DBIT` plus
+an unsigned magnitude) and are converted to signed minor units.
 
 ## 8. Local Storage Strategy
 
@@ -710,42 +738,50 @@ for name, conditions, and tags.
 
 Enable Banking is delivered in two steps: Phase 6 integrates the connector with
 the released server, and Phase 11 integrates the same connector contracts with
-Flutter. Neither step introduces synchronization between vaults.
+Flutter. Neither step introduces synchronization between vaults. The server half
+is implemented in `apps/server/src/banking/` (`docs/adr/0016`).
 
 ### 12.1 Security boundary
 
-Enable Banking application private keys and JWT signing must never ship in the
-web, mobile, or desktop clients. Reverse engineering a distributed client would
-expose those credentials.
+Enable Banking application private keys and JWT signing never ship in the web,
+mobile, or desktop clients. Reverse engineering a distributed client would
+expose those credentials, so signing happens only on the server, and the key
+lives in the encrypted vault:
 
-Create a separate connector service that:
-
-- Stores the application private key in a managed secret store or HSM-backed
-  service.
-- Generates short-lived signed JWTs.
-- Owns registered redirect URLs and callback validation.
-- Uses cryptographically random, single-use OAuth state values.
-- Stores provider sessions/tokens encrypted with strict retention limits.
-- Calls Enable Banking APIs and normalizes responses into a provider-neutral
-  transaction schema.
-- Provides one-time or short-lived delivery of imported batches to an unlocked
-  client.
-- Maintains audit events without logging financial payloads or secrets.
+- The connection is configured from Settings: application id, the `.pem` private
+  key, the callback URL, the environment and the default country/PSU type.
+- Saving calls `GET /application` first, so a wrong key, a wrong environment or a
+  callback URL that is not among the application's registered redirect URLs is
+  rejected before anything is stored.
+- The API returns the application id and a hash of the matching **public** key,
+  never the private key, and the frontend secret scan still fails the build if a
+  `VITE_*` name looks like a secret.
+- Every request is signed with a short-lived RS256 JWT (`kid` = application id,
+  maximum lifetime one day).
+- Callbacks are validated against a cryptographically random, single-use state
+  with a 15-minute expiry; a replayed callback is rejected.
+- The PSU IP and user agent of the requesting browser are forwarded only when a
+  bank requires PSU headers; no financial payload is ever logged.
 
 ### 12.2 Preserve the no-sync product rule
 
 The connector is an ingestion channel, not the canonical database:
 
-- The server vault links and imports independently in Phase 6.
+- The server vault links and imports independently in Phase 6: connecting a bank
+  asks whether to create a Flowly account or pair an existing one, and unmapped
+  accounts are never imported.
 - Each native vault links and imports independently in Phase 11.
 - The destination encrypted vault remains the source of truth.
 - The connector does not provide cross-device synchronization.
-- Provider data is deleted after delivery or after a short documented retry
-  window.
+- Raw provider responses are kept per account in `bank_payloads` inside the
+  encrypted vault as the audit trail, and unlink deletes them along with the
+  link.
 - User notes and tags remain local and are never overwritten by provider
   refreshes.
 - Tagging rules run on the imported batch, so imported transactions land with
   their tags in one atomic write.
+- Unlinking a bank keeps every imported transaction; only the link, its account
+  mappings and its raw payloads go away.
 
 ### 12.3 Provider deduplication
 
@@ -754,16 +790,38 @@ use a versioned fingerprint and retain provider raw identifiers needed for
 reconciliation. Pending-to-booked transitions must update an existing
 transaction rather than create a duplicate when a reliable match exists.
 
+Implemented as: `entry_reference` (then `transaction_id`) is stored as
+`providerTransactionId`, with the versioned import fingerprint as the fallback
+match. Every sync re-reads a seven-day overlap before the stored cursor, so a
+pending transaction that the bank later books updates in place, keeping the
+user's note and tags.
+
 ### 12.4 Connector requirements
 
 The connector is written from the provider's documented API, inside the server:
 
-- Credentials live in a server-side secret provider and never in the browser.
+- Credentials live in the encrypted vault and never in the browser bundle or in
+  a plain file on the server.
 - Requests carry explicit timeouts, retries with bounded backoff, pagination and
   rate-limit handling.
-- Callback state and redirect data are validated.
-- Fixtures are sanitized and covered by contract tests; real transaction files
+- A single sync runs at a time; concurrent requests join the run in progress.
+- Sandbox fixtures are sanitized and covered by tests; real transaction files
   are never committed.
+
+### 12.5 Refresh behaviour
+
+- Unlocking the vault triggers a background refresh of every linked bank; the
+  unlock response never waits for the provider, and failures are reported on the
+  link instead of blocking the session.
+- The dashboard shows the last sync, the sync in progress and a **Sync now**
+  button for a manual refresh, plus the connection state of every bank.
+- The first sync of an account looks back 90 days; later syncs resume from the
+  stored cursor with the seven-day overlap.
+- A bank whose consent expired or was revoked is marked `expired` and reported
+  for reconnection; its imported transactions stay in the ledger.
+- Transactions whose currency Flowly cannot represent yet, or that arrive
+  without an amount or a usable date, are skipped and reported per account
+  instead of failing the sync.
 
 ## 13. Security Requirements and Threat Model
 
@@ -774,7 +832,7 @@ The connector is written from the provider's documented API, inside the server:
 - Vault encryption keys
 - Passphrase-derived material
 - Export files
-- Future bank session tokens and signing keys
+- Bank session tokens and the Enable Banking signing key
 
 ### 13.2 Primary threats and controls
 
@@ -791,7 +849,8 @@ The connector is written from the provider's documented API, inside the server:
 | Tampered desktop updates | Signed installers and verified update metadata |
 | OS backup leakage | Backup exclusion or encrypted backup only |
 | Memory inspection on compromised device | Minimize unlocked lifetime and decrypted caches; document that full compromise cannot be completely mitigated |
-| Enable Banking key extraction | Server-only key custody; never distribute provider private keys |
+| Enable Banking key extraction | Server-only key custody: the private key lives in the encrypted vault, is never returned by the API, and never ships in any client bundle |
+| A stale or revoked bank consent | Consent validity is stored per link, the session status is checked before every sync, and an expired consent is marked and reported instead of failing silently |
 
 ### 13.3 Application security controls
 
@@ -881,7 +940,10 @@ The connector is written from the provider's documented API, inside the server:
   update tests on Linux amd64/arm64 and Docker Desktop on macOS/Windows
 - End-to-end workflows for create, lock-current, lock-all, unlock, CSV merge,
   complete-vault replace, export, and delete
-- Connector contract tests using sanitized Enable Banking fixtures in Phase 6
+- Connector tests using sanitized Enable Banking fixtures: JWT signing and
+  verification, normalization of debits/credits and pending/booked rows,
+  idempotent sync, pending-to-booked reconciliation, expired consent, raw
+  payload storage, and the portability round trip (Phase 6)
 - Equivalent Dart domain, property-based, storage, crypto, component, and
   accessibility tests beginning in Phase 8
 - Cross-language golden-vector and portable-archive conformance tests in Phases
@@ -1227,23 +1289,41 @@ Status: **complete** (2026-09-11), decision in `docs/adr/0012`.
 
 #### Task `design-banking-connector`
 
-- Replace the prototype with a separate connector architecture.
-- Define OAuth/session, callback, secret custody, retention, delivery, retry,
-  audit, deletion, and normalized transaction contracts.
-- Keep delivery contracts client-neutral so Flutter can adopt them in Phase 11.
-- Complete a dedicated threat model and privacy assessment.
+Status: **complete** (2026-09-11), decision in `docs/adr/0016`.
+
+- Replaced the prototype with a connector module inside the server
+  (`apps/server/src/banking/`).
+- Defined the authorization/session flow, callback validation, secret custody in
+  the encrypted vault, raw payload retention, retry and rate-limit handling,
+  deletion on unlink, and the normalized transaction mapping.
+- Kept the delivery contract client-neutral: the banking endpoints return plain
+  JSON, so Flutter can adopt it in Phase 11 without provider secrets.
+- Recorded the security boundary, the deduplication rule and the refresh
+  behaviour in `docs/PLAN.md` §12 and the threat model in §13.
 
 #### Task `implement-server-banking-import`
 
-- Implement the connector, provider adapter, server authorization flow,
-  one-time delivery, pending-to-booked reconciliation, and idempotent import.
-- Apply tagging rules to imported transactions before the batch is committed.
-- Add sandbox integration tests and operational monitoring without sensitive
-  payload logging.
+Status: **complete** (2026-09-11).
+
+- Implemented the RS256 JWT signing, the Enable Banking client (timeouts,
+  bounded retries, pagination), the ASPSP picker, the redirect flow with a
+  single-use state, and the session handshake.
+- Added `bank_connections`, `bank_links`, `bank_accounts` and `bank_payloads`
+  (migration 5), with the settings UI asking for the application id, the `.pem`
+  key and the callback URL, and asking per account whether to create or pair a
+  Flowly account.
+- Sync runs on unlock and on demand from the dashboard, reconciles
+  pending-to-booked rows by provider id and fingerprint, applies tagging rules
+  before the batch is committed, and never overwrites the user's note or tags.
+- Added sanitized sandbox fixtures and 36 connector tests (JWT, normalization,
+  API flow, sync, portability, encryption at rest) without logging payloads.
 
 **Exit criteria:** the server can explicitly link, retrieve, normalize, and
 import transactions without receiving provider application secrets and without
 turning the connector into a synchronization service.
+
+Met: the private key never leaves the server, credentials are only readable while
+the vault is unlocked, and the vault stays the canonical ledger.
 
 ### Phase 8 - Flutter foundation
 
@@ -1417,7 +1497,9 @@ The first MVP is complete at the end of Phase 5 only when:
 - Investment portfolio pricing
 - Receipt/image attachment storage
 - Payment initiation
-- Enable Banking integration in the MVP
+- Enable Banking integration in the Server MVP (it ships as Phase 6, after the
+  MVP release gate)
+- Bank account linking for the Flutter clients (Phase 11)
 - Nested boolean condition groups, tag-removal actions, rule-driven edits to
   payee or note, rule re-evaluation when a transaction is edited, and background
   rule scheduling in the Server MVP
@@ -1439,8 +1521,10 @@ The first MVP is complete at the end of Phase 5 only when:
 | Recurrence calendar edge cases | Calendar-aware library plus property and time-zone tests |
 | Tagging rules label transactions unexpectedly | Live match preview, per-rule pause, rule-applied tags labeled in import previews, and explicit backfill instead of silent retroactive changes |
 | Rule evaluation slows large imports | In-memory evaluation over the imported batch, bounded condition counts per rule, and import performance fixtures |
-| Future provider credentials leak from clients | Separate backend connector with managed secret custody |
-| Existing prototype encourages unsafe patterns | Sanitize, isolate, and retire it before production integration |
+| Provider credentials leak from clients | Server-side connector with the key in the encrypted vault, a public-key fingerprint in the API, and a build-time frontend secret scan |
+| A bank changes or withdraws its consent | Stored consent validity, a session status check before every sync, and an `expired` link state that asks for reconnection |
+| Provider data and the local ledger drift apart | Provider ids plus versioned fingerprints, a seven-day reconciliation overlap, and raw payloads kept per account |
+| Existing prototype encourages unsafe patterns | Retired from the build and the tests; replaced by `apps/server/src/banking/` |
 
 ## 22. Reference Material
 
@@ -1477,3 +1561,8 @@ The first MVP is complete at the end of Phase 5 only when:
   <https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html>
 - Enable Banking API reference:
   <https://enablebanking.com/docs/api/reference/>
+- Enable Banking quick start and JWT format:
+  <https://enablebanking.com/docs/api/quick-start/>
+- Enable Banking sandbox guide: <https://enablebanking.com/docs/api/sandbox/>
+- Enable Banking OpenAPI description:
+  <https://enablebanking.com/docs/api/reference/enablebanking-api.yaml>

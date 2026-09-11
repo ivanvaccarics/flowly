@@ -26,7 +26,9 @@ Nothing, unless you export it yourself:
   cannot be reversed without the passphrase.
 - Financial records in the browser: no `localStorage`, no IndexedDB, no service
   worker cache, no cookie beyond the opaque session identifier.
-- Provider credentials (until Phase 6, and then only in the connector service).
+- Provider credentials: the Enable Banking private key lives only inside the
+  encrypted vault, is never returned by the API, and never reaches the browser
+  bundle.
 
 ## Your controls
 

@@ -32,13 +32,16 @@ If the app shows **Vault locked** on a deployment where nobody created a vault,
 it already has one — most likely from an acceptance run. See
 [TESTING.md](./TESTING.md) for how to unlock or reset it.
 
-What works today (end of Phase 3):
+What works today (end of Phase 6):
 
 - create, unlock, lock-this-session, lock-all and change-passphrase
 - accounts, transactions with notes and tags, and tag management
 - tagging rules with an explicit backfill over existing transactions
 - transaction CSV export/import with preview, a plain ZIP with one CSV per
   table for taking your data elsewhere, plus the encrypted complete archive
+- Enable Banking: connect a bank from Settings, choose for each shared account
+  whether Flowly creates an account or pairs an existing one, refresh on unlock
+  and on demand from the dashboard
 
 Useful commands:
 
@@ -58,6 +61,57 @@ command and a screen-by-screen manual test plan.
 Configuration is environment based; see [`.env.example`](../.env.example) for
 the full list (`FLOWLY_HOST`, `FLOWLY_PORT`, `FLOWLY_VAULT_DIR`,
 `FLOWLY_STORAGE_ENGINE`, session and auto-lock lifetimes, `FLOWLY_TRUST_PROXY`).
+
+### Connecting a bank (Enable Banking)
+
+Flowly talks to [Enable Banking](https://enablebanking.com/docs/api/quick-start/)
+as an Account Information Service. Everything happens from **Settings → Connect
+to Enable Banking**; no command line and no configuration file are involved.
+
+1. Register an application in the Enable Banking control panel. Keep the
+   **Sandbox** environment while you test, and register the callback URL below
+   among the application's **redirect URLs** — Enable Banking rejects a callback
+   that is not registered, and so does Flowly.
+2. In Flowly, open **Settings → Connect to Enable Banking** and fill in:
+   - the **application id** (the UUID that names the `.pem` file),
+   - the **private key** (`.pem` file your browser downloaded when you registered
+     the application),
+   - the **callback URL**, which must be
+     `<your Flowly URL>/enablebanking/auth_callback`.
+3. Press **Verify and save**. Flowly calls `GET /application` once: a wrong key,
+   a key from the other environment, or an unregistered callback URL is rejected
+   before anything is stored. The key is then kept only inside the encrypted
+   vault — it is never written to a plain file and never returned to the
+   browser.
+4. Press **Load available banks**, pick your country and account type, and press
+   **Connect** next to your bank. The browser goes to Enable Banking, you log in
+   at the bank, and you come back to `/enablebanking/auth_callback`.
+5. Flowly lists the accounts the bank shared and asks, for each one, whether to
+   **create** a Flowly account or **pair** an existing one. Accounts you ignore
+   are never imported.
+
+Testing on the sandbox: the bank list shows the sandbox credentials returned by
+Enable Banking (usually `customera` / `12345678`, OTP `123456`). The callback URL
+must be reachable by the browser, so a self-hosted sandbox deployment needs the
+HTTPS URL others (or your Tailscale/VPN peers) use — a `127.0.0.1` callback only
+works when the browser runs on the same machine.
+
+After that:
+
+- unlocking the vault refreshes every linked bank in the background;
+- the dashboard shows the last sync and a **Sync now** button for a manual
+  refresh;
+- the first sync of an account looks back 90 days, later syncs resume from the
+  stored cursor with a seven-day overlap so pending rows reconcile when the bank
+  books them;
+- your notes and tags on an imported transaction are never overwritten, and
+  unlinking a bank keeps every imported transaction.
+
+If a bank shows **consent expired** (or revoked), the consent lapsed at the bank:
+connect that bank again from Settings. Imported transactions stay untouched.
+Raw provider responses are kept per account in the vault (`bank_payloads`) so a
+refresh can be audited; the plain-text tables ZIP redacts the private key, and
+only the password-encrypted archive carries it.
 
 ## 3. Self-hosted on your own network (Docker Compose)
 
@@ -148,3 +202,8 @@ Phase boundaries and dependencies are listed in `docs/PLAN.md` sections 17-18.
 | Port 5173 already in use | `pnpm --filter @flowly/web exec vite --port 5199`, or stop the other dev server. |
 | Vite warns about Node 22.9 | Upgrade to Node 22.12+; the container already uses a newer 22.x. |
 | Forgot the passphrase | There is no recovery. Restore a portable archive whose password you know. |
+| `bank_redirect_not_registered` | The callback URL in Settings is not one of the redirect URLs registered for the Enable Banking application. Copy one exactly. |
+| `bank_environment_mismatch` | The `.pem` belongs to a PRODUCTION application while the configuration says SANDBOX (or the other way round). Change the environment field. |
+| `bank_state_invalid` | The bank redirect was replayed, expired (15 minutes) or started in another browser session. Start the connection again. |
+| A linked bank shows **consent expired** | The bank consent lapsed or was revoked. Connect that bank again from Settings. |
+| An account is missing from a sync | Only **mapped** accounts are imported. Map it in Settings; accounts whose currency Flowly cannot store yet are skipped and reported. |

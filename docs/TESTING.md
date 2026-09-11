@@ -76,7 +76,7 @@ passphrase, instead of showing a locked vault you cannot open.
 The unit, integration and contract suites are separate:
 
 ```bash
-pnpm verify          # format, lint, secret scan, types, 148 tests
+pnpm verify          # format, lint, secret scan, types, 191 tests
 pnpm build           # compile the server, bundle the UI
 pnpm release:check   # license policy for runtime dependencies
 ```
@@ -90,7 +90,7 @@ you should see.
 
 | Do this | Expect |
 | --- | --- |
-| Open the app on a fresh deployment, enter a passphrase, press **Create vault** | Vault is created; the workspace opens; the status shows `sqlcipher` and schema v4 |
+| Open the app on a fresh deployment, enter a passphrase, press **Create vault** | Vault is created; the workspace opens; the status shows `sqlcipher` and schema v5 |
 | Restart the server (or the container) and reload | The app comes back **locked**; the same passphrase unlocks it |
 | Enter a wrong passphrase | "That passphrase did not unlock the vault." No vault contents |
 | Repeat a wrong passphrase many times | After a few attempts: "Too many unlock attempts." |
@@ -135,13 +135,32 @@ you should see.
 | Open Dashboard and change the period | Balances, cash flow and spending recompute; pending transactions are excluded |
 | Look at the per-currency cards | Each currency has its own totals; nothing is converted or blended |
 | Look at the spending-by-tag list | Booked outflows are grouped by tag and currency |
+| Look at the **Bank sync** card | Without a connected bank it offers **Connect to Enable Banking**; with one it shows the last sync, the paired accounts and a **Sync now** button |
+
+### Bank connection (Enable Banking)
+
+Use a sandbox application while testing; the bank list shows the sandbox
+credentials Enable Banking returns.
+
+| Do this | Expect |
+| --- | --- |
+| Settings → Connect to Enable Banking: paste a wrong application id or a callback URL that is not registered for the application | A clear rejection; nothing is stored |
+| Fill in the application id, choose a `.pem` key and the registered callback URL, press **Verify and save** | The card switches to the configured state and shows the application name, environment and a short key fingerprint — never the key |
+| Press **Load available banks** for your country | The banks Enable Banking offers in that country, with a **Connect** button each |
+| Press **Connect** and finish the authorization at the bank | The browser returns to `/enablebanking/auth_callback` and Flowly lists the shared accounts |
+| Choose **Create a new account** for one and **Ignore** for another | The created account appears under Accounts with the bank as institution; the ignored one is never imported |
+| Press **Sync now** on the dashboard | Report with created/updated/unchanged counts; the imported rows appear in Transactions with source `enable-banking` |
+| Re-run the sync | Nothing is duplicated: the report says `0 new`, `1 unchanged` |
+| Edit the note of an imported transaction, then sync again | The note and your tags survive; only provider fields are reconciled |
+| Unlink the bank from Settings | The link and its raw payloads disappear; every imported transaction stays |
+| Restart the server and unlock | Linked banks refresh in the background without blocking the unlock |
 
 ### Import and export
 
 | Do this | Expect |
 | --- | --- |
 | Export transactions CSV | A spreadsheet-friendly file; negative amounts stay plain numbers |
-| Download every table (ZIP), accept the plain-text warning | One ZIP with `accounts.csv`, `transactions.csv`, `tags.csv`, `tagging_rules.csv`, a manifest and a README; `unzip -t` reports no errors |
+| Download every table (ZIP), accept the plain-text warning | One ZIP with `accounts.csv`, `transactions.csv`, `tags.csv`, `tagging_rules.csv`, `banking.json`, a manifest and a README; `unzip -t` reports no errors, and `banking.json` carries no private key |
 | Open the ZIP's `transactions.csv` and merge it back through the CSV import preview | The rows are recognised as duplicates instead of being written twice |
 | Import that CSV back, first through the preview | Preview shows valid rows, duplicates and any new tags before anything is written |
 | Confirm the merge | Report says how many rows were created and how many duplicates were skipped |

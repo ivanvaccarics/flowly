@@ -3,6 +3,7 @@ import type { Account, Dashboard, Tag, Transaction, VaultStatus } from "@flowly/
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
 import { Banner, Chip, Empty, Money, PageHeader } from "../components/ui.js";
+import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { describeError } from "../hooks/use-workspace.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -53,17 +54,21 @@ function formatPerMinor(minor: number, currency: string): string {
 export interface DashboardViewProps {
   vaultId: string | null;
   status: VaultStatus | undefined;
+  csrf: string;
   onNewTransaction: () => void;
   onSeeAllTransactions: () => void;
   onExportData: () => void;
+  onOpenSettings: () => void;
 }
 
 export function DashboardView({
   vaultId,
   status,
+  csrf,
   onNewTransaction,
   onSeeAllTransactions,
   onExportData,
+  onOpenSettings,
 }: DashboardViewProps) {
   const [from, setFrom] = useState(startOfMonth);
   const [to, setTo] = useState(today);
@@ -415,6 +420,7 @@ export function DashboardView({
         </div>
 
         <aside className="dash-side">
+          <BankingSyncCard csrf={csrf} onOpenSettings={onOpenSettings} onSynced={load} />
           <div className="card">
             <header>
               <div>

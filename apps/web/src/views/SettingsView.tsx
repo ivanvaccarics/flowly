@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { VaultStatus } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
+import { BankingPanel } from "../components/BankingPanel.js";
 import { Icon } from "../components/icons.js";
 import { Banner, Chip, PageHeader, Stat } from "../components/ui.js";
 import { describeError } from "../hooks/use-workspace.js";
@@ -374,6 +375,8 @@ export function SettingsView({
           </div>
         ) : null}
       </div>
+
+      <BankingPanel csrf={csrf} />
 
       {status ? <Banner tone="ok">{status}</Banner> : null}
       {error ? <Banner tone="error">{error}</Banner> : null}

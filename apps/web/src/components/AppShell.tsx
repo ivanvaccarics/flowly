@@ -135,9 +135,11 @@ export function AppShell({
             <DashboardView
               vaultId={vaultId}
               status={status}
+              csrf={csrf}
               onNewTransaction={() => setView("transactions")}
               onSeeAllTransactions={() => setView("transactions")}
               onExportData={() => setView("settings")}
+              onOpenSettings={() => setView("settings")}
             />
           ) : null}
           {view === "accounts" ? <AccountsView csrf={csrf} /> : null}

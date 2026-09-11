@@ -85,6 +85,16 @@ Filter by date range, account, tag, amount, currency, status or source — and
 free-text search across payee, description and your notes. Filtering runs on the
 server, so a large vault stays quick.
 
+### 🏦 Connect your bank (Enable Banking)
+Connect a bank from Settings with your Enable Banking application id, private key
+and callback URL — the key is verified once and then kept only inside the
+encrypted vault. Pick your bank, authorize the consent at the bank, and tell
+Flowly for each shared account whether to create a new account or pair an
+existing one. Banks refresh when you unlock the vault, and the dashboard has a
+**Sync now** button for a manual pull. Pending rows reconcile into booked ones in
+place, your notes and tags are never overwritten, every raw provider response is
+kept per account, and the vault stays the canonical ledger.
+
 ### 🔐 Security you can explain to a friend
 - A **mandatory passphrase** protects a randomly generated encryption key,
   derived with Argon2id and a per-vault salt.
@@ -187,7 +197,7 @@ carrying its status facts and actions; accounts are endpoint cards with their re
 balances, rules are tiles with an on/off switch, and the ledger's filters include
 quick tag pills. Accounts can be archived and restored, tags can be renamed and
 recoloured in place, and Settings holds the passphrase change plus export and
-import. Export comes in three shapes: the single transaction CSV, a plain ZIP
+import, and the Enable Banking connection. Export comes in three shapes: the single transaction CSV, a plain ZIP
 with one CSV per table (and a manifest) for taking everything elsewhere, and the
 password-encrypted complete archive. Import is additive for a CSV merge and
 replaces the vault for a complete archive, after an explicit confirmation and an
@@ -234,9 +244,11 @@ browser sessions with auto-lock and revision-checked writes, and Phase 3 adds th
 daily finance flows with tagging rules and file-based portability. Phase 4 adds
 the dashboard and server-side search, and Phase 5 hardens the
 deployment: HTTPS with a local certificate authority, upgrade and rollback
-documentation, an SBOM and license inventory, and a threat model. The app is
-still pre-release: an independent cryptographic review and a full
-assistive-technology audit remain open.
+documentation, an SBOM and license inventory, and a threat model. Phase 6 then
+connects the server to Enable Banking: bank consent with per-account linking, raw
+provider payloads stored per account, reconciliation by provider id, and refresh
+on unlock or on demand. The app is still pre-release: an independent
+cryptographic review and a full assistive-technology audit remain open.
 
 | | Milestone | Status |
 | --- | --- | --- |
@@ -246,7 +258,7 @@ assistive-technology audit remain open.
 | 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ✅ Complete |
 | 4️⃣ | Server dashboard and search | ✅ Complete |
 | 5️⃣ | Server hardening and release | ✅ Complete |
-| 6️⃣ | Enable Banking for Server | 🔮 Post-MVP |
+| 6️⃣ | Enable Banking for Server | ✅ Complete |
 | 8️⃣ | Flutter foundation and encrypted native vaults | 🔮 Post-MVP |
 | 9️⃣ | Flutter feature parity | 🔮 Post-MVP |
 | 🔟 | Native hardening and release | 🔮 Post-MVP |
@@ -257,12 +269,14 @@ assistive-technology audit remain open.
 
 ### 🏦 About bank connections
 
-Bank import is a post-MVP goal: Phase 6 adds it to the server, and Phase 11 adds
-it to Flutter. Provider credentials and signing keys will **never** ship inside
-either client. A separate service will fetch and normalize data, hand a batch to
-the unlocked destination vault once, and forget it. It's an import channel —
+Phase 6 connects the server to **Enable Banking**; Phase 11 adds the same
+connector to the Flutter clients. Provider credentials and signing keys **never**
+ship inside any client: the application key pair is stored in the encrypted
+vault, JWT signing happens on the server only, and the API exposes just a
+fingerprint of the matching public key. Bank data arrives as an import channel —
 not a sync service, and never the source of truth. The destination vault stays
-canonical. 🏠
+canonical: imported rows carry their provider id, pending activity reconciles
+into booked activity in place, and your notes and tags are never overwritten. 🏠
 
 ---
 

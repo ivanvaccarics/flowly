@@ -10,6 +10,8 @@ export interface UnlockScreenProps {
   onUnlock: (passphrase: string) => Promise<boolean>;
   onCreate: (passphrase: string) => Promise<boolean>;
   onClearError: () => void;
+  /** Extra context, for example finishing a bank authorization. */
+  notice?: string;
 }
 
 export function UnlockScreen({
@@ -19,6 +21,7 @@ export function UnlockScreen({
   onUnlock,
   onCreate,
   onClearError,
+  notice,
 }: UnlockScreenProps) {
   const [passphrase, setPassphrase] = useState("");
   const missingVault =
@@ -48,6 +51,8 @@ export function UnlockScreen({
           Your money, your device, your keys. Everything is encrypted on your own server and stays
           unreadable until you unlock it.
         </p>
+
+        {notice ? <Banner tone="neutral">{notice}</Banner> : null}
 
         <form
           onSubmit={(event) => {

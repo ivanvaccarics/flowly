@@ -16,7 +16,9 @@ export type IconName =
   | "archive"
   | "search"
   | "check"
-  | "alert";
+  | "alert"
+  | "bank"
+  | "refresh";
 
 const PATHS: Record<IconName, string> = {
   dashboard: "M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z",
@@ -36,6 +38,8 @@ const PATHS: Record<IconName, string> = {
   search: "M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM15.5 15.5 20 20",
   check: "M4 12l5 5L20 6",
   alert: "M12 3l9 17H3zM12 9v5M12 17h.01",
+  bank: "M3 9.5 12 4l9 5.5M5 10v9M19 10v9M9 19v-6h6v6M3 21h18M8 6.2h.01",
+  refresh: "M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4",
 };
 
 export function Icon({

@@ -45,7 +45,9 @@ disk, and the import/export files the user moves by hand.
 - Protection against a compromised browser or a keylogger on the client.
 - Denial of service from a host on the network (the service is private by
   design).
-- Provider-supplied data: Enable Banking arrives in Phase 6 with its own model.
+- Provider-supplied data is only as trustworthy as the ASPSP that sends it: the
+  connector validates and normalizes every row, keeps it in the vault, and never
+  lets provider text overwrite user notes or tags.
 
 ## Residual risks
 

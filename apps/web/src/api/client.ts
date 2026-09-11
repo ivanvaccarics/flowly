@@ -26,6 +26,137 @@ export interface Session {
   csrf: string;
 }
 
+export interface BankingConnectionPublic {
+  id: string;
+  provider: "enable-banking";
+  appId: string;
+  redirectUrl: string;
+  environment: "SANDBOX" | "PRODUCTION";
+  psuType: "personal" | "business";
+  country: string;
+  autoSync: boolean;
+  appName?: string;
+  keyFingerprint: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BankingAccountSummary {
+  id: string;
+  providerAccountUid: string;
+  status: "unmapped" | "mapped" | "ignored";
+  accountId?: string;
+  accountName?: string;
+  iban?: string;
+  maskedIban?: string;
+  providerName?: string;
+  currency?: string;
+  cashAccountType?: string;
+  lastSyncedAt?: string;
+  lastBalanceMinor?: number;
+  lastBalanceCurrency?: string;
+  lastBalanceAt?: string;
+  transactionCount: number;
+}
+
+export interface BankLinkSummary {
+  id: string;
+  aspspName: string;
+  aspspCountry: string;
+  aspspLogo?: string;
+  psuType: "personal" | "business";
+  status: "pending" | "authorized" | "expired" | "revoked" | "failed" | "closed";
+  accessValidUntil?: string;
+  lastSyncedAt?: string;
+  lastSyncError?: string;
+  createdAt: string;
+  accounts: BankingAccountSummary[];
+}
+
+export interface BankingSyncReport {
+  startedAt: string;
+  finishedAt: string;
+  links: number;
+  accounts: number;
+  fetched: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
+  failed: number;
+  errors: Array<{ linkId: string; accountId?: string; message: string }>;
+  reconnectRequired: string[];
+}
+
+export interface BankingStatus {
+  provider: "enable-banking";
+  configured: boolean;
+  connection?: BankingConnectionPublic;
+  links: BankLinkSummary[];
+  sync: { running: boolean; lastSyncAt?: string; lastReport?: BankingSyncReport };
+  autoSync?: boolean;
+}
+
+export interface AspspSummary {
+  name: string;
+  country: string;
+  logo?: string;
+  bic?: string;
+  beta: boolean;
+  psuTypes: Array<"personal" | "business">;
+  maximumConsentDays?: number;
+  sandboxUsers: Array<{ username?: string; password?: string; otp?: string }>;
+  methods: Array<{
+    name?: string;
+    approach: string;
+    psuType: "personal" | "business";
+    credentials: Array<{
+      name: string;
+      title?: string;
+      required: boolean;
+      description?: string;
+      template?: string;
+    }>;
+  }>;
+}
+
+export interface BankingAuthorizationResult {
+  link: BankLinkSummary;
+  accounts: Array<{
+    providerAccountUid: string;
+    status: BankingAccountSummary["status"];
+    suggestedName: string;
+    suggestedType: string;
+    suggestedCurrency?: string;
+    currency?: string;
+    iban?: string;
+    maskedIban?: string;
+    providerName?: string;
+    cashAccountType?: string;
+  }>;
+  aspsp: { name: string; country: string };
+  accessValidUntil?: string;
+}
+
+export interface BankingConfigInput {
+  appId: string;
+  /** Omitted when only settings change; the stored key is reused. */
+  privateKeyPem?: string;
+  redirectUrl: string;
+  environment: "SANDBOX" | "PRODUCTION";
+  psuType: "personal" | "business";
+  country: string;
+  autoSync: boolean;
+}
+
+export interface BankAccountMappingInput {
+  mode: "create" | "pair" | "ignore";
+  accountId?: string;
+  name?: string;
+  type?: string;
+  currency?: string;
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
@@ -180,4 +311,55 @@ export const api = {
       "/api/import/archive",
       { method: "POST", csrf, body: { password, contentBase64 } },
     ),
+
+  // --- Enable Banking -------------------------------------------------------
+
+  bankingStatus: () => request<BankingStatus>("/api/banking/status"),
+  saveBankingConfig: (csrf: string, body: BankingConfigInput) =>
+    request<{ connection: BankingConnectionPublic; status: BankingStatus }>(
+      "/api/banking/enable-banking/config",
+      { method: "PUT", csrf, body },
+    ),
+  deleteBankingConfig: (csrf: string) =>
+    request<{ deleted: boolean }>("/api/banking/enable-banking/config", {
+      method: "DELETE",
+      csrf,
+    }),
+  listAspsps: (params: { country?: string; psuType?: "personal" | "business" } = {}) =>
+    request<{ items: AspspSummary[] }>(`/api/banking/enable-banking/aspsps${queryString(params)}`),
+  startBankingAuthorization: (
+    csrf: string,
+    body: { aspspName: string; aspspCountry: string; psuType: "personal" | "business" },
+  ) =>
+    request<{ linkId: string; url: string; state: string; expiresAt: string }>(
+      "/api/banking/enable-banking/authorize",
+      { method: "POST", csrf, body },
+    ),
+  completeBankingAuthorization: (csrf: string, body: { code: string; state: string }) =>
+    request<BankingAuthorizationResult>("/api/banking/enable-banking/callback", {
+      method: "POST",
+      csrf,
+      body,
+    }),
+  mapBankAccount: (
+    csrf: string,
+    linkId: string,
+    body: BankAccountMappingInput & { providerAccountUid: string },
+  ) =>
+    request<BankLinkSummary>(`/api/banking/enable-banking/links/${linkId}/accounts`, {
+      method: "POST",
+      csrf,
+      body,
+    }),
+  unlinkBank: (csrf: string, linkId: string) =>
+    request<{ deleted: boolean; deletedAccounts: number }>(
+      `/api/banking/enable-banking/links/${linkId}`,
+      { method: "DELETE", csrf },
+    ),
+  syncBanking: (csrf: string, linkId?: string) =>
+    request<{ report: BankingSyncReport; status: BankingStatus }>("/api/banking/sync", {
+      method: "POST",
+      csrf,
+      body: linkId ? { linkId } : {},
+    }),
 };
