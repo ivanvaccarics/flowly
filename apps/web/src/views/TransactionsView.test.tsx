@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TransactionsPanel } from "./TransactionsPanel.js";
+import { TransactionsView } from "./TransactionsView.js";
 
 const ACCOUNT_ID = "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f";
 const TAG_ID = "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081";
@@ -22,6 +22,7 @@ const tag = {
   id: TAG_ID,
   name: "Coffee",
   normalizedName: "coffee",
+  color: "#4648d4",
   createdAt: "2026-09-01T08:00:00.000Z",
   updatedAt: "2026-09-01T08:00:00.000Z",
 };
@@ -55,8 +56,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("transactions panel", () => {
-  it("asks the server to filter instead of filtering in the browser", async () => {
+describe("transactions view", () => {
+  it("renders the ledger and asks the server to filter", async () => {
     const requests: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -74,16 +75,18 @@ describe("transactions panel", () => {
       }),
     );
 
-    render(<TransactionsPanel csrf="csrf-token" />);
+    render(<TransactionsView csrf="csrf-token" />);
 
     await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
-    expect(screen.getAllByText("Coffee").length).toBeGreaterThan(0);
     expect(screen.getByText("-12.30 EUR")).toBeTruthy();
+    expect(screen.getAllByText("Coffee").length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByLabelText("Search"), { target: { value: "espresso" } });
     await waitFor(() => expect(requests.some((url) => url.includes("q=espresso"))).toBe(true));
 
-    fireEvent.change(screen.getByLabelText("Filter by account"), { target: { value: ACCOUNT_ID } });
+    fireEvent.change(screen.getByLabelText("Filter by account"), {
+      target: { value: ACCOUNT_ID },
+    });
     await waitFor(() =>
       expect(requests.some((url) => url.includes(`accountId=${ACCOUNT_ID}`))).toBe(true),
     );

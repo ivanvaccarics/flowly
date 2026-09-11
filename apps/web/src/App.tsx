@@ -1,13 +1,20 @@
-import { LockedVaultShell } from "./components/LockedVaultShell.js";
+import { AppShell } from "./components/AppShell.js";
 import { UnlockScreen } from "./components/UnlockScreen.js";
-import { Workspace } from "./components/Workspace.js";
 import { useWorkspace } from "./hooks/use-workspace.js";
 
 export function App() {
   const workspace = useWorkspace();
 
   if (workspace.loading) {
-    return <LockedVaultShell status={undefined} loading error={undefined} />;
+    return (
+      <div className="unlock-layout">
+        <main className="unlock-card" aria-busy="true">
+          <p className="muted" role="status">
+            Checking the vault…
+          </p>
+        </main>
+      </div>
+    );
   }
 
   if (workspace.status?.state !== "unlocked" || !workspace.csrf) {
@@ -24,7 +31,7 @@ export function App() {
   }
 
   return (
-    <Workspace
+    <AppShell
       csrf={workspace.csrf}
       status={workspace.status}
       busy={workspace.busy}

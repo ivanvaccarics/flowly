@@ -180,12 +180,15 @@ after an idle window, and the vault locks itself when the last session goes
 away. Writes carry the revision they read, so two browsers can never overwrite
 each other silently: a stale write gets `409 revision_conflict`.
 
-The browser UI covers the whole daily flow: unlock or create the vault, manage
-accounts, add transactions with notes and tags, curate tags, write tagging rules
-and backfill them, and move data in and out. Deleting an account or a tag asks
-for a cascade and tells you how many records are affected; importing a complete
-archive always replaces the vault after an explicit confirmation and an
-encrypted safety snapshot.
+The browser UI follows the repository's own design system (*Sovereign Ledger*:
+light canvas, hairline cards, monospaced figures) with one sidebar and six
+sections: **Dashboard**, **Accounts**, **Transactions**, **Tags**, **Rules** and
+**Settings**. Settings holds the passphrase change plus export and import, where
+a CSV merge is additive and a complete archive replaces the vault after an
+explicit confirmation and an encrypted safety snapshot. Deleting an account or a
+tag asks for a cascade and tells you how many records are affected. See
+[docs/DESIGN.md](docs/DESIGN.md) for the tokens and the mapping to what actually
+ships.
 
 You can drive the whole lifecycle against a running server with
 `node tooling/scripts/vault-smoke.mjs create` and then
@@ -201,6 +204,8 @@ interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
   local certificate authority, upgrade, roll back and back up.
 - [docs/TESTING.md](docs/TESTING.md) — the acceptance script and the manual test
   plan, with what a pass looks like for every screen.
+- [docs/DESIGN.md](docs/DESIGN.md) — the UI design system, its tokens and the
+  mapping to the sections that actually ship.
 - [docs/PLAN.md](docs/PLAN.md) — architecture, security requirements, data
   model and the phase-by-phase delivery plan.
 - [docs/adr/](docs/adr/) — the decisions behind the storage engine, key

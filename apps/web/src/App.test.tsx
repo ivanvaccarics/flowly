@@ -14,7 +14,7 @@ const lockedStatus = {
   lastUnlockedAt: null,
 };
 
-const unlockedStatus = { ...lockedStatus, state: "unlocked", schemaVersion: 1 };
+const unlockedStatus = { ...lockedStatus, state: "unlocked", schemaVersion: 3 };
 const freshStatus = { ...lockedStatus, vaultExists: false };
 
 const dashboard = {
@@ -66,7 +66,6 @@ function mockFetch(routes: RouteMap) {
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      // Route on the pathname so query strings (filters, ranges) still match.
       const path = new URL(raw, "http://localhost").pathname;
       const handler = routes[path];
       if (!handler) return json({ error: "not_found" }, 404);
@@ -75,24 +74,64 @@ function mockFetch(routes: RouteMap) {
   );
 }
 
+function unlockedRoutes(): RouteMap {
+  return {
+    "/api/vault/status": () => json(lockedStatus),
+    "/api/vault/unlock": () =>
+      json({ csrfToken: "csrf-token", vault: unlockedStatus }, 200, {
+        "set-cookie": "flowly_sid=abc",
+      }),
+    "/api/dashboard": () => json(dashboard),
+    "/api/accounts": () => json({ items: [] }),
+    "/api/transactions": () => json({ items: [], total: 0, limit: 100, offset: 0 }),
+    "/api/tags": () => json({ items: [] }),
+    "/api/tagging-rules": () => json({ items: [] }),
+  };
+}
+
+async function unlock(app = <App />) {
+  render(app);
+  await waitFor(() => expect(screen.getByLabelText("Passphrase")).toBeTruthy());
+  fireEvent.change(screen.getByLabelText("Passphrase"), {
+    target: { value: "correct horse battery staple" },
+  });
+  await waitFor(() =>
+    expect(
+      (screen.getByRole("button", { name: "Unlock vault" }) as HTMLButtonElement).disabled,
+    ).toBe(false),
+  );
+  screen.getByRole("button", { name: "Unlock vault" }).click();
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
 describe("Flowly web client", () => {
-  it("renders the locked shell from the server status", async () => {
+  it("renders the locked vault screen from the server status", async () => {
     mockFetch({ "/api/vault/status": () => json(lockedStatus) });
     render(<App />);
 
     await waitFor(() =>
       expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Vault locked"),
     );
-    expect(screen.getByLabelText("Passphrase").hasAttribute("disabled")).toBe(false);
+    expect(screen.getByLabelText("Passphrase")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Unlock vault" }).hasAttribute("disabled")).toBe(
       true,
     );
     expect(screen.getByText("sqlcipher")).toBeTruthy();
+  });
+
+  it("offers to create the vault on a fresh deployment", async () => {
+    mockFetch({ "/api/vault/status": () => json(freshStatus) });
+    render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Create your vault"),
+    );
+    expect(screen.getByRole("button", { name: "Create vault" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Unlock vault" })).toBeNull();
   });
 
   it("explains when the server cannot be reached", async () => {
@@ -108,50 +147,29 @@ describe("Flowly web client", () => {
     );
   });
 
-  it("offers to create the vault on a fresh deployment", async () => {
-    mockFetch({ "/api/vault/status": () => json(freshStatus) });
-    render(<App />);
+  it("unlocks into the vault shell with every implemented section", async () => {
+    mockFetch(unlockedRoutes());
+    await unlock();
 
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Create your vault"),
-    );
-    expect(screen.getByRole("button", { name: "Create vault" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Unlock vault" })).toBeNull();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    for (const section of ["Dashboard", "Accounts", "Transactions", "Tags", "Rules", "Settings"]) {
+      expect(screen.getByRole("button", { name: section })).toBeTruthy();
+    }
+    expect(await screen.findByText("Rent")).toBeTruthy();
   });
 
-  it("unlocks and shows the workspace with real data", async () => {
-    mockFetch({
-      "/api/vault/status": () => json(lockedStatus),
-      "/api/vault/unlock": () =>
-        json({ csrfToken: "csrf-token", vault: unlockedStatus }, 200, {
-          "set-cookie": "flowly_sid=abc",
-        }),
-      "/api/accounts": () => json({ items: [] }),
-      "/api/transactions": () => json({ items: [] }),
-      "/api/tags": () => json({ items: [] }),
-      "/api/tagging-rules": () => json({ items: [] }),
-      "/api/dashboard": () => json(dashboard),
-    });
-    render(<App />);
+  it("keeps the passphrase change and portability controls inside Settings", async () => {
+    mockFetch(unlockedRoutes());
+    await unlock();
 
-    await waitFor(() => expect(screen.getByLabelText("Passphrase")).toBeTruthy());
-    fireEvent.change(screen.getByLabelText("Passphrase"), {
-      target: { value: "correct horse battery staple" },
-    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Settings" })).toBeTruthy());
+    screen.getByRole("button", { name: "Settings" }).click();
 
-    await waitFor(() => {
-      const button = screen.getByRole("button", { name: "Unlock vault" }) as HTMLButtonElement;
-      expect(button.disabled).toBe(false);
-    });
-    screen.getByRole("button", { name: "Unlock vault" }).click();
-
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Your vault" })).toBeTruthy());
-    expect(screen.getByRole("tab", { name: "Transactions" })).toBeTruthy();
-    expect(await screen.findByText("1470.00 EUR net")).toBeTruthy();
-    expect(screen.getByText("Rent")).toBeTruthy();
-
-    screen.getByRole("tab", { name: "Accounts" }).click();
-    expect(await screen.findByText("No accounts yet. Add the first one above.")).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Settings" })).toBeTruthy());
+    expect(screen.getByLabelText("Current passphrase")).toBeTruthy();
+    expect(screen.getByLabelText("New passphrase")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export transactions CSV" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export complete archive" })).toBeTruthy();
   });
 
   it("surfaces a revision conflict in plain language", () => {

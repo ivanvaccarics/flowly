@@ -302,6 +302,13 @@ never silently overwrites a newer edit from another browser session.
 
 ### 6.5 User interfaces
 
+The web client implements the repository's own design system — *Sovereign
+Ledger*, defined in `ui/sovereign_ledger/DESIGN.md` and the `ui/*` mockups — with
+one sidebar shell and six sections: Dashboard, Accounts, Transactions, Tags,
+Rules and Settings. Settings carries the passphrase change plus export and
+import. Only implemented features are rendered, fonts use local stacks so the app
+never needs a CDN, and `docs/DESIGN.md` records the tokens and the mapping.
+
 The two UIs follow one product design specification but are implemented with
 their platform-native toolkit:
 
@@ -1083,9 +1090,9 @@ Delivered:
   against `archive-manifest.schema.json`, AES-256-GCM under an Argon2id-derived
   key, encrypted safety snapshot before replacement, atomic replace, and loud
   failures for a wrong password, tampering or an inconsistent archive.
-- React workspace with unlock/create, accounts, transactions (notes and tags),
-  tags, tagging rules and the import/export screen, with accessible forms and
-  plain-language error states including revision conflicts.
+- React vault shell with unlock/create and the Accounts, Transactions, Tags and
+  Rules sections, with accessible forms and plain-language error states including
+  revision conflicts.
 
 #### Task `implement-server-core-finance`
 
@@ -1146,7 +1153,9 @@ Delivered:
   dashboard reads fast without persisting anything derived from decrypted data.
 - `dashboard.schema.json` joins the contracts, so the dashboard response is
   validated at runtime and the shape is shared with the future Dart client.
-- React dashboard screen plus server-side filters in the transactions screen.
+- React dashboard section plus server-side filters in the transactions section,
+  and the Settings section that consolidates the passphrase change with export
+  and import (`docs/adr/0011-ui-design-system.md`).
 
 #### Task `implement-server-dashboard-search`
 
