@@ -559,6 +559,9 @@ function CashFlowChart({
   );
   const slot = chartWidth / buckets.length;
   const barWidth = Math.max(6, Math.min(18, slot / 3));
+  // With a year of weekly buckets the labels would collide, so only every nth
+  // one is drawn; the tooltip-free chart stays readable at any range length.
+  const labelStep = Math.max(1, Math.ceil(buckets.length / 12));
   const scale = (value: number) => chartHeight - (value / max) * (chartHeight - 8);
   const netPoints = buckets.map((bucket, index) => {
     const x = padding.left + slot * index + slot / 2;
@@ -603,12 +606,16 @@ function CashFlowChart({
                 rx={3}
                 className="bar expense"
               />
-              <text x={centre} y={height - 18} textAnchor="middle" className="axis-label">
-                {bucket.label}
-              </text>
-              <text x={centre} y={height - 6} textAnchor="middle" className="axis-sub">
-                {bucket.from.slice(5)} → {bucket.to.slice(5)}
-              </text>
+              {index % labelStep === 0 ? (
+                <>
+                  <text x={centre} y={height - 18} textAnchor="middle" className="axis-label">
+                    {bucket.label}
+                  </text>
+                  <text x={centre} y={height - 6} textAnchor="middle" className="axis-sub">
+                    {bucket.from.slice(5)} → {bucket.to.slice(5)}
+                  </text>
+                </>
+              ) : null}
             </g>
           );
         })}
