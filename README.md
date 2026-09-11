@@ -72,20 +72,14 @@ to blend unlike currencies into one fake number without a real exchange rate.
 
 ### 📊 A dashboard worth opening
 Balances per account, net cash flow, income vs. expenses, spending by tag and
-upcoming recurring transactions — all computed on your
-self-hosted server, without an Internet dependency. Totals always carry their
-currency, and only booked transactions move a balance.
+the latest movements — all computed on your self-hosted server, without an
+Internet dependency. Totals always carry their currency, and only booked
+transactions move a balance.
 
 ### 🔎 Search that actually finds it
 Filter by date range, account, tag, amount, currency, status or source — and
 free-text search across payee, description and your notes. Filtering runs on the
 server, so a large vault stays quick.
-
-### 🔁 Recurring transactions
-Real calendar arithmetic — not "every 30 days". Rent on the 31st behaves the way
-you'd expect in February. Pause and resume any time, no cloud scheduler needed.
-*Next feature after bank connections: scheduled for Phase 7, before any Flutter
-work.*
 
 ### 🔐 Security you can explain to a friend
 - A **mandatory passphrase** protects a randomly generated encryption key,
@@ -102,11 +96,12 @@ work.*
 
 ### 📦 Your data, portable
 - 📄 **Transaction CSV** — clean, standard, spreadsheet-ready.
-- 🗃️ **Complete portable export** — a password-encrypted, versioned archive with
-  everything (accounts, transactions, tags, tagging rules, preferences, and
-  recurring rules once Phase 7 lands) and a checksum manifest. This is the
-  supported way to move a complete vault between independent server and native
-  deployments.
+- 🗃️ **Every table as a ZIP** — one plain CSV per table plus a manifest, so you
+  can take your data elsewhere even if you stop using Flowly.
+- 🔒 **Complete portable export** — a password-encrypted, versioned archive with
+  everything (accounts, transactions, tags, tagging rules, preferences) and a
+  checksum manifest. This is the supported way to move a complete vault between
+  independent server and native deployments.
 - 🛡️ Spreadsheet formula-injection protection on export.
 - ✅ Import with a **preview first**: transaction CSVs merge after duplicate
   checks; complete portable archives always replace the destination vault after
@@ -248,7 +243,6 @@ assistive-technology audit remain open.
 | 4️⃣ | Server dashboard and search | ✅ Complete |
 | 5️⃣ | Server hardening and release | ✅ Complete |
 | 6️⃣ | Enable Banking for Server | 🔮 Post-MVP |
-| 7️⃣ | Recurring transactions — the next feature after banking | 🔮 Post-MVP |
 | 8️⃣ | Flutter foundation and encrypted native vaults | 🔮 Post-MVP |
 | 9️⃣ | Flutter feature parity | 🔮 Post-MVP |
 | 🔟 | Native hardening and release | 🔮 Post-MVP |
@@ -265,9 +259,6 @@ either client. A separate service will fetch and normalize data, hand a batch to
 the unlocked destination vault once, and forget it. It's an import channel —
 not a sync service, and never the source of truth. The destination vault stays
 canonical. 🏠
-
-Recurring transactions come between the two banking steps, as Phase 7, so they
-land before any Flutter work starts.
 
 ---
 

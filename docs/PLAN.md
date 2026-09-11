@@ -35,10 +35,6 @@ The first release is the **Flowly Server MVP**. It includes:
 - Full data export and import
 - Server-side passphrase protection and secure browser sessions
 
-Recurring transactions are the next post-MVP feature: they are delivered in
-Phase 7, after Enable Banking for Server (Phase 6) and before Flutter work
-begins.
-
 Flutter applications, native encrypted storage, and biometric unlock are
 post-Server-MVP deliverables in Phases 8-10.
 
@@ -69,13 +65,7 @@ foundation:
 - The vault is implemented and encrypted at rest, and the browser UI covers the
   unlock flow, accounts, transactions, tags, tagging rules and import/export. It
   is aligned with the Sovereign Ledger mockups (`docs/adr/0012`).
-- `.python-version` selects Python 3.14, and `enable_banking.py` is a standalone
-  Enable Banking exploration script.
-- Local `data/`, `secrets/`, `.venv/`, and `node_modules/` paths are ignored.
-- The prototype reads an RSA private key from `secrets/`, creates a JWT, prints
-  that JWT, and performs an interactive authorization flow. Printing tokens and
-  keeping provider signing logic in a distributable client must not be carried
-  into production.
+- Local `data/`, `secrets/` and `node_modules/` paths are ignored.
 - Local SQLite and JSON files exist under the ignored `data/` directory. Their
   financial contents are not required for architecture planning and should be
   treated as sensitive local data.
@@ -106,11 +96,11 @@ hardened.
 | Toolchain | pnpm workspace on Node.js 22.12 or newer; TypeScript 6.0.3 while `typescript-eslint` does not support TypeScript 7 |
 | Server HTTP layer | Fastify 5 serving a same-origin JSON API; the domain imports no HTTP or storage API |
 | Contract tooling | JSON Schema 2020-12 as the source of truth, generated TypeScript types, and Ajv runtime validation that always accompanies them |
-| Delivery order | Release the server, then Enable Banking for Server, then recurring transactions, then Flutter |
+| Delivery order | Release the server, then Enable Banking for Server, then Flutter |
 | Future bank integration | A separate trusted backend/connector is allowed |
 | Additional MVP scope | Dashboard, advanced search, multi-currency, manual tagging rules |
 | Auto-tagging rules | Server MVP, Phase 3: one AND/OR condition group over note, description, payee, amount, or account, adding one or more tags; tags are only added, provenance is not tracked, and editing a transaction does not re-run rules |
-| Next feature after the MVP | Recurring transactions in Phase 7, delivered after Enable Banking for Server and before Flutter |
+| Next feature after the MVP | Enable Banking for Server in Phase 6, then Flutter |
 
 ## 4. Architecture Options Considered
 
@@ -271,7 +261,6 @@ Use-case services coordinate domain rules through interfaces:
 - `TagRepository`
 - `TaggingRuleRepository`
 - `TaggingRuleService`
-- `RecurringRuleRepository`
 - `ImportExportService`
 - `Clock`
 - `IdGenerator`
@@ -365,7 +354,7 @@ Required fields:
 - `description` optional provider/import description
 - `userNote` optional user-authored text
 - `status`: pending or booked
-- `source`: manual, CSV import, recurring rule, or Enable Banking
+- `source`: manual, CSV import, or Enable Banking
 - `createdAt`
 - `updatedAt`
 
@@ -378,7 +367,6 @@ Optional interoperability fields:
 - `providerAccountId`
 - `providerTransactionId`
 - `importFingerprint`
-- `recurringRuleId`
 
 `Enable Banking` is reserved for forward-compatible contracts and becomes an
 active source only when the post-MVP connector is implemented.
@@ -426,30 +414,14 @@ tags are a set, so evaluation is order-independent.
 A rule holds at most 25 conditions and assigns at most 25 tags; the API and the
 editor enforce both limits.
 
-Rules run when a transaction is created manually, merged from CSV, imported
-from Enable Banking (Phase 6), or generated from a recurring rule (Phase 7).
-Editing an existing transaction does not re-run rules. An explicit backfill
+Rules run when a transaction is created manually, merged from CSV, or imported
+from Enable Banking (Phase 6). Editing an existing transaction does not re-run
+rules. An explicit backfill
 action applies rules to existing transactions and is idempotent.
 
 Rules only add tags. They never remove tags or modify other fields, and Flowly
 does not track which rule added which tag: editing or deleting a rule leaves
 previously applied tags in place.
-
-### 7.5 Recurring rules
-
-Delivered in Phase 7, after Enable Banking for Server and before Flutter. The
-Server MVP ships without recurring rules.
-
-- `id`
-- Template account, amount, currency, payee, note, and tags
-- Frequency and interval
-- Start date and optional end date
-- Next due date
-- Active/paused state
-- Generation policy
-
-Generation produces local transaction occurrences when the app is opened. It
-does not require a background cloud scheduler.
 
 ### 7.6 Operational metadata
 
@@ -615,8 +587,6 @@ Provide three workflows:
 The complete export is the supported device-to-device transfer format. The
 archive contents remain CSV-oriented while preserving normalized relationships.
 Tagging rules are part of format version 1 because they ship in the Server MVP.
-Recurring rules join the archive in Phase 7 through a versioned format bump that
-keeps the previous version importable.
 
 ### 10.2 Encoding and representation
 
@@ -687,7 +657,6 @@ The initial dashboard includes:
 - Net cash flow for a selected period
 - Income and expense totals
 - Spending by tag
-- Upcoming recurring transactions (added with the recurring phase, Phase 7)
 
 ### 11.2 Search and filters
 
@@ -785,18 +754,16 @@ use a versioned fingerprint and retain provider raw identifiers needed for
 reconciliation. Pending-to-booked transitions must update an existing
 transaction rather than create a duplicate when a reliable match exists.
 
-### 12.4 Prototype disposition
+### 12.4 Connector requirements
 
-Before reusing any logic from `enable_banking.py`:
+The connector is written from the provider's documented API, inside the server:
 
-- Remove JWT and session payload printing.
-- Add explicit request timeouts and typed error handling.
-- Move credentials to a server-side secret provider.
-- Validate callback state and redirect data.
-- Add pagination, retries with bounded backoff, rate-limit handling, and
-  idempotency.
-- Add sanitized fixtures and contract tests.
-- Do not use real transaction files as committed test fixtures.
+- Credentials live in a server-side secret provider and never in the browser.
+- Requests carry explicit timeouts, retries with bounded backoff, pagination and
+  rate-limit handling.
+- Callback state and redirect data are validated.
+- Fixtures are sanitized and covered by contract tests; real transaction files
+  are never committed.
 
 ## 13. Security Requirements and Threat Model
 
@@ -915,8 +882,6 @@ Before reusing any logic from `enable_banking.py`:
 - End-to-end workflows for create, lock-current, lock-all, unlock, CSV merge,
   complete-vault replace, export, and delete
 - Connector contract tests using sanitized Enable Banking fixtures in Phase 6
-- Recurring rule contract, property, end-of-month, and time-zone tests in
-  Phase 7
 - Equivalent Dart domain, property-based, storage, crypto, component, and
   accessibility tests beginning in Phase 8
 - Cross-language golden-vector and portable-archive conformance tests in Phases
@@ -937,8 +902,9 @@ Before reusing any logic from `enable_banking.py`:
 
 Phases 0-5 are strictly server-first. They deliver the first releasable product,
 the **Flowly Server MVP**. After that release gate, Phase 6 adds Enable Banking
-for Server, Phase 7 adds recurring transactions as the next feature, and only
-then does Flutter work begin in Phase 8.
+for Server, and Flutter work begins in Phase 8. Phase 7 (recurring transactions)
+and its tasks were removed from the plan in `docs/adr/0015`; the remaining phase
+numbers are kept as published so earlier records stay accurate.
 
 ### Phase 0 - Server architecture and security feasibility
 
@@ -987,8 +953,8 @@ Delivered:
   produces TypeScript types and Ajv validators, and CI fails when the generated
   output drifts from the schemas.
 - Domain invariants for money and currency, accounts, transactions, tags,
-  tagging rules, and recurring-rule shapes, with UUIDv7 identifiers and
-  the versioned import fingerprint.
+  and tagging rules, with UUIDv7 identifiers and the versioned import
+  fingerprint.
 - A Fastify same-origin API serving `/api/health`, a contract-validated
   `/api/vault/status`, `/api/contracts`, and an explicit `501` for unlock until
   Phase 2 implements it.
@@ -1041,8 +1007,8 @@ Delivered:
 - Encrypted storage: SQLCipher 4 behind the adapter from ADR 0001, plus the
   `node:sqlite` + AES-256-GCM fallback, versioned transactional migrations with
   crash injection, indexed reference columns, and 0600 file permissions.
-- Repositories for accounts, transactions, tags, tagging rules and recurring
-  rules, every write guarded by an integer revision; a stale revision
+- Repositories for accounts, transactions, tags and tagging rules, every write
+  guarded by an integer revision; a stale revision
   returns an explicit conflict instead of overwriting.
 - Browser sessions with `HttpOnly; SameSite=Strict` cookies, idle and absolute
   expiry, per-session CSRF tokens, origin validation, unlock rate limiting,
@@ -1143,8 +1109,8 @@ it inside a single transaction after writing an encrypted snapshot.
 
 ### Phase 4 - Server analysis features
 
-Status: **complete** (2026-09-11). `pnpm verify` runs 150 tests (contracts 11,
-server 127, web 12), including the analytics and search suites. Decisions are
+Status: **complete** (2026-09-11). `pnpm verify` runs 148 tests (contracts 10,
+server 126, web 12), including the analytics and search suites. Decisions are
 recorded in `docs/adr/0008-dashboard-search-and-budget-semantics.md`; its budget
 parts are superseded by `docs/adr/0010-remove-budgets.md`.
 
@@ -1183,7 +1149,7 @@ cached in memory.
 ### Phase 5 - Server hardening and release
 
 Status: **complete for its engineering scope** (2026-09-11). `pnpm verify` runs
-150 tests (contracts 11, server 127, web 12). Two verification items cannot be
+148 tests (contracts 10, server 126, web 12). Two verification items cannot be
 finished by writing code in this repository — an independent cryptographic
 review and a full assistive-technology accessibility audit — and are tracked as
 open in `docs/security/verification.md`. Decisions are recorded in
@@ -1238,7 +1204,7 @@ Delivered:
 **Exit criteria:** the **Flowly Server MVP** passes its acceptance suite and
 requires neither Internet access nor any Flowly-operated service for core use.
 
-Met: the acceptance suite is `pnpm verify` plus `pnpm build` (150 tests), the
+Met: the acceptance suite is `pnpm verify` plus `pnpm build` (148 tests), the
 container runs with no outbound network dependency and no Flowly-operated
 service, and the deployment, backup and threat-model documentation ships with
 the repository. The independent cryptographic review and the assistive-technology
@@ -1278,37 +1244,6 @@ Status: **complete** (2026-09-11), decision in `docs/adr/0012`.
 **Exit criteria:** the server can explicitly link, retrieve, normalize, and
 import transactions without receiving provider application secrets and without
 turning the connector into a synchronization service.
-
-### Phase 7 - Recurring transactions (next feature)
-
-The next feature after Enable Banking for Server, delivered before Flutter work
-begins. The Server MVP ships without recurring rules, so this phase owns their
-contracts, storage, generation, UI, and portability.
-
-#### Task `define-recurring-contracts`
-
-- Add canonical recurrence schemas, rule shapes, generation policies, and
-  expected-result fixtures to `contracts/`.
-- Extend the portable archive with a new version that carries recurring rules
-  while remaining able to import the previous version.
-- Define `RecurringRuleRepository` and clock-driven occurrence-generation
-  interfaces.
-
-#### Task `implement-server-recurring`
-
-- Implement recurring rule CRUD in the server API and the React UI, including
-  pause and resume.
-- Implement calendar-aware occurrence generation when the app is opened, with
-  deterministic next-due handling and no background server scheduler.
-- Add the upcoming-recurring panel to the dashboard and the multi-currency
-  exclusion and explicit-conversion rules for generated occurrences.
-- Apply tagging rules to generated occurrences.
-- Add property, end-of-month, time-zone, and archive round-trip tests against
-  the shared fixtures.
-
-**Exit criteria:** occurrences are generated deterministically across locale and
-time zone, paused rules stop generating, the new archive version round-trips and
-imports the previous one, and no recurring work requires a cloud scheduler.
 
 ### Phase 8 - Flutter foundation
 
@@ -1426,9 +1361,7 @@ recovery point.
 | `build-server-release-pipeline` | `integrate-server-deployment`, `harden-server` |
 | `design-banking-connector` | `build-server-release-pipeline` |
 | `implement-server-banking-import` | `design-banking-connector` |
-| `define-recurring-contracts` | `implement-server-banking-import`, `define-contracts-and-server-domain` |
-| `implement-server-recurring` | `define-recurring-contracts`, `implement-server-dashboard-search` |
-| `native-architecture-spike` | `implement-server-recurring`, `build-server-release-pipeline` |
+| `native-architecture-spike` | `implement-server-banking-import`, `build-server-release-pipeline` |
 | `scaffold-native` | `native-architecture-spike`, `define-contracts-and-server-domain` |
 | `implement-native-vault-storage` | `scaffold-native` |
 | `implement-native-core-finance` | `implement-native-vault-storage` |
@@ -1440,9 +1373,9 @@ recovery point.
 | `implement-automatic-backups` | `build-server-release-pipeline`, `implement-native-banking-import` |
 
 Server phases are sequential release gates. After the Server MVP, Enable Banking
-for Server (Phase 6) is delivered first and recurring transactions (Phase 7)
-come next, before Flutter foundation (Phase 8) may begin. Flutter feature work
-cannot move ahead of its foundation and conformance gates.
+for Server (Phase 6) is delivered first, before Flutter foundation (Phase 8) may
+begin. Flutter feature work cannot move ahead of its foundation and conformance
+gates.
 
 ## 19. Definition of Done for the Server MVP
 
@@ -1485,9 +1418,6 @@ The first MVP is complete at the end of Phase 5 only when:
 - Receipt/image attachment storage
 - Payment initiation
 - Enable Banking integration in the MVP
-- Recurring rules, occurrence generation, and upcoming-recurring widgets in the
-  Server MVP (delivered in Phase 7)
-- Background server scheduling for recurring transactions
 - Nested boolean condition groups, tag-removal actions, rule-driven edits to
   payee or note, rule re-evaluation when a transaction is edited, and background
   rule scheduling in the Server MVP

@@ -14,7 +14,6 @@ import {
   parseAccountsCsv,
   parseTagsCsv,
   parseTransactionCsv,
-  recurringRulesToCsv,
   taggingRulesToCsv,
   tagsToCsv,
   transactionsToCsv,
@@ -56,7 +55,6 @@ export interface ArchiveImportReport {
   transactions: number;
   tags: number;
   taggingRules: number;
-  recurringRules: number;
   snapshot: string;
   manifest: ArchiveManifest;
 }
@@ -102,12 +100,11 @@ export class ImportExportService {
    * the archive is built in memory and handed to the browser.
    */
   async exportTablesZip(): Promise<TablesExport> {
-    const [accounts, transactions, tags, taggingRules, recurringRules] = await Promise.all([
+    const [accounts, transactions, tags, taggingRules] = await Promise.all([
       this.vault.accounts.list(),
       this.vault.transactions.list(),
       this.vault.tags.list(),
       this.vault.taggingRules.list(),
-      this.vault.recurringRules.list(),
     ]);
 
     const exportedAt = this.clock.nowIso();
@@ -125,11 +122,6 @@ export class ImportExportService {
         rows: taggingRules.length,
         content: taggingRulesToCsv(taggingRules, tags),
       },
-      {
-        name: "recurring_rules.csv",
-        rows: recurringRules.length,
-        content: recurringRulesToCsv(recurringRules, accounts, tags),
-      },
     ].map((file) => ({ ...file, content: Buffer.from(file.content, "utf8") }));
 
     const counts = {
@@ -137,7 +129,6 @@ export class ImportExportService {
       transactions: transactions.length,
       tags: tags.length,
       taggingRules: taggingRules.length,
-      recurringRules: recurringRules.length,
     };
     const manifest = {
       format: "flowly-tables-v1",
@@ -175,12 +166,11 @@ export class ImportExportService {
     destination: string,
     password: string,
   ): Promise<{ bytes: number; manifest: ArchiveManifest }> {
-    const [accounts, transactions, tags, rules, recurringRules] = await Promise.all([
+    const [accounts, transactions, tags, rules] = await Promise.all([
       this.vault.accounts.list(),
       this.vault.transactions.list(),
       this.vault.tags.list(),
       this.vault.taggingRules.list(),
-      this.vault.recurringRules.list(),
     ]);
     return writeArchive(
       destination,
@@ -196,10 +186,6 @@ export class ImportExportService {
         {
           name: "tagging_rules.json",
           content: Buffer.from(JSON.stringify(rules, null, 2), "utf8"),
-        },
-        {
-          name: "recurring_rules.csv",
-          content: Buffer.from(JSON.stringify(recurringRules, null, 2), "utf8"),
         },
       ],
       {
@@ -377,6 +363,8 @@ export class ImportExportService {
    */
   async importArchive(source: string, password: string): Promise<ArchiveImportReport> {
     const { manifest, files } = await readArchive(source, password);
+    // Archives written before recurring rules were removed still carry
+    // `recurring_rules.csv`; it is ignored rather than rejected.
     const accounts = parseAccountsCsv(files.get("accounts.csv")?.toString("utf8") ?? "");
     const tags = parseTagsCsv(files.get("tags.csv")?.toString("utf8") ?? "");
     const tagNames = new Map(tags.map((tag) => [tag.id, tag.normalizedName]));
@@ -385,7 +373,6 @@ export class ImportExportService {
       tagNames,
     );
     const taggingRules = parseJsonArray(files.get("tagging_rules.json"), "tagging_rules.json");
-    const recurringRules = parseJsonArray(files.get("recurring_rules.csv"), "recurring_rules.csv");
 
     if (manifest.vaultId === this.vault.header.vaultId) {
       throw new ImportError("this archive was exported from the same vault");
@@ -416,7 +403,6 @@ export class ImportExportService {
         transactions,
         tags,
         taggingRules: taggingRules as never,
-        recurringRules: recurringRules as never,
       });
     } catch (error) {
       throw new ImportError(
@@ -430,7 +416,6 @@ export class ImportExportService {
       transactions: transactions.length,
       tags: tags.length,
       taggingRules: taggingRules.length,
-      recurringRules: recurringRules.length,
       snapshot,
       manifest,
     };
@@ -501,7 +486,7 @@ function tablesReadme(exportedAt: string, counts: Record<string, number>): strin
   return `Flowly - plain-text data export
 Exported: ${exportedAt}
 Rows: ${counts.accounts} accounts, ${counts.transactions} transactions, ${counts.tags} tags,
-      ${counts.taggingRules} tagging rules, ${counts.recurringRules} recurring rules
+      ${counts.taggingRules} tagging rules
 
 WHAT THIS IS
   Every table in your Flowly vault as a CSV file, so you can read, archive or
@@ -512,7 +497,6 @@ FILES
   transactions.csv     one row per transaction, same format as the single-file CSV export
   tags.csv             one row per tag
   tagging_rules.csv    one row per tagging rule; "conditions" is a JSON array
-  recurring_rules.csv  one row per recurring rule
   manifest.json        row counts and a SHA-256 checksum per file
 
 THIS EXPORT IS PLAIN TEXT

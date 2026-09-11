@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { createAccount, validateAccount } from "../src/domain/account.js";
 import { DomainError } from "../src/domain/errors.js";
 import { generateId, isGeneratedId } from "../src/domain/ids.js";
-import { validateRecurringRule, type RecurringRule } from "../src/domain/recurring.js";
 import { createTag, isSameTagName, validateTag } from "../src/domain/tag.js";
 import {
   FINGERPRINT_VERSION,
@@ -103,30 +102,5 @@ describe("transactions", () => {
     expect(importFingerprint({ ...input, description: "card purchase" })).toBe(fingerprint);
     expect(importFingerprint({ ...input, amountMinor: -1231 })).not.toBe(fingerprint);
     expect(importFingerprint({ ...input, description: "OTHER" })).not.toBe(fingerprint);
-  });
-});
-
-describe("recurring rules", () => {
-  const rule: RecurringRule = {
-    formatVersion: 1,
-    revision: 1,
-    id: "018f2c1e-6d5b-7c3a-9f2e-6c4d5e6f7081",
-    name: "Rent",
-    template: { accountId: ACCOUNT_ID, amountMinor: -95000, currency: "EUR", payee: "Landlord" },
-    frequency: "monthly",
-    interval: 1,
-    startDate: "2026-10-31",
-    active: true,
-    createdAt: NOW,
-    updatedAt: NOW,
-  };
-
-  it("validates template invariants", () => {
-    expect(() => validateRecurringRule(rule)).not.toThrow();
-    expect(() => validateRecurringRule({ ...rule, interval: 0 })).toThrow(DomainError);
-    expect(() => validateRecurringRule({ ...rule, endDate: "2026-09-01" })).toThrow(DomainError);
-    expect(() => validateRecurringRule({ ...rule, frequency: "hourly" as never })).toThrow(
-      DomainError,
-    );
   });
 });

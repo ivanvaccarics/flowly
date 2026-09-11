@@ -7,6 +7,5 @@ data
 secrets
 spikes
 ui
-.venv
 .env
 *.local

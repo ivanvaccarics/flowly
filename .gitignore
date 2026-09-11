@@ -1,9 +1,6 @@
 secrets/
-.venv/
 node_modules/
 data/
-enable_banking.py
-.python-version
 ui/
 dist/
 coverage/

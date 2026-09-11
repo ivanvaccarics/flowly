@@ -1,7 +1,6 @@
 import { validateContract } from "@flowly/web-contracts";
 import { describe, expect, it } from "vitest";
 import { createAccount, validateAccount, type Account } from "../src/domain/account.js";
-import { validateRecurringRule, type RecurringRule } from "../src/domain/recurring.js";
 import { validateTag, type Tag } from "../src/domain/tag.js";
 import { validateTaggingRule, type TaggingRule } from "../src/domain/tagging-rule.js";
 import {
@@ -34,12 +33,6 @@ describe("contract fixtures satisfy the domain invariants", () => {
     const fixture = readFixture<TaggingRule>("tagging-rule");
     expect(() => validateTaggingRule(fixture)).not.toThrow();
     expect(validateContract("taggingRule", fixture).valid).toBe(true);
-  });
-
-  it("accepts the recurring rule fixture", () => {
-    const fixture = readFixture<RecurringRule>("recurring-rule");
-    expect(() => validateRecurringRule(fixture)).not.toThrow();
-    expect(validateContract("recurringRule", fixture).valid).toBe(true);
   });
 });
 

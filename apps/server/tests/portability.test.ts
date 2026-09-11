@@ -227,6 +227,9 @@ describe("complete portable archive", () => {
       await seed(source.service, source.vault);
       const exported = await source.service.exportArchive(archivePath, ARCHIVE_PASSWORD);
       expect(exported.manifest.entries.map((entry) => entry.name)).toContain("tagging_rules.json");
+      expect(exported.manifest.entries.map((entry) => entry.name)).not.toContain(
+        "recurring_rules.csv",
+      );
       expect(exported.manifest.vaultId).toBe(source.vault.header.vaultId);
 
       const report = await target.service.importArchive(archivePath, ARCHIVE_PASSWORD);
@@ -241,6 +244,39 @@ describe("complete portable archive", () => {
       expect(transactions[0]?.userNote).toBe("espresso with Luca");
       expect(transactions[0]?.tagIds).toEqual([COFFEE_TAG]);
       expect((await target.vault.taggingRules.list())[0]?.name).toBe("Coffee");
+    } finally {
+      await source.vault.lock();
+      await target.vault.lock();
+      cleanup(source.dir);
+      cleanup(target.dir);
+    }
+  });
+
+  it("imports an archive that still carries recurring_rules.csv", async () => {
+    const source = await setupVault("flowly-archive-legacy-recurring-");
+    const target = await setupVault("flowly-archive-legacy-recurring-target-");
+    const archivePath = join(source.dir, "legacy.flowly");
+    try {
+      await seed(source.service, source.vault);
+      await source.service.exportArchive(archivePath, ARCHIVE_PASSWORD);
+
+      // Old exports always carried the file, even when it held no rules.
+      const { files, manifest } = await readArchive(archivePath, ARCHIVE_PASSWORD);
+      await writeArchive(
+        archivePath,
+        ARCHIVE_PASSWORD,
+        manifest.vaultId,
+        [
+          ...[...files.entries()].map(([name, content]) => ({ name, content })),
+          { name: "recurring_rules.csv", content: Buffer.from("[]", "utf8") },
+        ],
+        TEST_KDF,
+      );
+
+      const report = await target.service.importArchive(archivePath, ARCHIVE_PASSWORD);
+      expect(report.accounts).toBe(1);
+      expect(report.transactions).toBe(1);
+      expect(report.taggingRules).toBe(1);
     } finally {
       await source.vault.lock();
       await target.vault.lock();

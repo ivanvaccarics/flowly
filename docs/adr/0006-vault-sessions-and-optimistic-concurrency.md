@@ -12,8 +12,9 @@ developer machines and inside containers.
 ## Decision
 
 - **Revision on every mutable record.** Accounts, transactions, tags, tagging
-  rules and recurring rules carry an integer `revision` starting at
-  `1`. The revision lives in its own column and is authoritative on read. The
+  rules and recurring rules carry an integer `revision` starting at `1` (the
+  recurring table was removed later, see `docs/adr/0015`). The revision lives in
+  its own column and is authoritative on read. The
   API requires the revision the client read on every update and delete; a
   mismatch returns `409 revision_conflict` with the expected and the actual
   revision.

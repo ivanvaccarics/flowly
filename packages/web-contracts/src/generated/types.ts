@@ -91,32 +91,6 @@ export interface Dashboard {
 }
 
 /**
- * Calendar-aware recurring transaction template. Occurrence generation is delivered in Phase 7.
- */
-export interface RecurringRule {
-  formatVersion: 1;
-  revision: number;
-  id: string;
-  name: string;
-  template: {
-    accountId: string;
-    amountMinor: number;
-    currency: string;
-    payee?: string;
-    userNote?: string;
-    tagIds?: string[];
-  };
-  frequency: "daily" | "weekly" | "monthly" | "yearly";
-  interval: number;
-  startDate: string;
-  endDate?: string;
-  nextDueDate?: string;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
  * Tags match case-insensitively; `name` preserves the casing the user typed.
  */
 export interface Tag {
@@ -216,7 +190,7 @@ export interface Transaction {
   description?: string;
   userNote?: string;
   status: "pending" | "booked";
-  source: "manual" | "csv-import" | "recurring-rule" | "enable-banking";
+  source: "manual" | "csv-import" | "enable-banking";
   /**
    * @maxItems 100
    */
@@ -225,7 +199,6 @@ export interface Transaction {
   providerAccountId?: string;
   providerTransactionId?: string;
   importFingerprint?: string;
-  recurringRuleId?: string;
   createdAt: string;
   updatedAt: string;
 }

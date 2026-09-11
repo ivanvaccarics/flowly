@@ -61,6 +61,14 @@ export const MIGRATIONS: Migration[] = [
     name: "drop-budgets",
     statements: [`DROP TABLE IF EXISTS budgets`],
   },
+  {
+    // Recurring rules were dropped from the product for the same reason: the
+    // table from version 1 goes away forward-only, so existing vaults keep
+    // opening with the same passphrase.
+    version: 4,
+    name: "drop-recurring-rules",
+    statements: [`DROP TABLE IF EXISTS recurring_rules`],
+  },
 ];
 
 export const SCHEMA_VERSION = Math.max(...MIGRATIONS.map((migration) => migration.version));

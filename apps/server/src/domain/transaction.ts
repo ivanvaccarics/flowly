@@ -19,13 +19,12 @@ export const USER_NOTE_MAX = 2000;
 export const FINGERPRINT_VERSION = "v1";
 
 export type TransactionStatus = "pending" | "booked";
-export type TransactionSource = "manual" | "csv-import" | "recurring-rule" | "enable-banking";
+export type TransactionSource = "manual" | "csv-import" | "enable-banking";
 
 export const TRANSACTION_STATUSES: readonly TransactionStatus[] = ["pending", "booked"];
 export const TRANSACTION_SOURCES: readonly TransactionSource[] = [
   "manual",
   "csv-import",
-  "recurring-rule",
   "enable-banking",
 ];
 
@@ -50,7 +49,6 @@ export interface Transaction {
   providerAccountId?: string;
   providerTransactionId?: string;
   importFingerprint?: string;
-  recurringRuleId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -109,9 +107,6 @@ export function validateTransaction(transaction: Transaction): void {
       "invalid-transaction",
       "transaction.importFingerprint must be 32 hex chars",
     );
-  }
-  if (transaction.recurringRuleId !== undefined) {
-    assertUuid(transaction.recurringRuleId, "transaction.recurringRuleId");
   }
   assertIsoDateTime(transaction.createdAt, "transaction.createdAt");
   assertIsoDateTime(transaction.updatedAt, "transaction.updatedAt");

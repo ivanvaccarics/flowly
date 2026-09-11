@@ -46,7 +46,7 @@ describe.each(["sqlcipher", "record-encryption"] as const)("vault lifecycle (%s)
       expect(await reopened.accounts.count()).toBe(1);
       const stats = await reopened.stats();
       expect(stats.engine).toBe(engine);
-      expect(stats.schemaVersion).toBe(3);
+      expect(stats.schemaVersion).toBe(4);
       await reopened.lock();
 
       await Vault.destroy(dir);

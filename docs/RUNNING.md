@@ -10,7 +10,7 @@ desktop apps will need when their phases land. The roadmap itself lives in
 | --- | --- |
 | Node.js 22.12 or newer | Vite 8 and `node-gyp` 11 both expect it. Node 22.9 works but prints a warning. |
 | pnpm 12 | `corepack enable pnpm` or `npm install -g pnpm@12` |
-| A C toolchain with OpenSSL headers | `pnpm install` compiles the SQLCipher addon: `python3`, `make`, `g++`, `libssl-dev` on Debian/Ubuntu, `openssl-dev` on Alpine, Xcode command line tools on macOS. |
+| A C toolchain with OpenSSL headers | `pnpm install` compiles the SQLCipher addon through `node-gyp`, which needs its own `python3` alongside `make`, `g++`, `libssl-dev` on Debian/Ubuntu (`openssl-dev` on Alpine) or the Xcode command line tools on macOS. Flowly itself contains no Python. |
 | Docker (optional) | Only for the container build and the Compose deployment. |
 
 There is no Flowly account and no cloud dependency: everything below runs on

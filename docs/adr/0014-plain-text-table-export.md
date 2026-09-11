@@ -16,8 +16,9 @@ metadata.
 ## Decision
 
 - Add a third export: `GET /api/export/tables.zip`, one CSV per table
-  (`accounts`, `transactions`, `tags`, `tagging_rules`, `recurring_rules`), plus
-  `manifest.json` (row counts and a SHA-256 per file) and `README.txt`.
+  (`accounts`, `transactions`, `tags`, `tagging_rules`), plus `manifest.json`
+  (row counts and a SHA-256 per file) and `README.txt`. (`recurring_rules` was
+  dropped from this list by `docs/adr/0015`.)
 - Build the archive in memory and hand it to the browser; nothing is written to
   the server's disk. The transaction CSV keeps the documented export format, so
   a ledger can still be merged back through the existing CSV import.
@@ -38,5 +39,5 @@ metadata.
 - Plaintext leaves the server, so `docs/security/data-loss.md`,
   `threat-model.md` and `support-matrix.md` now name this export next to the
   plain transaction CSV.
-- Tagging rules and recurring rules are nested structures: their CSVs keep the
-  condition array in one JSON cell rather than flattening it into columns.
+- Tagging rules are a nested structure: their CSV keeps the condition array in
+  one JSON cell rather than flattening it into columns.

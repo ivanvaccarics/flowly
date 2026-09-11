@@ -31,7 +31,7 @@ moves a whole vault between independent deployments.
 The archive is the supported way to move a complete vault. Layout:
 
 1. A gzipped tar containing `manifest.json`, `accounts.csv`, `transactions.csv`,
-   `tags.csv`, `tagging_rules.json` and `recurring_rules.csv`.
+   `tags.csv` and `tagging_rules.json`.
 2. `manifest.json` lists every entry with its byte length and SHA-256 digest,
    plus `formatVersion`, `createdAt` and the Flowly vault id.
 3. The tar is encrypted with AES-256-GCM under a key derived from the archive
@@ -48,23 +48,21 @@ Rules for reading:
 - The importer always replaces the destination vault, requires an explicit
   confirmation, saves an encrypted safety snapshot first, writes inside one
   transaction and rolls back on any failure.
-- Tagging rules are part of version 1 because they ship in the Server MVP;
-  recurring rules join through a later version bump in Phase 7.
+- Tagging rules are part of version 1 because they ship in the Server MVP.
+- Archives written before `docs/adr/0015` still carry `recurring_rules.csv`
+  (usually empty). Import ignores the file instead of rejecting the archive.
 
 ## Tables ZIP (`flowly-tables-v1`)
 
 `GET /api/export/tables.zip` returns one folder named
 `flowly-export-<yyyy-mm-dd>/` containing `README.txt`, `manifest.json`,
-`accounts.csv`, `transactions.csv`, `tags.csv`, `tagging_rules.csv` and
-`recurring_rules.csv`.
+`accounts.csv`, `transactions.csv`, `tags.csv` and `tagging_rules.csv`.
 
 - `accounts.csv`, `tags.csv` and `transactions.csv` use the column order
   documented above, so the ledger can be merged back through the CSV import.
 - `tagging_rules.csv` carries `id, name, enabled, combinator, conditions,
   tag_names, created_at, updated_at`; `conditions` is the JSON condition array in
   a single cell and `tag_names` joins tag names with `|`.
-- `recurring_rules.csv` carries the rule plus its template (`account_id,
-  account_name, amount, currency, payee, user_note, tag_names`).
 - `manifest.json` holds `format`, `exportedAt`, the vault id, `encrypted: false`,
   per-table row counts and a SHA-256 for every file.
 - The export is plain text and is **not** a restore format; the encrypted archive

@@ -33,7 +33,6 @@ import { validateAccount, type Account } from "../domain/account.js";
 import { validateTag, type Tag } from "../domain/tag.js";
 import { validateTaggingRule, type TaggingRule } from "../domain/tagging-rule.js";
 import { validateTransaction, type Transaction } from "../domain/transaction.js";
-import { validateRecurringRule, type RecurringRule } from "../domain/recurring.js";
 import { EXPORT_FORMAT_VERSION, VAULT_FORMAT_VERSION } from "../version.js";
 
 export class VaultLockedError extends Error {
@@ -118,7 +117,6 @@ export class Vault {
   readonly transactions: StoreRepository<Transaction>;
   readonly tags: StoreRepository<Tag>;
   readonly taggingRules: StoreRepository<TaggingRule>;
-  readonly recurringRules: StoreRepository<RecurringRule>;
 
   private readonly clock: Clock;
   private readonly headerValue: VaultHeader;
@@ -157,7 +155,6 @@ export class Vault {
     this.accounts = repository<Account>("accounts", validateAccount);
     this.tags = repository<Tag>("tags", validateTag, (tag) => ({ refA: tag.normalizedName }));
     this.taggingRules = repository<TaggingRule>("tagging_rules", validateTaggingRule);
-    this.recurringRules = repository<RecurringRule>("recurring_rules", validateRecurringRule);
     this.transactions = repository<Transaction>(
       "transactions",
       validateTransaction,
@@ -279,17 +276,10 @@ export class Vault {
     transactions?: Transaction[];
     tags?: Tag[];
     taggingRules?: TaggingRule[];
-    recurringRules?: RecurringRule[];
   }): Promise<void> {
     const store = this.store();
     await store.transaction(async () => {
-      for (const table of [
-        "accounts",
-        "transactions",
-        "tags",
-        "tagging_rules",
-        "recurring_rules",
-      ] as const) {
+      for (const table of ["accounts", "transactions", "tags", "tagging_rules"] as const) {
         await store.clear(table);
       }
       for (const account of data.accounts ?? []) {
@@ -306,9 +296,6 @@ export class Vault {
       }
       for (const rule of data.taggingRules ?? []) {
         await store.insert("tagging_rules", rule.id, rule);
-      }
-      for (const rule of data.recurringRules ?? []) {
-        await store.insert("recurring_rules", rule.id, rule);
       }
     });
   }
@@ -436,21 +423,18 @@ export class Vault {
 
   async stats(): Promise<VaultStats> {
     const store = this.store();
-    const [accounts, transactions, tags, taggingRules, recurringRules, applied] = await Promise.all(
-      [
-        store.count("accounts"),
-        store.count("transactions"),
-        store.count("tags"),
-        store.count("tagging_rules"),
-        store.count("recurring_rules"),
-        store.appliedMigrations(),
-      ],
-    );
+    const [accounts, transactions, tags, taggingRules, applied] = await Promise.all([
+      store.count("accounts"),
+      store.count("transactions"),
+      store.count("tags"),
+      store.count("tagging_rules"),
+      store.appliedMigrations(),
+    ]);
     return {
       engine: store.engine,
       details: store.details,
       schemaVersion: applied.length > 0 ? Math.max(...applied) : 0,
-      counts: { accounts, transactions, tags, taggingRules, recurringRules },
+      counts: { accounts, transactions, tags, taggingRules },
       bytesOnDisk: store.bytesOnDisk(),
     };
   }

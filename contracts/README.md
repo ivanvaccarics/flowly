@@ -21,7 +21,7 @@ storage engine, a framework or a language runtime.
   and the native application. Adding an optional field is not breaking.
 - Export formats are versioned separately: the transaction CSV and the complete
   portable archive both start at version `1`. Tagging rules ship inside archive
-  version 1 because they land in the Server MVP; recurring rules add a new
+  version 1 because they land in the Server MVP; new record types add a new
   archive version in Phase 7.
 - Generated code never replaces runtime validation, and golden vectors are
   never updated to match an implementation — the implementation must match

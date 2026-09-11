@@ -1,6 +1,5 @@
 import type { Account } from "../domain/account.js";
 import type { Clock } from "../domain/clock.js";
-import type { RecurringRule } from "../domain/recurring.js";
 import type { Tag } from "../domain/tag.js";
 import type { TaggingRule } from "../domain/tagging-rule.js";
 import type { Transaction } from "../domain/transaction.js";
@@ -27,8 +26,6 @@ export interface TagRepository extends Repository<Tag> {
 export interface TaggingRuleRepository extends Repository<TaggingRule> {
   listOrdered(): Promise<TaggingRule[]>;
 }
-
-export type RecurringRuleRepository = Repository<RecurringRule>;
 
 export interface UnitOfWork {
   /** Runs a multi-record write atomically across repositories. */
@@ -79,6 +76,5 @@ export interface ServerServices {
   transactions: TransactionRepository;
   tags: TagRepository;
   taggingRules: TaggingRuleRepository;
-  recurringRules: RecurringRuleRepository;
   unitOfWork: UnitOfWork;
 }

@@ -17,7 +17,6 @@ const fixtureFor: Record<string, ContractKey> = {
   transaction: "transaction",
   tag: "tag",
   "tagging-rule": "taggingRule",
-  "recurring-rule": "recurringRule",
   "vault-status": "vaultStatus",
   dashboard: "dashboard",
 };
