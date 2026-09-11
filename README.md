@@ -1,3 +1,7 @@
+<div align="center">
+
+<img src="apps/web/public/logo.svg" alt="Flowly — your money, your device, your keys" width="340">
+
 # 💸 Flowly
 
 ### Your money. Your device. Your keys.
