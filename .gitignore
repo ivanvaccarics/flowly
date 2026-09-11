@@ -10,3 +10,4 @@ coverage/
 .env
 *.local
 *.tsbuildinfo
+data_bank
