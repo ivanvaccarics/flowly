@@ -65,9 +65,10 @@ the full list (`FLOWLY_HOST`, `FLOWLY_PORT`, `FLOWLY_VAULT_DIR`,
 docker compose -f deployment/self-hosted/compose.yaml up --build
 ```
 
-Two containers start: the server (vault in the `vault-data` volume) and a Caddy
-reverse proxy that terminates HTTPS on `127.0.0.1:8443` with a certificate from
-its own local CA. Only the proxy publishes a port, and only on the loopback
+Two containers start: the server, whose vault lives in `./data/vault` in the
+project through a bind mount, and a Caddy reverse proxy that terminates HTTPS on
+`127.0.0.1:8443` with a certificate from its own local CA (kept in
+`./data/caddy`). Only the proxy publishes a port, and only on the loopback
 interface. The server refuses to bind a public interface unless
 `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose — that flag is for containers
 where the port mapping itself stays private.

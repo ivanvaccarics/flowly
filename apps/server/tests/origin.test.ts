@@ -1,5 +1,45 @@
 import { describe, expect, it } from "vitest";
 import { makeConfig, startHarness } from "./helpers/api.js";
+import { buildApp } from "../src/api/app.js";
+import { Vault } from "../src/vault/vault.js";
+import { TEST_KDF } from "./helpers/test-utils.js";
+
+/**
+ * A service that has not opened the vault yet must still report that the vault
+ * file exists, otherwise the client offers to create a second vault.
+ */
+describe("locked status", () => {
+  it("reports an existing vault without opening it", async () => {
+    const { config } = makeConfig();
+    const vault = await Vault.create(config.vaultDir, "correct horse battery staple", {
+      kdf: TEST_KDF,
+    });
+    await vault.lock();
+
+    const app = buildApp({ config });
+    try {
+      const response = await app.inject({ method: "GET", url: "/api/vault/status" });
+      const body = response.json<{ state: string; vaultExists: boolean }>();
+      expect(body).toMatchObject({ state: "locked", vaultExists: true });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("reports no vault on an empty deployment", async () => {
+    const { config } = makeConfig();
+    const app = buildApp({ config });
+    try {
+      const response = await app.inject({ method: "GET", url: "/api/vault/status" });
+      expect(response.json<{ state: string; vaultExists: boolean }>()).toMatchObject({
+        state: "locked",
+        vaultExists: false,
+      });
+    } finally {
+      await app.close();
+    }
+  });
+});
 
 /**
  * Regression: the server serves the web app itself, so a browser calling the

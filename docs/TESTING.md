@@ -23,8 +23,13 @@ docker compose -f deployment/self-hosted/compose.yaml up --build -d
 ```
 
 Use a **scratch vault** while testing. Set `FLOWLY_VAULT_DIR` to a throwaway
-directory, or delete the Compose volume with
-`docker compose -f deployment/self-hosted/compose.yaml down -v`.
+directory, or remove the Compose vault folder:
+
+```bash
+docker compose -f deployment/self-hosted/compose.yaml down
+rm -rf data/vault          # containers write into the project's data/ folder
+docker compose -f deployment/self-hosted/compose.yaml up -d
+```
 
 ## 2. Automated acceptance run
 
@@ -56,9 +61,10 @@ the vault belongs to the acceptance run. Either unlock with the acceptance
 passphrase and change it from the workspace, or start over:
 
 ```bash
-# Docker Compose: remove the volume and come back with an empty vault
-docker compose -f deployment/self-hosted/compose.yaml down -v
-docker compose -f deployment/self-hosted/compose.yaml up --build -d
+# Docker Compose: remove the vault folder and come back empty
+docker compose -f deployment/self-hosted/compose.yaml down
+rm -rf data/vault
+docker compose -f deployment/self-hosted/compose.yaml up -d
 
 # local run: point the server at a scratch directory instead
 FLOWLY_VAULT_DIR=$(mktemp -d) node apps/server/dist/index.js

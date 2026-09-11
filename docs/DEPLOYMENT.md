@@ -29,7 +29,7 @@ docker compose -f deployment/self-hosted/compose.yaml up --build -d
 Two containers start:
 
 - `server` — the TypeScript service, listening on port 8787 **inside** the
-  Compose network, with the vault in the `vault-data` volume.
+  Compose network, with the vault in `./data/vault` inside the project.
 - `proxy` — Caddy terminating HTTPS on `127.0.0.1:8443` and forwarding to the
   server. Only HTTPS is exposed; plain HTTP is not published, so there is no
   half-configured redirect to work around.
@@ -95,13 +95,26 @@ are Phase 12):
 3. Keep the archive password somewhere separate; without it the file is
    unreadable, by design.
 
-To restore, start a fresh deployment with an empty `vault-data` volume, create a
+Both containers write into the project's `data/` folder through bind mounts, so
+nothing is hidden inside a Docker volume:
+
+```text
+data/vault/          the encrypted vault (vault.json, vault.db, snapshots/)
+data/caddy/data/     the local certificate authority and issued certificates
+data/caddy/config/   Caddy's runtime configuration
+```
+
+`data/` is git-ignored: financial data must never end up in a commit.
+
+To restore, start a fresh deployment with an empty `data/vault` folder, create a
 vault with any passphrase you will remember, unlock it and import the archive
 over it; the import validates the checksums and replaces the vault atomically.
 
-The named volume `vault-data` holds the encrypted database and snapshots. Copying
-the volume with the container running is **not** a supported backup: the
-checkpoint files may be inconsistent. Use the archive export.
+The vault lives in `./data/vault` on the host, so you can see it, size it and
+copy it. Copying `vault.db` while the container is running is **not** a supported
+backup: the WAL file may be inconsistent. Stop the stack
+(`docker compose ... down`) for a file-level copy, or use the archive export,
+which is the supported path.
 
 ## Upgrade
 
@@ -126,8 +139,8 @@ curl -k https://127.0.0.1:8443/api/system/info
 ## Rollback
 
 1. Stop the stack: `docker compose ... down`.
-2. Take the archive export from **before** the upgrade, or the `vault-data`
-   snapshot the upgrade created under `snapshots/`.
+2. Take the archive export from **before** the upgrade, or the snapshot the
+   upgrade created under `data/vault/snapshots/`.
 3. Start the previous image tag (`docker compose ... up -d` with that tag, or
    rebuild from the previous commit).
 4. If the newer schema had been applied and you need the old one, restore from

@@ -131,7 +131,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   }));
 
   app.get("/api/vault/status", async (): Promise<VaultStatus> => {
-    if (!vault) return lockedStatus(config.storageEngine);
+    if (!vault) return lockedStatus(config);
     return vault.status();
   });
 
@@ -253,7 +253,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     if (!session) return { error: "session_required" };
     return {
       csrfToken: session.csrf,
-      vault: vault ? await vault.status() : lockedStatus(config.storageEngine),
+      vault: vault ? await vault.status() : lockedStatus(config),
     };
   });
 
@@ -626,13 +626,18 @@ function importExport(context: RequestContext): ImportExportService {
   });
 }
 
-function lockedStatus(engine: ServerConfig["storageEngine"]): VaultStatus {
+/**
+ * Status for a service that holds no open vault. It still reports whether a vault
+ * file exists on disk, so the client can offer to create one only when the
+ * deployment is genuinely empty.
+ */
+function lockedStatus(config: ServerConfig): VaultStatus {
   return {
     state: "locked",
-    vaultExists: false,
+    vaultExists: Vault.exists(config.vaultDir),
     vaultFormatVersion: VAULT_FORMAT_VERSION,
     exportFormatVersion: EXPORT_FORMAT_VERSION,
-    storageEngine: engine,
+    storageEngine: config.storageEngine,
     schemaVersion: null,
     lastUnlockedAt: null,
   };

@@ -35,7 +35,8 @@ Nothing, unless you export it yourself:
   password is yours alone.
 - Deleting the vault removes it from the server (with an explicit confirmation
   and the passphrase).
-- Deleting the `vault-data` volume destroys the data irrecoverably.
+- Deleting the `data/vault` folder (bind-mounted into the server container)
+  destroys the data irrecoverably.
 
 ## Logs
 

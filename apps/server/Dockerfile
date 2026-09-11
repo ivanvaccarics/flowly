@@ -42,12 +42,13 @@ COPY --from=build /repo/apps/web/dist ./apps/web/dist
 ENV FLOWLY_HOST=0.0.0.0 \
     FLOWLY_ALLOW_PUBLIC_BIND=true \
     FLOWLY_PORT=8787 \
-    FLOWLY_VAULT_DIR=/vault \
+    FLOWLY_VAULT_DIR=/data/vault \
     FLOWLY_WEB_DIR=/repo/apps/web/dist
 
-RUN mkdir -p /vault && chown -R node:node /vault /repo
+RUN mkdir -p /data/vault && chown -R node:node /data /repo
 USER node
-VOLUME ["/vault"]
+# Mount the host project's data/ folder here; see deployment/self-hosted/compose.yaml.
+VOLUME ["/data"]
 EXPOSE 8787
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
