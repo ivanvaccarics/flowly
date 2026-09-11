@@ -36,7 +36,9 @@ export function TransactionsView({ csrf }: { csrf: string }) {
   const [userNote, setUserNote] = useState("");
   const [status, setStatus] = useState<"booked" | "pending">("booked");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [editing, setEditing] = useState<{ id: string; note: string } | undefined>(undefined);
+  const [editing, setEditing] = useState<
+    { id: string; note: string; tagIds: string[] } | undefined
+  >(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
 
   const account = accounts.items.find((candidate) => candidate.id === accountId);
@@ -109,29 +111,15 @@ export function TransactionsView({ csrf }: { csrf: string }) {
     }
   }
 
-  async function saveNote(transaction: Transaction) {
+  async function saveEdits(transaction: Transaction) {
     if (!editing) return;
     try {
       await api.update<Transaction>(csrf, "transactions", transaction.id, {
         ...transaction,
         userNote: editing.note,
+        tagIds: editing.tagIds,
       });
       setEditing(undefined);
-      await load();
-    } catch (cause) {
-      setError(describeError(cause));
-    }
-  }
-
-  async function toggleTag(transaction: Transaction, tagId: string) {
-    const nextTags = transaction.tagIds.includes(tagId)
-      ? transaction.tagIds.filter((id) => id !== tagId)
-      : [...transaction.tagIds, tagId];
-    try {
-      await api.update<Transaction>(csrf, "transactions", transaction.id, {
-        ...transaction,
-        tagIds: nextTags,
-      });
       await load();
     } catch (cause) {
       setError(describeError(cause));
@@ -366,39 +354,57 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                       <input
                         aria-label={`Note for ${transaction.payee ?? transaction.id}`}
                         value={editing.note}
-                        onChange={(event) =>
-                          setEditing({ id: transaction.id, note: event.target.value })
-                        }
+                        onChange={(event) => setEditing({ ...editing, note: event.target.value })}
                       />
                     ) : (
                       (transaction.userNote ?? "—")
                     )}
                   </td>
                   <td>
-                    {tags.items
-                      .filter((tag) => transaction.tagIds.includes(tag.id))
-                      .map((tag) => (
-                        <span key={tag.id} className="tag-pill">
-                          <span className="swatch" style={{ background: tag.color ?? "#4648d4" }} />
-                          {tag.name}
-                        </span>
-                      ))}
-                    {tags.items.length > 0 ? (
-                      <select
-                        aria-label={`Toggle tags for ${transaction.payee ?? transaction.id}`}
-                        value=""
-                        onChange={(event) => {
-                          if (event.target.value) void toggleTag(transaction, event.target.value);
-                        }}
-                      >
-                        <option value="">± tag</option>
-                        {tags.items.map((tag) => (
-                          <option key={tag.id} value={tag.id}>
-                            {transaction.tagIds.includes(tag.id) ? "Remove" : "Add"} {tag.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : null}
+                    {editing?.id === transaction.id ? (
+                      <span className="tag-choices">
+                        {tags.items.length === 0 ? (
+                          <span className="sub">No tags yet</span>
+                        ) : (
+                          tags.items.map((tag) => (
+                            <label key={tag.id} className="checkline">
+                              <input
+                                type="checkbox"
+                                checked={editing.tagIds.includes(tag.id)}
+                                onChange={(event) =>
+                                  setEditing({
+                                    ...editing,
+                                    tagIds: event.target.checked
+                                      ? [...editing.tagIds, tag.id]
+                                      : editing.tagIds.filter((id) => id !== tag.id),
+                                  })
+                                }
+                              />
+                              <span
+                                className="swatch"
+                                style={{ background: tag.color ?? "#4648d4" }}
+                              />
+                              {tag.name}
+                            </label>
+                          ))
+                        )}
+                      </span>
+                    ) : transaction.tagIds.length === 0 ? (
+                      <span className="muted">—</span>
+                    ) : (
+                      transaction.tagIds.map((id) => {
+                        const tag = tags.items.find((candidate) => candidate.id === id);
+                        return (
+                          <span key={id} className="tag-pill">
+                            <span
+                              className="swatch"
+                              style={{ background: tag?.color ?? "#4648d4" }}
+                            />
+                            {tag?.name ?? "…"}
+                          </span>
+                        );
+                      })
+                    )}
                   </td>
                   <td>
                     <button
@@ -424,7 +430,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                           <button
                             type="button"
                             className="btn small primary"
-                            onClick={() => void saveNote(transaction)}
+                            onClick={() => void saveEdits(transaction)}
                           >
                             Save
                           </button>
@@ -441,10 +447,14 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                           type="button"
                           className="btn small"
                           onClick={() =>
-                            setEditing({ id: transaction.id, note: transaction.userNote ?? "" })
+                            setEditing({
+                              id: transaction.id,
+                              note: transaction.userNote ?? "",
+                              tagIds: transaction.tagIds,
+                            })
                           }
                         >
-                          Edit note
+                          Edit
                         </button>
                       )}
                       <button

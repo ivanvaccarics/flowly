@@ -868,6 +868,16 @@ tbody tr.archived td {
   color: var(--text-secondary);
 }
 
+.tag-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+}
+
+.tag-choices .checkline {
+  font-size: 0.8125rem;
+}
+
 .condition {
   display: flex;
   flex-wrap: wrap;

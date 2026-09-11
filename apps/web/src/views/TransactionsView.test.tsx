@@ -94,4 +94,52 @@ describe("transactions view", () => {
       expect(requests.some((url) => url.includes(`accountId=${ACCOUNT_ID}`))).toBe(true),
     );
   });
+
+  it("edits note and tags together, without the old ± tag control", async () => {
+    const calls: Array<{ method: string; url: string; body: string }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const parsed = new URL(raw, "http://localhost");
+        if (parsed.pathname === "/api/accounts") return json({ items: [account] });
+        if (parsed.pathname === "/api/tags") return json({ items: [tag] });
+        if (parsed.pathname === "/api/transactions" && (init?.method ?? "GET") === "GET") {
+          return json({ items: [transaction], total: 1, limit: 100, offset: 0 });
+        }
+        if (parsed.pathname.startsWith("/api/transactions/")) {
+          calls.push({
+            method: init?.method ?? "GET",
+            url: parsed.pathname,
+            body: String(init?.body ?? ""),
+          });
+          return json({ entity: { ...transaction, revision: 2, tagIds: [] } });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
+
+    expect(screen.queryByText("± tag")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+    // The create form also renders a Coffee checkbox; the row's edit mode is the
+    // one pre-checked because the transaction already carries the tag.
+    const boxes = (await screen.findAllByRole("checkbox", {
+      name: /Coffee/,
+    })) as HTMLInputElement[];
+    const tagCheckbox = boxes.find((box) => box.checked);
+    if (!tagCheckbox) throw new Error("the edit row shows the current tags pre-selected");
+    fireEvent.click(tagCheckbox);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.method).toBe("PUT");
+    expect(calls[0]?.url).toBe(`/api/transactions/${transaction.id}`);
+    expect(calls[0]?.body).toContain('"tagIds":[]');
+  });
 });

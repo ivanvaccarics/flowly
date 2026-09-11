@@ -85,6 +85,9 @@ export function assertText(
   if (typeof value !== "string") {
     throw new DomainError("invalid-value", `${field} must be a string`, { field, value });
   }
+  // An optional text field may be cleared: an empty string is a valid value for
+  // payee, description, institution name and similar, and must not be rejected.
+  if (optional && value === "") return;
   const length = [...value].length;
   if (length < min || length > max) {
     throw new DomainError("invalid-value", `${field} must be ${min}-${max} characters`, {

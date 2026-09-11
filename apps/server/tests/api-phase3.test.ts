@@ -166,6 +166,47 @@ describe("core finance API", () => {
       await harness.close();
     }
   });
+
+  it("accepts an edit that clears an optional text field", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    try {
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/accounts",
+        payload: { entity: SAMPLE_ACCOUNT },
+      });
+      const created = await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/transactions",
+        payload: {
+          entity: sampleTransaction({ payee: "Bar Centrale", userNote: "espresso" }),
+        },
+      });
+      const stored = created.json<{ entity: Record<string, unknown> }>().entity;
+
+      // Saving the row back without touching anything must not fail.
+      const unchanged = await call(harness.app, harness.client, {
+        method: "PUT",
+        url: `/api/transactions/${String(stored["id"])}`,
+        payload: { entity: stored },
+      });
+      expect(unchanged.statusCode).toBe(200);
+
+      // Clearing a note is a legitimate edit, not an invalid request.
+      const cleared = await call(harness.app, harness.client, {
+        method: "PUT",
+        url: `/api/transactions/${String(stored["id"])}`,
+        payload: { entity: { ...stored, revision: 2, userNote: "", payee: "" } },
+      });
+      expect(cleared.statusCode).toBe(200);
+      const updated = cleared.json<{ entity: { userNote?: string; payee?: string } }>().entity;
+      expect(updated.userNote).toBe("");
+      expect(updated.payee).toBe("");
+    } finally {
+      await harness.close();
+    }
+  });
 });
 
 describe("data portability API", () => {
