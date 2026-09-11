@@ -48,6 +48,25 @@ Two things to know: it writes records named `Acceptance …` into the vault (del
 them afterwards from the UI), and it deliberately triggers rate limiting, so for
 about a minute afterwards unlock attempts may answer `429`.
 
+**It also creates the vault if none exists**, using the acceptance passphrase
+(`FLOWLY_ACCEPTANCE_PASSPHRASE`, default `flowly acceptance passphrase 2026`).
+That matters when you point it at the vault you are testing by hand: afterwards
+the app shows **Vault locked** and your own passphrase will not open it, because
+the vault belongs to the acceptance run. Either unlock with the acceptance
+passphrase and change it from the workspace, or start over:
+
+```bash
+# Docker Compose: remove the volume and come back with an empty vault
+docker compose -f deployment/self-hosted/compose.yaml down -v
+docker compose -f deployment/self-hosted/compose.yaml up --build -d
+
+# local run: point the server at a scratch directory instead
+FLOWLY_VAULT_DIR=$(mktemp -d) node apps/server/dist/index.js
+```
+
+On a fresh deployment the app now says **Create your vault** and asks for a new
+passphrase, instead of showing a locked vault you cannot open.
+
 The unit, integration and contract suites are separate:
 
 ```bash

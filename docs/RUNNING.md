@@ -28,6 +28,10 @@ Open <http://127.0.0.1:5173>. The first run shows **Create your vault**: choose
 a passphrase, and the server creates an encrypted vault under `FLOWLY_VAULT_DIR`
 (default `./data/vault`). Later runs show **Vault locked**.
 
+If the app shows **Vault locked** on a deployment where nobody created a vault,
+it already has one — most likely from an acceptance run. See
+[TESTING.md](./TESTING.md) for how to unlock or reset it.
+
 What works today (end of Phase 3):
 
 - create, unlock, lock-this-session, lock-all and change-passphrase

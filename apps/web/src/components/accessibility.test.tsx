@@ -5,6 +5,7 @@ import { Workspace } from "./Workspace.js";
 
 const unlockedStatus = {
   state: "unlocked" as const,
+  vaultExists: true,
   vaultFormatVersion: 1,
   exportFormatVersion: 1,
   storageEngine: "sqlcipher" as const,

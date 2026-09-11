@@ -19,7 +19,8 @@ export function UnlockScreen({
   onClearError,
 }: UnlockScreenProps) {
   const [passphrase, setPassphrase] = useState("");
-  const missingVault = error?.includes("No vault exists") ?? false;
+  const missingVault =
+    status?.vaultExists === false || (error?.includes("No vault exists") ?? false);
 
   return (
     <main className="shell" aria-labelledby="shell-title">

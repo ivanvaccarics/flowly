@@ -944,6 +944,7 @@ export const schemas = {
     "additionalProperties": false,
     "required": [
       "state",
+      "vaultExists",
       "vaultFormatVersion",
       "exportFormatVersion"
     ],
@@ -953,6 +954,10 @@ export const schemas = {
           "locked",
           "unlocked"
         ]
+      },
+      "vaultExists": {
+        "type": "boolean",
+        "description": "False on a fresh deployment, so the client can offer to create the vault."
       },
       "vaultFormatVersion": {
         "type": "integer",

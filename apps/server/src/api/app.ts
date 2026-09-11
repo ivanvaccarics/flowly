@@ -629,6 +629,7 @@ function importExport(context: RequestContext): ImportExportService {
 function lockedStatus(engine: ServerConfig["storageEngine"]): VaultStatus {
   return {
     state: "locked",
+    vaultExists: false,
     vaultFormatVersion: VAULT_FORMAT_VERSION,
     exportFormatVersion: EXPORT_FORMAT_VERSION,
     storageEngine: engine,

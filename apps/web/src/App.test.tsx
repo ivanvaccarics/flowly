@@ -6,6 +6,7 @@ import { describeError } from "./hooks/use-workspace.js";
 
 const lockedStatus = {
   state: "locked",
+  vaultExists: true,
   vaultFormatVersion: 1,
   exportFormatVersion: 1,
   storageEngine: "sqlcipher",
@@ -14,6 +15,7 @@ const lockedStatus = {
 };
 
 const unlockedStatus = { ...lockedStatus, state: "unlocked", schemaVersion: 1 };
+const freshStatus = { ...lockedStatus, vaultExists: false };
 
 const dashboard = {
   range: { from: "2026-09-01", to: "2026-09-30" },
@@ -121,6 +123,17 @@ describe("Flowly web client", () => {
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain("connection refused"),
     );
+  });
+
+  it("offers to create the vault on a fresh deployment", async () => {
+    mockFetch({ "/api/vault/status": () => json(freshStatus) });
+    render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Create your vault"),
+    );
+    expect(screen.getByRole("button", { name: "Create vault" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Unlock vault" })).toBeNull();
   });
 
   it("unlocks and shows the workspace with real data", async () => {

@@ -257,6 +257,10 @@ export interface Transaction {
  */
 export interface VaultStatus {
   state: "locked" | "unlocked";
+  /**
+   * False on a fresh deployment, so the client can offer to create the vault.
+   */
+  vaultExists: boolean;
   vaultFormatVersion: number;
   exportFormatVersion: number;
   storageEngine?: "sqlcipher" | "record-encryption" | null;

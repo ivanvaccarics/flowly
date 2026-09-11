@@ -2,15 +2,17 @@
 /**
  * End-to-end acceptance run for the Flowly Server MVP.
  *
- *   node tooling/scripts/acceptance.mjs [baseUrl]
+ *   node tooling/scripts/acceptance.mjs [baseUrl] [--create]
  *   FLOWLY_ACCEPTANCE_PASSPHRASE=... node tooling/scripts/acceptance.mjs
  *
  * It writes real records (clearly named "Acceptance ...") into the vault, so run
- * it against a scratch deployment. It never deletes a vault and it aborts rather
- * than guessing when it meets a vault it cannot open with the acceptance
- * passphrase.
+ * it against a scratch deployment. It never deletes a vault, it refuses to
+ * create one unless you pass --create, and it aborts rather than guessing when it
+ * meets a vault it cannot open with the acceptance passphrase.
  */
-const baseUrl = process.argv[2] ?? "http://127.0.0.1:8787";
+const args = process.argv.slice(2);
+const allowCreate = args.includes("--create");
+const baseUrl = args.find((argument) => argument.startsWith("http")) ?? "http://127.0.0.1:8787";
 const passphrase = process.env.FLOWLY_ACCEPTANCE_PASSPHRASE ?? "flowly acceptance passphrase 2026";
 const archivePassword = "flowly acceptance archive password";
 
@@ -49,9 +51,11 @@ async function step(name, run) {
     const detail = await run();
     results.push({ name, ok: true, detail });
     console.log(`  ok   ${name}${detail ? ` — ${detail}` : ""}`);
+    return true;
   } catch (error) {
     results.push({ name, ok: false, detail: error.message });
     console.log(`  FAIL ${name} — ${error.message}`);
+    return false;
   }
 }
 
@@ -67,21 +71,27 @@ await step("health endpoint answers", async () => {
   return `v${body.version}`;
 });
 
-await step("vault is created or unlocked", async () => {
-  const created = await call("/api/vault/create", {
-    method: "POST",
-    auth: false,
-    csrf: false,
-    body: { passphrase },
-  });
-  if (created.status === 201) {
+const vaultReady = await step("vault is unlocked (created only with --create)", async () => {
+  const status = await call("/api/vault/status", { auth: false });
+  if (status.body.vaultExists === false) {
+    expect(
+      allowCreate,
+      "no vault exists here. Create one from the app, or re-run with --create to let the " +
+        "acceptance run build a scratch vault with the acceptance passphrase",
+    );
+    const created = await call("/api/vault/create", {
+      method: "POST",
+      auth: false,
+      csrf: false,
+      body: { passphrase },
+    });
+    expect(
+      created.status === 201,
+      `create returned ${created.status}: ${JSON.stringify(created.body)}`,
+    );
     session.csrf = created.body.csrfToken;
-    return "created a new vault";
+    return `created a scratch vault (passphrase: ${passphrase})`;
   }
-  expect(
-    created.status === 409,
-    `create returned ${created.status}: ${JSON.stringify(created.body)}`,
-  );
   const unlocked = await call("/api/vault/unlock", {
     method: "POST",
     auth: false,
@@ -96,6 +106,11 @@ await step("vault is created or unlocked", async () => {
   session.csrf = unlocked.body.csrfToken;
   return "unlocked the existing vault";
 });
+
+if (!vaultReady) {
+  // Without an open vault every later check would fail for the same reason.
+  finish();
+}
 
 await step("account is created", async () => {
   created.account = newUuid();
@@ -370,17 +385,21 @@ await step("rate limiting protects unlock", async () => {
   if (unlocked.status === 200) session.csrf = unlocked.body.csrfToken;
 });
 
-const failed = results.filter((result) => !result.ok);
-console.log(
-  `\n${results.length - failed.length}/${results.length} checks passed against ${baseUrl}`,
-);
-if (failed.length > 0) {
-  console.log("Failed checks:");
-  for (const failure of failed) console.log(`  - ${failure.name}: ${failure.detail}`);
-  process.exit(1);
+finish();
+
+function finish() {
+  const failed = results.filter((result) => !result.ok);
+  console.log(
+    `\n${results.length - failed.length}/${results.length} checks passed against ${baseUrl}`,
+  );
+  if (failed.length > 0) {
+    console.log("Failed checks:");
+    for (const failure of failed) console.log(`  - ${failure.name}: ${failure.detail}`);
+    process.exit(1);
+  }
+  console.log("The MVP behaves as documented. Notes:");
+  console.log(
+    "  - the run left 'Acceptance …' records in the vault; delete them from the UI when you are done",
+  );
+  console.log("  - unlock attempts may be rate limited for a minute afterwards; that is expected");
 }
-console.log("The MVP behaves as documented. Notes:");
-console.log(
-  "  - the run left 'Acceptance …' records in the vault; delete them from the UI when you are done",
-);
-console.log("  - unlock attempts may be rate limited for a minute afterwards; that is expected");

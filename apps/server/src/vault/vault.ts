@@ -399,6 +399,7 @@ export class Vault {
     }
     return {
       state: unlocked ? "unlocked" : "locked",
+      vaultExists: true,
       vaultFormatVersion: VAULT_FORMAT_VERSION,
       exportFormatVersion: EXPORT_FORMAT_VERSION,
       storageEngine: this.engine,
