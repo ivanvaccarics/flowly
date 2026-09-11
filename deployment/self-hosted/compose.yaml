@@ -44,8 +44,10 @@ services:
     # Only the proxy is published, and only on the private interface. Caddy
     # issues a certificate from its local CA: import the root certificate from
     # the caddy data volume to remove the browser warning (see docs/DEPLOYMENT.md).
+    # FLOWLY_BIND_IP lets the stack answer on a private LAN or Tailscale
+    # interface (and that address becomes part of the Enable Banking callback URL).
     ports:
-      - "127.0.0.1:8443:443"
+      - "${FLOWLY_BIND_IP:-127.0.0.1}:${FLOWLY_SITE_PORT:-8443}:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       # Certificates and the local CA live in the project data folder too, so

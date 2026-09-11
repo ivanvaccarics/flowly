@@ -35,9 +35,17 @@ Two containers start:
   half-configured redirect to work around.
 
 Only the proxy publishes ports, and only on the loopback interface. To reach the
-server from another device on your private LAN or VPN, change the published
-address to that interface (for example `192.168.1.20:8443:443`) and add the
-hostname you use to `FLOWLY_SITE_ADDRESS`.
+server from another device on your private LAN or VPN, set the interface and the
+port in `.env` — for example:
+
+```bash
+FLOWLY_BIND_IP=192.168.1.20        # or the Tailscale address of this machine
+FLOWLY_SITE_PORT=8443
+FLOWLY_SITE_ADDRESS=flowly.local   # or <machine>.<tailnet>.ts.net
+```
+
+and start the stack again. `0.0.0.0` publishes on every interface: only do that
+inside a private network you control.
 
 Check it:
 

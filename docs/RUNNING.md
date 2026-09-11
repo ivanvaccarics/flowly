@@ -84,17 +84,38 @@ to Enable Banking**; no command line and no configuration file are involved.
    vault — it is never written to a plain file and never returned to the
    browser.
 4. Press **Load available banks**, pick your country and account type, and press
-   **Connect** next to your bank. The browser goes to Enable Banking, you log in
-   at the bank, and you come back to `/enablebanking/auth_callback`.
-5. Flowly lists the accounts the bank shared and asks, for each one, whether to
+   **Connect** next to your bank. Flowly shows a **Finish the authorization**
+   panel: **Open the bank page** takes you to Enable Banking in another tab, you
+   log in at the bank, and you land back on
+   `/enablebanking/auth_callback`.
+5. If that callback page opens, Flowly takes over and lists the accounts the bank
+   shared. If it does not — the registered callback URL is a hostname, port or
+   VPN address this browser cannot reach — copy the **whole address** from the
+   browser bar (including `?code=…&state=…`, or the `error=…` Enable Banking
+   appended) and paste it into **URL you were redirected to** in Flowly, then
+   press **Complete connection**. This is also how an Enable Banking error is
+   surfaced in plain language.
+6. For each shared account, tell Flowly whether to
    **create** a Flowly account or **pair** an existing one. Accounts you ignore
    are never imported.
 
 Testing on the sandbox: the bank list shows the sandbox credentials returned by
-Enable Banking (usually `customera` / `12345678`, OTP `123456`). The callback URL
-must be reachable by the browser, so a self-hosted sandbox deployment needs the
-HTTPS URL others (or your Tailscale/VPN peers) use — a `127.0.0.1` callback only
-works when the browser runs on the same machine.
+Enable Banking (for example `user1` / `1234`, OTP `012345`). Two callback
+arrangements are supported; either way the URL you save in Flowly must be exactly
+one of the application's registered redirect URLs:
+
+- **Local only** — register
+  `https://localhost:8443/enablebanking/auth_callback` (the URL the Compose stack
+  publishes) and use Flowly from that address. The simplest sandbox setup.
+- **Over Tailscale/VPN** — register
+  `https://<machine>.<tailnet>.ts.net/enablebanking/auth_callback` and make the
+  stack answer on that host: publish Caddy on the tailnet interface
+  (`FLOWLY_BIND_IP=<tailscale ip>` in `deployment/self-hosted/compose.yaml`) and
+  set `FLOWLY_SITE_ADDRESS=<machine>.<tailnet>.ts.net`. Certificates come from
+  Caddy's local CA, so trust it on every device you use.
+
+When neither is reachable from the browser, the paste box above completes the
+flow anyway: it only needs the redirect URL, not a working callback host.
 
 After that:
 
@@ -106,6 +127,11 @@ After that:
   books them;
 - your notes and tags on an imported transaction are never overwritten, and
   unlinking a bank keeps every imported transaction.
+
+**Disconnect Enable Banking** in Settings removes the stored application key,
+every bank link and every raw provider payload; the accounts and transactions
+that were already imported stay in the vault. Unlinking a single bank keeps the
+other links and the same transactions.
 
 If a bank shows **consent expired** (or revoked), the consent lapsed at the bank:
 connect that bank again from Settings. Imported transactions stay untouched.
