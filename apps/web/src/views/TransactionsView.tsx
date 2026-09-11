@@ -18,21 +18,12 @@ interface Filters {
 
 const EMPTY_FILTERS: Filters = { accountId: "", from: "", to: "", tagId: "", status: "", q: "" };
 
-export function TransactionsView({
-  csrf,
-  initialQuery = "",
-}: {
-  csrf: string;
-  initialQuery?: string;
-}) {
+export function TransactionsView({ csrf }: { csrf: string }) {
   const accounts = useCollection<Account>("accounts", csrf, true);
   const tags = useCollection<Tag>("tags", csrf, true);
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
 
-  useEffect(() => {
-    setFilters((current) => ({ ...current, q: initialQuery }));
-  }, [initialQuery]);
   const [items, setItems] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | undefined>(undefined);

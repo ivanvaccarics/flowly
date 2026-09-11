@@ -247,43 +247,6 @@ h3 {
   flex-wrap: wrap;
 }
 
-.search-field {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 0 1 420px;
-  height: 36px;
-  padding: 0 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text-muted);
-}
-
-.search-field input {
-  flex: 1;
-  height: 32px;
-  border: 0;
-  padding: 0;
-  background: transparent;
-}
-
-.search-field input:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-
-.kbd {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-muted);
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 1px 5px;
-}
-
 .avatar {
   display: inline-flex;
   align-items: center;

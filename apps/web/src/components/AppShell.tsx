@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { VaultStatus } from "@flowly/web-contracts";
 import { Icon, type IconName } from "./icons.js";
 import { Banner, Chip } from "./ui.js";
@@ -38,28 +38,7 @@ export function AppShell({
   onClearError,
 }: AppShellProps) {
   const [view, setView] = useState("dashboard");
-  const [search, setSearch] = useState("");
-  const [transactionQuery, setTransactionQuery] = useState("");
-  const searchRef = useRef<HTMLInputElement>(null);
   const vaultId = status?.vaultId ?? null;
-
-  // ⌘K / Ctrl+K focuses the vault-wide transaction search, like the mockup.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        searchRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  function submitSearch(event: React.FormEvent) {
-    event.preventDefault();
-    setTransactionQuery(search.trim());
-    setView("transactions");
-  }
 
   return (
     <div className="shell">
@@ -120,18 +99,6 @@ export function AppShell({
           ) : null}
         </div>
 
-        <form className="search-field" onSubmit={submitSearch} role="search">
-          <Icon name="search" size={16} />
-          <input
-            ref={searchRef}
-            aria-label="Search transactions"
-            placeholder="Search transactions, payees, notes…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <span className="kbd">⌘K</span>
-        </form>
-
         <div className="cell-actions">
           <button
             type="button"
@@ -168,24 +135,15 @@ export function AppShell({
           {error ? <Banner tone="error">{error}</Banner> : null}
           {view === "dashboard" ? (
             <DashboardView
-              csrf={csrf}
               vaultId={vaultId}
               status={status}
-              onNewTransaction={() => {
-                setTransactionQuery("");
-                setView("transactions");
-              }}
-              onSeeAllTransactions={(query) => {
-                setTransactionQuery(query ?? "");
-                setView("transactions");
-              }}
+              onNewTransaction={() => setView("transactions")}
+              onSeeAllTransactions={() => setView("transactions")}
               onExportData={() => setView("settings")}
             />
           ) : null}
           {view === "accounts" ? <AccountsView csrf={csrf} /> : null}
-          {view === "transactions" ? (
-            <TransactionsView csrf={csrf} initialQuery={transactionQuery} />
-          ) : null}
+          {view === "transactions" ? <TransactionsView csrf={csrf} /> : null}
           {view === "tags" ? <TagsView csrf={csrf} /> : null}
           {view === "rules" ? <RulesView csrf={csrf} /> : null}
           {view === "settings" ? (

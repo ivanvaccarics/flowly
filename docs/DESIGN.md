@@ -81,9 +81,13 @@ that remain absent are listed at the end of this section.
 | Settings | Passphrase change, transaction CSV export, complete archive export, CSV preview and merge, archive replacement |
 
 Header requirements from the mockup: vault chip with pulsing state dot plus the
-cipher badge and the vault id, a global search field with the ⌘K / Ctrl-K
-shortcut that jumps to Transactions with the query applied, Export data (routes
-to Settings) and the lock actions.
+cipher badge and the vault id, Export data (routes to Settings) and the lock
+actions.
+
+The mockup's global search field was **deliberately left out of the header**:
+free-text search lives in the Transactions filters, next to the other query
+controls, so there is one place to search the ledger instead of two. If a global
+search comes back later, it should reuse the same server-side query endpoint.
 
 Deliberately absent because the product does not have them: the session timeout
 countdown (no remaining-time value is exposed by the API), the user avatar and

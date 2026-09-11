@@ -51,11 +51,10 @@ function formatPerMinor(minor: number, currency: string): string {
 }
 
 export interface DashboardViewProps {
-  csrf: string;
   vaultId: string | null;
   status: VaultStatus | undefined;
   onNewTransaction: () => void;
-  onSeeAllTransactions: (query?: string) => void;
+  onSeeAllTransactions: () => void;
   onExportData: () => void;
 }
 
