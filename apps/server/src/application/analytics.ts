@@ -35,11 +35,21 @@ export interface TagSpending {
   transactionCount: number;
 }
 
+export interface CashFlowBucket {
+  currency: string;
+  label: string;
+  from: string;
+  to: string;
+  incomeMinor: number;
+  expensesMinor: number;
+}
+
 export interface Dashboard {
   range: DateRange;
   generatedAt: string;
   balances: AccountBalance[];
   cashFlow: CurrencyTotals[];
+  cashFlowBuckets: CashFlowBucket[];
   spendingByTag: TagSpending[];
 }
 
@@ -61,12 +71,20 @@ export class AnalyticsService {
 
   async dashboard(range: DateRange): Promise<Dashboard> {
     return cacheFor(this.vault, this.clock).get(`dashboard|${range.from}|${range.to}`, async () => {
-      const [balances, cashFlow, spendingByTag] = await Promise.all([
+      const [balances, cashFlow, cashFlowBuckets, spendingByTag] = await Promise.all([
         this.balances(),
         this.cashFlow(range),
+        this.cashFlowBuckets(range),
         this.spendingByTag(range),
       ]);
-      return { range, generatedAt: this.clock.nowIso(), balances, cashFlow, spendingByTag };
+      return {
+        range,
+        generatedAt: this.clock.nowIso(),
+        balances,
+        cashFlow,
+        cashFlowBuckets,
+        spendingByTag,
+      };
     });
   }
 
@@ -140,6 +158,41 @@ export class AnalyticsService {
   }
 
   /** Booked outflows grouped by tag and currency. */
+  /** Income and expenses per week, per currency, for the chart. */
+  async cashFlowBuckets(range: DateRange, bucketDays = 7): Promise<CashFlowBucket[]> {
+    const buckets = new Map<string, CashFlowBucket>();
+    const start = new Date(`${range.from}T00:00:00.000Z`);
+    const end = new Date(`${range.to}T00:00:00.000Z`);
+
+    for (const transaction of await this.inRange(range)) {
+      if (transaction.status !== "booked") continue;
+      const booking = new Date(`${transaction.bookingDate}T00:00:00.000Z`);
+      const index = Math.floor((booking.getTime() - start.getTime()) / (bucketDays * 86_400_000));
+      const bucketStart = new Date(start.getTime() + index * bucketDays * 86_400_000);
+      const bucketEnd = new Date(
+        Math.min(bucketStart.getTime() + (bucketDays - 1) * 86_400_000, end.getTime()),
+      );
+      const key = `${transaction.currency}|${index}`;
+      const entry = buckets.get(key) ?? {
+        currency: transaction.currency,
+        label: `Week ${index + 1}`,
+        from: bucketStart.toISOString().slice(0, 10),
+        to: bucketEnd.toISOString().slice(0, 10),
+        incomeMinor: 0,
+        expensesMinor: 0,
+      };
+      if (transaction.amountMinor >= 0) entry.incomeMinor += transaction.amountMinor;
+      else entry.expensesMinor += -transaction.amountMinor;
+      buckets.set(key, entry);
+    }
+
+    return [...buckets.values()].sort((a, b) =>
+      a.currency === b.currency
+        ? a.from.localeCompare(b.from)
+        : a.currency.localeCompare(b.currency),
+    );
+  }
+
   async spendingByTag(range: DateRange): Promise<TagSpending[]> {
     const [tags, transactions] = await Promise.all([this.vault.tags.list(), this.inRange(range)]);
     const names = new Map(tags.map((tag: Tag) => [tag.id, tag.name]));

@@ -216,6 +216,16 @@ export class Vault {
     return existsSync(join(path, HEADER_FILE));
   }
 
+  /** Public vault id read straight from the header, without unlocking. */
+  static peekVaultId(path: string): string | null {
+    try {
+      const parsed = JSON.parse(readFileSync(join(path, HEADER_FILE), "utf8")) as unknown;
+      return isVaultHeader(parsed) ? parsed.vaultId : null;
+    } catch {
+      return null;
+    }
+  }
+
   static async destroy(path: string): Promise<void> {
     if (!existsSync(path)) return;
     rmSync(path, { recursive: true, force: true });
@@ -392,6 +402,7 @@ export class Vault {
     return {
       state: unlocked ? "unlocked" : "locked",
       vaultExists: true,
+      vaultId: this.headerValue.vaultId,
       vaultFormatVersion: VAULT_FORMAT_VERSION,
       exportFormatVersion: EXPORT_FORMAT_VERSION,
       storageEngine: this.engine,

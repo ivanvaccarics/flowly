@@ -6,6 +6,7 @@ import { UnlockScreen } from "./UnlockScreen.js";
 const unlockedStatus = {
   state: "unlocked" as const,
   vaultExists: true,
+  vaultId: "018f2c1e-6d5b-7c3a-9f2e-7c4d5e6f7081",
   vaultFormatVersion: 1,
   exportFormatVersion: 1,
   storageEngine: "sqlcipher" as const,
@@ -18,6 +19,7 @@ const emptyDashboard = {
   generatedAt: "2026-09-30T18:00:00.000Z",
   balances: [],
   cashFlow: [],
+  cashFlowBuckets: [],
   spendingByTag: [],
 };
 
@@ -106,9 +108,12 @@ describe("accessibility structure", () => {
     );
 
     await waitFor(() => expect(screen.getByRole("navigation", { name: "Sections" })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Financial overview" })).toBeTruthy(),
+    );
     assertAccessibleNames(container);
     const current = container.querySelector('[aria-current="page"]');
     expect(current?.textContent).toContain("Dashboard");
-    expect(screen.getByRole("button", { name: "Lock all sessions" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Lock all" })).toBeTruthy();
   });
 });

@@ -23,6 +23,24 @@
       "transactionCount": 5
     }
   ],
+  "cashFlowBuckets": [
+    {
+      "currency": "EUR",
+      "label": "Week 1",
+      "from": "2026-09-01",
+      "to": "2026-09-07",
+      "incomeMinor": 250000,
+      "expensesMinor": 1230
+    },
+    {
+      "currency": "EUR",
+      "label": "Week 2",
+      "from": "2026-09-08",
+      "to": "2026-09-14",
+      "incomeMinor": 0,
+      "expensesMinor": 4000
+    }
+  ],
   "spendingByTag": [
     {
       "tagId": "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082",

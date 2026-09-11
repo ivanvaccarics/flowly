@@ -618,6 +618,7 @@ function lockedStatus(config: ServerConfig): VaultStatus {
   return {
     state: "locked",
     vaultExists: Vault.exists(config.vaultDir),
+    vaultId: Vault.peekVaultId(config.vaultDir),
     vaultFormatVersion: VAULT_FORMAT_VERSION,
     exportFormatVersion: EXPORT_FORMAT_VERSION,
     storageEngine: config.storageEngine,

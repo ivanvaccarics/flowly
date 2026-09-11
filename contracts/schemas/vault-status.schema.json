@@ -5,12 +5,17 @@
   "description": "What the web UI knows about the vault before it is unlocked. It never carries keys, passphrases or financial data.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["state", "vaultExists", "vaultFormatVersion", "exportFormatVersion"],
+  "required": ["state", "vaultExists", "vaultId", "vaultFormatVersion", "exportFormatVersion"],
   "properties": {
     "state": { "enum": ["locked", "unlocked"] },
     "vaultExists": {
       "type": "boolean",
       "description": "False on a fresh deployment, so the client can offer to create the vault."
+    },
+    "vaultId": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "Public vault identifier shown in the UI; null when no vault exists yet."
     },
     "vaultFormatVersion": { "type": "integer", "minimum": 1 },
     "exportFormatVersion": { "type": "integer", "minimum": 1 },

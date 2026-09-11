@@ -5,7 +5,7 @@
   "description": "Dashboard view computed from the vault. Totals always carry a currency code and never blend currencies.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["range", "generatedAt", "balances", "cashFlow", "spendingByTag"],
+  "required": ["range", "generatedAt", "balances", "cashFlow", "cashFlowBuckets", "spendingByTag"],
   "properties": {
     "range": {
       "type": "object",
@@ -88,6 +88,23 @@
             "type": "integer",
             "minimum": 0
           }
+        }
+      }
+    },
+    "cashFlowBuckets": {
+      "description": "Income and expenses split into calendar buckets (one week by default) so the dashboard can chart the period without blending currencies.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["currency", "label", "from", "to", "incomeMinor", "expensesMinor"],
+        "properties": {
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "label": { "type": "string", "minLength": 1, "maxLength": 40 },
+          "from": { "type": "string", "format": "date" },
+          "to": { "type": "string", "format": "date" },
+          "incomeMinor": { "type": "integer" },
+          "expensesMinor": { "type": "integer" }
         }
       }
     },

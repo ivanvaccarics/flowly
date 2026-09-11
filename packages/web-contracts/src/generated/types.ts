@@ -70,6 +70,17 @@ export interface Dashboard {
     netMinor: number;
     transactionCount: number;
   }[];
+  /**
+   * Income and expenses split into calendar buckets (one week by default) so the dashboard can chart the period without blending currencies.
+   */
+  cashFlowBuckets: {
+    currency: string;
+    label: string;
+    from: string;
+    to: string;
+    incomeMinor: number;
+    expensesMinor: number;
+  }[];
   spendingByTag: {
     tagId: string;
     tagName: string;
@@ -228,6 +239,10 @@ export interface VaultStatus {
    * False on a fresh deployment, so the client can offer to create the vault.
    */
   vaultExists: boolean;
+  /**
+   * Public vault identifier shown in the UI; null when no vault exists yet.
+   */
+  vaultId: string | null;
   vaultFormatVersion: number;
   exportFormatVersion: number;
   storageEngine?: "sqlcipher" | "record-encryption" | null;

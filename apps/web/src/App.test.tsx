@@ -7,6 +7,7 @@ import { describeError } from "./hooks/use-workspace.js";
 const lockedStatus = {
   state: "locked",
   vaultExists: true,
+  vaultId: "018f2c1e-6d5b-7c3a-9f2e-7c4d5e6f7081",
   vaultFormatVersion: 1,
   exportFormatVersion: 1,
   storageEngine: "sqlcipher",
@@ -37,6 +38,24 @@ const dashboard = {
       expensesMinor: 103000,
       netMinor: 147000,
       transactionCount: 5,
+    },
+  ],
+  cashFlowBuckets: [
+    {
+      currency: "EUR",
+      label: "Week 1",
+      from: "2026-09-01",
+      to: "2026-09-07",
+      incomeMinor: 250000,
+      expensesMinor: 1230,
+    },
+    {
+      currency: "EUR",
+      label: "Week 2",
+      from: "2026-09-08",
+      to: "2026-09-14",
+      incomeMinor: 0,
+      expensesMinor: 4000,
     },
   ],
   spendingByTag: [
@@ -151,11 +170,14 @@ describe("Flowly web client", () => {
     mockFetch(unlockedRoutes());
     await unlock();
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Financial overview" })).toBeTruthy(),
+    );
     for (const section of ["Dashboard", "Accounts", "Transactions", "Tags", "Rules", "Settings"]) {
       expect(screen.getByRole("button", { name: section })).toBeTruthy();
     }
-    expect(await screen.findByText("Rent")).toBeTruthy();
+    await waitFor(() => expect(screen.getAllByText("Rent").length).toBeGreaterThan(0));
+    expect(screen.getByRole("img", { name: /Income and expenses per week/ })).toBeTruthy();
   });
 
   it("keeps the passphrase change and portability controls inside Settings", async () => {

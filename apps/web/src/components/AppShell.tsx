@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { VaultStatus } from "@flowly/web-contracts";
 import { Icon, type IconName } from "./icons.js";
 import { Banner, Chip } from "./ui.js";
@@ -38,6 +38,28 @@ export function AppShell({
   onClearError,
 }: AppShellProps) {
   const [view, setView] = useState("dashboard");
+  const [search, setSearch] = useState("");
+  const [transactionQuery, setTransactionQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const vaultId = status?.vaultId ?? null;
+
+  // ⌘K / Ctrl+K focuses the vault-wide transaction search, like the mockup.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  function submitSearch(event: React.FormEvent) {
+    event.preventDefault();
+    setTransactionQuery(search.trim());
+    setView("transactions");
+  }
 
   return (
     <div className="shell">
@@ -66,11 +88,18 @@ export function AppShell({
         </div>
         <div className="sidebar-footer">
           <div className="vault-card">
-            <span className="stack">
-              <strong>Local vault</strong>
-              <span className="sub mono">{status?.storageEngine ?? "sqlcipher"}</span>
+            <span className="avatar">
+              <Icon name="shield" size={16} />
             </span>
-            <Chip tone="vault">schema v{status?.schemaVersion ?? "?"}</Chip>
+            <span className="stack" style={{ flex: 1 }}>
+              <strong>Local vault</strong>
+              <span className="sub mono">
+                {status?.storageEngine ?? "sqlcipher"} · v{status?.schemaVersion ?? "?"}
+              </span>
+            </span>
+            <span title="No cloud connection">
+              <Icon name="check" size={16} />
+            </span>
           </div>
         </div>
       </aside>
@@ -78,22 +107,49 @@ export function AppShell({
       <header className="topbar">
         <div className="topbar-status">
           <span className="chip neutral">
-            <span className="pulse" /> Unlocked
+            <span className="pulse" />
+            {status?.storageEngine ?? "sqlcipher"} v{status?.schemaVersion ?? "?"} unlocked
           </span>
           <Chip tone="neutral" icon="lock">
-            AES-256-GCM
+            AES-256
           </Chip>
-          <Chip tone="neutral">vault {status?.vaultFormatVersion ?? 1}</Chip>
+          {vaultId ? (
+            <span className="chip neutral mono" title="Vault identifier">
+              {vaultId.slice(0, 8)}
+            </span>
+          ) : null}
         </div>
+
+        <form className="search-field" onSubmit={submitSearch} role="search">
+          <Icon name="search" size={16} />
+          <input
+            ref={searchRef}
+            aria-label="Search transactions"
+            placeholder="Search transactions, payees, notes…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <span className="kbd">⌘K</span>
+        </form>
+
         <div className="cell-actions">
           <button
             type="button"
             className="btn small"
+            onClick={() => setView("settings")}
+            title="Export and import live in Settings"
+          >
+            <Icon name="download" size={14} />
+            Export data
+          </button>
+          <button
+            type="button"
+            className="btn small primary"
             disabled={busy}
             onClick={() => void onLock("current")}
           >
             <Icon name="lock" size={14} />
-            Lock this session
+            Lock session
           </button>
           <button
             type="button"
@@ -102,7 +158,7 @@ export function AppShell({
             onClick={() => void onLock("all")}
           >
             <Icon name="shield" size={14} />
-            Lock all sessions
+            Lock all
           </button>
         </div>
       </header>
@@ -110,9 +166,26 @@ export function AppShell({
       <main className="content">
         <div className="view">
           {error ? <Banner tone="error">{error}</Banner> : null}
-          {view === "dashboard" ? <DashboardView /> : null}
+          {view === "dashboard" ? (
+            <DashboardView
+              csrf={csrf}
+              vaultId={vaultId}
+              status={status}
+              onNewTransaction={() => {
+                setTransactionQuery("");
+                setView("transactions");
+              }}
+              onSeeAllTransactions={(query) => {
+                setTransactionQuery(query ?? "");
+                setView("transactions");
+              }}
+              onExportData={() => setView("settings")}
+            />
+          ) : null}
           {view === "accounts" ? <AccountsView csrf={csrf} /> : null}
-          {view === "transactions" ? <TransactionsView csrf={csrf} /> : null}
+          {view === "transactions" ? (
+            <TransactionsView csrf={csrf} initialQuery={transactionQuery} />
+          ) : null}
           {view === "tags" ? <TagsView csrf={csrf} /> : null}
           {view === "rules" ? <RulesView csrf={csrf} /> : null}
           {view === "settings" ? (

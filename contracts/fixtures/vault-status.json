@@ -1,6 +1,7 @@
 {
   "state": "locked",
   "vaultExists": true,
+  "vaultId": "018f2c1e-6d5b-7c3a-9f2e-7c4d5e6f7081",
   "vaultFormatVersion": 1,
   "exportFormatVersion": 1,
   "storageEngine": "sqlcipher",

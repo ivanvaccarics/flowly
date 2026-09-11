@@ -67,18 +67,29 @@ not shift.
 
 ## Mapping to implemented features
 
-Only shipping functionality is on screen; the mockups' charts, budgets, savings
-rate and multi-account widgets are **not** rendered because the product does not
-compute them.
+Only shipping functionality is on screen. The mockup's charts, savings rate,
+spending shares and identifiers are now implemented from real data; the pieces
+that remain absent are listed at the end of this section.
 
 | Section | Contents |
 | --- | --- |
-| Dashboard | Date range, per-currency net flow metrics, account balances, spending by tag with share bars |
+| Dashboard | Vault id in the eyebrow, segmented period control (month / 3 months / year / custom), Export data and New transaction shortcuts, four metric cards per currency (total balance, income, expenses, net + savings rate) with deltas against the previous equal-length period, cash-flow chart (weekly income/expense bars with a net line, inline SVG), spending breakdown with a stacked share bar and percentages, average daily spend, recent transactions table (beneficiary with source subline, account, category, stacked date, amount), accounts summary and the local vault status card |
 | Accounts | Create account, status chips, archive, cascade delete |
 | Transactions | Create with notes and tags, server-side filters (account, dates, tag, status, text), inline note editing, tag toggling, delete |
 | Tags | Create with color, normalized name shown, cascade delete |
 | Rules | Condition builder (AND/OR, per-field operators, amount currency), tag selection, pause/resume, backfill report |
 | Settings | Passphrase change, transaction CSV export, complete archive export, CSV preview and merge, archive replacement |
+
+Header requirements from the mockup: vault chip with pulsing state dot plus the
+cipher badge and the vault id, a global search field with the ⌘K / Ctrl-K
+shortcut that jumps to Transactions with the query applied, Export data (routes
+to Settings) and the lock actions.
+
+Deliberately absent because the product does not have them: the session timeout
+countdown (no remaining-time value is exposed by the API), the user avatar and
+account identity (Flowly has no accounts or users), transfer/top-up actions,
+filtered exports, and the budget capacity row (budgets were removed in
+ADR 0010; the card shows average daily spend and the top category instead).
 
 The vault lock screen uses the same language: centered card, lock badge,
 passphrase field, the no-recovery warning, and a facts row with state, storage

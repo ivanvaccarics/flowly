@@ -144,6 +144,7 @@ export const schemas = {
       "generatedAt",
       "balances",
       "cashFlow",
+      "cashFlowBuckets",
       "spendingByTag"
     ],
     "properties": {
@@ -236,6 +237,47 @@ export const schemas = {
             "transactionCount": {
               "type": "integer",
               "minimum": 0
+            }
+          }
+        }
+      },
+      "cashFlowBuckets": {
+        "description": "Income and expenses split into calendar buckets (one week by default) so the dashboard can chart the period without blending currencies.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "label",
+            "from",
+            "to",
+            "incomeMinor",
+            "expensesMinor"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "from": {
+              "type": "string",
+              "format": "date"
+            },
+            "to": {
+              "type": "string",
+              "format": "date"
+            },
+            "incomeMinor": {
+              "type": "integer"
+            },
+            "expensesMinor": {
+              "type": "integer"
             }
           }
         }
@@ -771,6 +813,7 @@ export const schemas = {
     "required": [
       "state",
       "vaultExists",
+      "vaultId",
       "vaultFormatVersion",
       "exportFormatVersion"
     ],
@@ -784,6 +827,14 @@ export const schemas = {
       "vaultExists": {
         "type": "boolean",
         "description": "False on a fresh deployment, so the client can offer to create the vault."
+      },
+      "vaultId": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uuid",
+        "description": "Public vault identifier shown in the UI; null when no vault exists yet."
       },
       "vaultFormatVersion": {
         "type": "integer",
