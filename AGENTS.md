@@ -20,8 +20,26 @@
 
 ## Documentation Maintenance
 
-Review `docs/PLAN.md`, `docs/RUNNING.md` and `README.md` during every development
-iteration and update them whenever necessary.
+`docs/` is the home of the project documentation, and it must stay accurate.
+Review it during every development iteration and update it whenever necessary:
+no completed change is allowed to leave the documentation behind.
+
+| Path | What it holds | Update it when |
+| --- | --- | --- |
+| `docs/PLAN.md` | Architecture, security requirements, data model and the phased delivery plan | Work completes, decisions change, scope or priorities shift, or tasks, risks and next steps change |
+| `docs/RUNNING.md` | How to run, self-host and work on the app | Commands, prerequisites, configuration, deployment steps, mobile/desktop instructions or troubleshooting change |
+| `docs/adr/` | One decision record per binding technical choice | A decision is made or reversed; add a new numbered ADR instead of rewriting an accepted one |
+| `README.md` | Product overview and entry point, linking into `docs/` | Features, setup, usage, architecture, dependencies or milestones change |
+
+Rules:
+
+- Documentation must describe implemented behavior, never intentions presented
+  as facts.
+- Include documentation updates in the same commit as the change they describe.
+- When you add or move a document under `docs/`, update every reference to it,
+  including `README.md`, the repository guidelines and any ADR.
+- If an iteration needs no documentation change, verify that every file above is
+  still accurate before completing it.
 
 ### `docs/PLAN.md`
 
@@ -32,6 +50,30 @@ Keep `docs/PLAN.md` aligned with the current state of the project. Update it to 
 - Technical or architectural decisions.
 - Changes in scope or priorities.
 - Remaining tasks, known issues, and next steps.
+
+### `docs/RUNNING.md`
+
+Keep `docs/RUNNING.md` usable by someone who has never run the project. Update it
+when:
+
+- Prerequisites, commands or environment variables change.
+- The local, self-hosted or container workflow changes.
+- A phase adds or changes what users can do, or how they reach the app.
+- Planned client work (mobile and desktop) moves forward and gains real
+  commands.
+- A new failure mode or troubleshooting step is discovered.
+
+### `docs/adr/`
+
+Record every binding decision as a numbered ADR before or with the change that
+implements it:
+
+- One decision per file, in the form `NNNN-short-title.md`, with status, context,
+  decision and consequences.
+- Never rewrite an accepted ADR to say something else; add a superseding ADR and
+  link the two.
+- Keep the decisions consistent with `docs/PLAN.md`; when they diverge, fix
+  whichever document is wrong in the same commit.
 
 ### `README.md`
 
@@ -45,11 +87,7 @@ Update `README.md` whenever a change affects:
 - Project architecture or directory structure.
 - Dependencies, prerequisites, limitations, or compatibility.
 
-Documentation must accurately describe the implemented behavior. Include documentation updates in the same commit as the change they describe.
-
-If an iteration does not require documentation changes, verify that
-`docs/PLAN.md`, `docs/RUNNING.md` and `README.md` remain accurate before
-completing the iteration.
+Documentation must accurately describe the implemented behavior.
 
 ## Iteration Completion Checklist
 
@@ -57,7 +95,9 @@ Before considering an iteration complete:
 
 1. Review the implementation and its associated tests.
 2. Run all relevant tests, linters, and validation checks.
-3. Review and update `docs/PLAN.md`, `docs/RUNNING.md` and `README.md` as necessary.
+3. Review and update the documentation under `docs/` (`PLAN.md`, `RUNNING.md`,
+   `adr/`) and `README.md` as necessary, and fix any reference that points at a
+   moved file.
 4. Inspect the final changes with `git diff`.
 5. Create a clear, focused commit containing the completed work.
 6. Verify the repository state with `git status`.
