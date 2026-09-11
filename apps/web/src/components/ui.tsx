@@ -62,6 +62,64 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="muted">{children}</p>;
 }
 
+/**
+ * The page header the mockups open every screen with: an eyebrow line, the
+ * title, an optional lead paragraph, right-aligned facts and actions, and an
+ * optional sunken ribbon of key figures.
+ */
+export function PageHeader({
+  eyebrow,
+  title,
+  titleId,
+  lead,
+  facts,
+  actions,
+  ribbon,
+}: {
+  eyebrow: string;
+  title: string;
+  titleId: string;
+  lead?: ReactNode;
+  facts?: ReactNode;
+  actions?: ReactNode;
+  ribbon?: ReactNode;
+}) {
+  return (
+    <section className="hero">
+      <div className="hero-top">
+        <div className="hero-title">
+          <p className="eyebrow primary">{eyebrow}</p>
+          <h1 id={titleId}>{title}</h1>
+          {lead ? <p className="lead">{lead}</p> : null}
+        </div>
+        <div className="hero-side">
+          {facts ? <div className="hero-facts">{facts}</div> : null}
+          {actions ? <div className="cell-actions">{actions}</div> : null}
+        </div>
+      </div>
+      {ribbon ? <div className="ribbon">{ribbon}</div> : null}
+    </section>
+  );
+}
+
+/** One figure inside a `PageHeader` ribbon. */
+export function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "income" | "expense" | "primary";
+}) {
+  return (
+    <span className="ribbon-item">
+      <span className="eyebrow">{label}</span>
+      <span className={tone ? `value ${tone}` : "value"}>{value}</span>
+    </span>
+  );
+}
+
 export function Money({ minor, currency }: { minor: number; currency: string }) {
   const sign = minor < 0 ? "-" : minor > 0 ? "+" : "";
   const amount = Math.abs(minor);

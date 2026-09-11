@@ -2,6 +2,9 @@
 
 Status: Accepted (2026-09-11)
 
+Palette, panel and page-header decisions superseded by
+[ADR 0012](./0012-align-web-ui-with-sovereign-ledger-mockups.md).
+
 ## Context
 
 The React client grew screen by screen: a locked shell, then panels for accounts,

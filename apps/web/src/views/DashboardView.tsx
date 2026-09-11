@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Account, Dashboard, Tag, Transaction, VaultStatus } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, Empty, Money } from "../components/ui.js";
+import { Banner, Chip, Empty, Money, PageHeader } from "../components/ui.js";
 import { describeError } from "../hooks/use-workspace.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -139,44 +139,54 @@ export function DashboardView({
 
   return (
     <section className="view" aria-labelledby="dashboard-title">
-      <div className="view-header">
-        <div>
-          <p className="eyebrow mono">
-            Ledger overview · VAULT ID {vaultId ? vaultId.slice(0, 13) : "—"}
-          </p>
-          <h1 id="dashboard-title">Financial overview</h1>
-        </div>
-        <div className="cell-actions">
-          <div className="segmented" role="group" aria-label="Period">
-            {(
-              [
-                ["month", "This month"],
-                ["quarter", "3 months"],
-                ["year", "Year"],
-                ["custom", "Custom"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={preset === key ? "segment active" : "segment"}
-                aria-pressed={preset === key}
-                onClick={() => applyPreset(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <button type="button" className="btn small" onClick={onExportData}>
-            <Icon name="download" size={14} />
-            Export data
-          </button>
-          <button type="button" className="btn small primary" onClick={onNewTransaction}>
-            <Icon name="plus" size={14} />
-            New transaction
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={`Sovereign vault ledger · ${status?.storageEngine ?? "sqlcipher"} v${status?.schemaVersion ?? "?"}`}
+        title="Financial overview"
+        titleId="dashboard-title"
+        lead={`${accounts.length} accounts · period ${from} → ${to} · aggregates use booked transactions only`}
+        facts={
+          <>
+            <Chip tone="income" icon="shield">
+              zero-telemetry
+            </Chip>
+            <Chip tone="vault" icon="lock">
+              AES-256-GCM
+            </Chip>
+          </>
+        }
+        actions={
+          <>
+            <div className="segmented" role="group" aria-label="Period">
+              {(
+                [
+                  ["month", "This month"],
+                  ["quarter", "3 months"],
+                  ["year", "Year"],
+                  ["custom", "Custom"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={preset === key ? "segment active" : "segment"}
+                  aria-pressed={preset === key}
+                  onClick={() => applyPreset(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button type="button" className="btn ghost" onClick={onExportData}>
+              <Icon name="download" size={16} />
+              Export data
+            </button>
+            <button type="button" className="btn primary" onClick={onNewTransaction}>
+              <Icon name="plus" size={16} />
+              New transaction
+            </button>
+          </>
+        }
+      />
 
       {preset === "custom" ? (
         <div className="fieldset">

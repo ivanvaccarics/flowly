@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Tag, TaggingRule } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, Empty } from "../components/ui.js";
+import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { CURRENCIES } from "../lib/money.js";
@@ -90,242 +90,262 @@ export function RulesView({ csrf }: { csrf: string }) {
 
   return (
     <section className="view" aria-labelledby="rules-title">
-      <div className="view-header">
-        <div>
-          <p className="eyebrow">Automation · rules only add tags</p>
-          <h1 id="rules-title">Tagging rules</h1>
-        </div>
-        <button type="button" className="btn" onClick={() => void backfill()}>
-          <Icon name="rules" size={16} />
-          Apply rules to existing transactions
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Automation engine · local rule evaluation"
+        title="Tagging & automation"
+        titleId="rules-title"
+        lead="Rules run when a transaction is created or imported, and they only ever add tags. Editing a transaction never re-runs them, so a tag you remove by hand stays removed."
+        facts={
+          <>
+            <Chip tone="neutral">{rules.items.length} rules</Chip>
+            <Chip tone="income">{rules.items.filter((rule) => rule.enabled).length} active</Chip>
+          </>
+        }
+        actions={
+          <button type="button" className="btn primary" onClick={() => void backfill()}>
+            <Icon name="rules" size={16} />
+            Apply to existing transactions
+          </button>
+        }
+      />
 
-      <p className="muted">
-        Rules run when a transaction is created or imported. Editing a transaction never re-runs
-        them, so a tag you remove by hand stays removed.
-      </p>
-
-      <form className="card" onSubmit={submit}>
-        <header>
-          <h2>New rule</h2>
-        </header>
-        <div className="fieldset">
-          <label>
-            Rule name
-            <input value={name} onChange={(event) => setName(event.target.value)} required />
-          </label>
-          <label>
-            Match
-            <select
-              value={combinator}
-              onChange={(event) => setCombinator(event.target.value as "and" | "or")}
-            >
-              <option value="and">all conditions (AND)</option>
-              <option value="or">any condition (OR)</option>
-            </select>
-          </label>
-        </div>
-
-        {conditions.map((condition, index) => (
-          <fieldset key={index} className="condition">
-            <legend>Condition {index + 1}</legend>
-            <label>
-              Field
-              <select
-                aria-label={`Field ${index + 1}`}
-                value={condition.field}
-                onChange={(event) => {
-                  const field = event.target.value as Condition["field"];
-                  const operator = OPERATORS_BY_FIELD[field][0] as Condition["operator"];
-                  updateCondition(index, {
-                    field,
-                    operator,
-                    value: field === "amountMinor" ? 0 : "",
-                    ...(field === "amountMinor" ? { currency: "EUR" } : {}),
-                  });
-                }}
-              >
-                {FIELDS.map((field) => (
-                  <option key={field} value={field}>
-                    {field}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Operator
-              <select
-                aria-label={`Operator ${index + 1}`}
-                value={condition.operator}
-                onChange={(event) =>
-                  updateCondition(index, {
-                    ...condition,
-                    operator: event.target.value as Condition["operator"],
-                  })
-                }
-              >
-                {OPERATORS_BY_FIELD[condition.field].map((operator) => (
-                  <option key={operator} value={operator}>
-                    {operator}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Value
-              <input
-                aria-label={`Value ${index + 1}`}
-                value={String(condition.value)}
-                onChange={(event) =>
-                  updateCondition(index, {
-                    ...condition,
-                    value:
-                      condition.field === "amountMinor"
-                        ? Number(event.target.value)
-                        : event.target.value,
-                  })
-                }
-              />
-            </label>
-            {condition.field === "amountMinor" ? (
+      <div className="dash">
+        <div className="dash-main">
+          <form className="card" onSubmit={submit}>
+            <header>
+              <div>
+                <h2>New rule</h2>
+                <span className="sub">Deterministic matching, evaluated in memory</span>
+              </div>
+            </header>
+            <div className="fieldset framed">
               <label>
-                Currency
+                Rule name
+                <input value={name} onChange={(event) => setName(event.target.value)} required />
+              </label>
+              <label>
+                Match
                 <select
-                  aria-label={`Currency ${index + 1}`}
-                  value={condition.currency ?? "EUR"}
-                  onChange={(event) =>
-                    updateCondition(index, { ...condition, currency: event.target.value })
-                  }
+                  value={combinator}
+                  onChange={(event) => setCombinator(event.target.value as "and" | "or")}
                 >
-                  {CURRENCIES.map((code) => (
-                    <option key={code} value={code}>
-                      {code}
-                    </option>
-                  ))}
+                  <option value="and">all conditions (AND)</option>
+                  <option value="or">any condition (OR)</option>
                 </select>
               </label>
-            ) : null}
-            {conditions.length > 1 ? (
+            </div>
+
+            {conditions.map((condition, index) => (
+              <fieldset key={index} className="condition">
+                <legend>Condition {index + 1}</legend>
+                <label>
+                  Field
+                  <select
+                    aria-label={`Field ${index + 1}`}
+                    value={condition.field}
+                    onChange={(event) => {
+                      const field = event.target.value as Condition["field"];
+                      const operator = OPERATORS_BY_FIELD[field][0] as Condition["operator"];
+                      updateCondition(index, {
+                        field,
+                        operator,
+                        value: field === "amountMinor" ? 0 : "",
+                        ...(field === "amountMinor" ? { currency: "EUR" } : {}),
+                      });
+                    }}
+                  >
+                    {FIELDS.map((field) => (
+                      <option key={field} value={field}>
+                        {field}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Operator
+                  <select
+                    aria-label={`Operator ${index + 1}`}
+                    value={condition.operator}
+                    onChange={(event) =>
+                      updateCondition(index, {
+                        ...condition,
+                        operator: event.target.value as Condition["operator"],
+                      })
+                    }
+                  >
+                    {OPERATORS_BY_FIELD[condition.field].map((operator) => (
+                      <option key={operator} value={operator}>
+                        {operator}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Value
+                  <input
+                    aria-label={`Value ${index + 1}`}
+                    value={String(condition.value)}
+                    onChange={(event) =>
+                      updateCondition(index, {
+                        ...condition,
+                        value:
+                          condition.field === "amountMinor"
+                            ? Number(event.target.value)
+                            : event.target.value,
+                      })
+                    }
+                  />
+                </label>
+                {condition.field === "amountMinor" ? (
+                  <label>
+                    Currency
+                    <select
+                      aria-label={`Currency ${index + 1}`}
+                      value={condition.currency ?? "EUR"}
+                      onChange={(event) =>
+                        updateCondition(index, { ...condition, currency: event.target.value })
+                      }
+                    >
+                      {CURRENCIES.map((code) => (
+                        <option key={code} value={code}>
+                          {code}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                {conditions.length > 1 ? (
+                  <button
+                    type="button"
+                    className="btn small danger"
+                    onClick={() =>
+                      setConditions((current) => current.filter((_, i) => i !== index))
+                    }
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </fieldset>
+            ))}
+
+            <div className="actions" style={{ display: "flex", gap: "0.5rem" }}>
               <button
                 type="button"
-                className="btn small danger"
-                onClick={() => setConditions((current) => current.filter((_, i) => i !== index))}
+                className="btn small"
+                onClick={() =>
+                  setConditions((current) => [
+                    ...current,
+                    { ...EMPTY_CONDITION, field: "payee", operator: "is" },
+                  ])
+                }
               >
-                Remove
+                <Icon name="plus" size={14} />
+                Add condition
               </button>
-            ) : null}
-          </fieldset>
-        ))}
+            </div>
 
-        <div className="actions" style={{ display: "flex", gap: "0.5rem" }}>
-          <button
-            type="button"
-            className="btn small"
-            onClick={() =>
-              setConditions((current) => [
-                ...current,
-                { ...EMPTY_CONDITION, field: "payee", operator: "is" },
-              ])
-            }
-          >
-            <Icon name="plus" size={14} />
-            Add condition
-          </button>
+            <fieldset className="fieldset">
+              <legend>Tags to apply</legend>
+              {tags.items.length === 0 ? (
+                <span className="sub">Create tags first.</span>
+              ) : (
+                tags.items.map((tag) => (
+                  <label key={tag.id} className="checkline">
+                    <input
+                      type="checkbox"
+                      checked={tagIds.includes(tag.id)}
+                      onChange={(event) =>
+                        setTagIds((current) =>
+                          event.target.checked
+                            ? [...current, tag.id]
+                            : current.filter((id) => id !== tag.id),
+                        )
+                      }
+                    />
+                    <span className="swatch" style={{ background: tag.color ?? "#4648d4" }} />
+                    {tag.name}
+                  </label>
+                ))
+              )}
+            </fieldset>
+
+            <div>
+              <button type="submit" className="btn primary">
+                <Icon name="check" size={16} />
+                Save rule
+              </button>
+            </div>
+          </form>
         </div>
 
-        <fieldset className="fieldset">
-          <legend>Tags to apply</legend>
-          {tags.items.length === 0 ? (
-            <span className="sub">Create tags first.</span>
-          ) : (
-            tags.items.map((tag) => (
-              <label key={tag.id} className="checkline">
-                <input
-                  type="checkbox"
-                  checked={tagIds.includes(tag.id)}
-                  onChange={(event) =>
-                    setTagIds((current) =>
-                      event.target.checked
-                        ? [...current, tag.id]
-                        : current.filter((id) => id !== tag.id),
-                    )
-                  }
-                />
-                <span className="swatch" style={{ background: tag.color ?? "#4648d4" }} />
-                {tag.name}
-              </label>
-            ))
-          )}
-        </fieldset>
-
-        <div>
-          <button type="submit" className="btn primary">
-            Save rule
-          </button>
-        </div>
-      </form>
+        <aside className="dash-side">
+          <div className="card">
+            <header>
+              <div>
+                <h2>Active rules</h2>
+                <span className="sub">Higher rules run first</span>
+              </div>
+              <Chip tone={rules.items.some((rule) => rule.enabled) ? "income" : "neutral"}>
+                {rules.items.filter((rule) => rule.enabled).length} on
+              </Chip>
+            </header>
+            {rules.items.length > 0 ? (
+              <ul className="rule-list">
+                {rules.items.map((rule) => (
+                  <li key={rule.id} className="rule-tile">
+                    <div className="rule-tile-head">
+                      <strong>{rule.name}</strong>
+                      <button
+                        type="button"
+                        className="switch"
+                        aria-pressed={rule.enabled}
+                        aria-label={`${rule.enabled ? "Pause" : "Resume"} rule ${rule.name}`}
+                        onClick={() => void rules.update({ ...rule, enabled: !rule.enabled })}
+                      >
+                        <span className="switch-track">
+                          <span className="switch-knob" />
+                        </span>
+                        {rule.enabled ? "On" : "Off"}
+                      </button>
+                    </div>
+                    <code>
+                      IF{" "}
+                      {rule.conditions
+                        .map(
+                          (condition) =>
+                            `${condition.field} ${condition.operator.toUpperCase()} "${condition.value}"`,
+                        )
+                        .join(` ${rule.combinator.toUpperCase()} `)}
+                    </code>
+                    <div className="hero-facts" style={{ justifyContent: "flex-start" }}>
+                      {rule.tagIds.map((id) => (
+                        <span key={id} className="tag-pill">
+                          #{tags.items.find((tag) => tag.id === id)?.name ?? "…"}
+                        </span>
+                      ))}
+                      <button
+                        type="button"
+                        className="btn small danger"
+                        onClick={() => void rules.remove(rule.id, rule.revision)}
+                      >
+                        <Icon name="trash" size={14} />
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Empty>No rules yet.</Empty>
+            )}
+          </div>
+        </aside>
+      </div>
 
       {report ? <Banner tone="ok">{report}</Banner> : null}
       {(rules.error ?? actionError) ? (
         <Banner tone="error">{rules.error ?? actionError}</Banner>
       ) : null}
-
-      <div className="card">
-        <header>
-          <h2>Your rules</h2>
-          <Chip tone="neutral">{rules.items.length} total</Chip>
-        </header>
-        {rules.items.length > 0 ? (
-          <ul className="rule-list">
-            {rules.items.map((rule) => (
-              <li key={rule.id}>
-                <span className="stack">
-                  <span>
-                    <strong>{rule.name}</strong>{" "}
-                    <Chip tone={rule.enabled ? "income" : "neutral"}>
-                      {rule.enabled ? "active" : "paused"}
-                    </Chip>
-                  </span>
-                  <span className="sub mono">
-                    {rule.combinator.toUpperCase()} ·{" "}
-                    {rule.conditions
-                      .map(
-                        (condition) =>
-                          `${condition.field} ${condition.operator} ${condition.value}`,
-                      )
-                      .join(" · ")}
-                  </span>
-                  <span className="sub">
-                    →{" "}
-                    {rule.tagIds
-                      .map((id) => tags.items.find((tag) => tag.id === id)?.name ?? "…")
-                      .join(", ")}
-                  </span>
-                </span>
-                <div className="cell-actions">
-                  <button
-                    type="button"
-                    className="btn small"
-                    onClick={() => void rules.update({ ...rule, enabled: !rule.enabled })}
-                  >
-                    {rule.enabled ? "Pause" : "Resume"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn small danger"
-                    onClick={() => void rules.remove(rule.id, rule.revision)}
-                  >
-                    <Icon name="trash" size={14} />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <Empty>No rules yet.</Empty>
-        )}
-      </div>
     </section>
   );
 }

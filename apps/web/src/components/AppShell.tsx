@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { VaultStatus } from "@flowly/web-contracts";
 import { Icon, type IconName } from "./icons.js";
-import { Banner, Chip } from "./ui.js";
+import { Banner } from "./ui.js";
 import { AccountsView } from "../views/AccountsView.js";
 import { DashboardView } from "../views/DashboardView.js";
 import { RulesView } from "../views/RulesView.js";
@@ -68,7 +68,7 @@ export function AppShell({
         <div className="sidebar-footer">
           <div className="vault-card">
             <span className="avatar">
-              <Icon name="shield" size={16} />
+              <Icon name="shield" size={18} />
             </span>
             <span className="stack" style={{ flex: 1 }}>
               <strong>Local vault</strong>
@@ -85,16 +85,16 @@ export function AppShell({
 
       <header className="topbar">
         <div className="topbar-status">
-          <span className="chip neutral">
+          <span className="status-pill" title="Encrypted vault, unlocked for this session">
             <span className="pulse" />
-            {status?.storageEngine ?? "sqlcipher"} v{status?.schemaVersion ?? "?"} unlocked
+            <strong>
+              {status?.storageEngine ?? "sqlcipher"} v{status?.schemaVersion ?? "?"} unlocked
+            </strong>
+            <span className="badge">AES-256</span>
           </span>
-          <Chip tone="neutral" icon="lock">
-            AES-256
-          </Chip>
           {vaultId ? (
-            <span className="chip neutral mono" title="Vault identifier">
-              {vaultId.slice(0, 8)}
+            <span className="chip mono neutral" title={`Vault identifier ${vaultId}`}>
+              {vaultId.slice(0, 13)}
             </span>
           ) : null}
         </div>
@@ -150,6 +150,7 @@ export function AppShell({
             <SettingsView
               csrf={csrf}
               busy={busy}
+              vaultStatus={status}
               onChangePassphrase={onChangePassphrase}
               onClearError={onClearError}
             />

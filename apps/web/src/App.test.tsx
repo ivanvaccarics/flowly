@@ -187,7 +187,7 @@ describe("Flowly web client", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Settings" })).toBeTruthy());
     screen.getByRole("button", { name: "Settings" }).click();
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Settings" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("heading", { name: /Settings/ })).toBeTruthy());
     expect(screen.getByLabelText("Current passphrase")).toBeTruthy();
     expect(screen.getByLabelText("New passphrase")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export transactions CSV" })).toBeTruthy();

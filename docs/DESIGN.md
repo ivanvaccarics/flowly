@@ -1,34 +1,44 @@
 # Flowly UI design system
 
 The interface follows **Sovereign Ledger**, the design language captured in the
-repository's `ui/` folder (a design specification plus four desktop mockups:
-dashboard, accounts, transactions, vault). That folder is a local, untracked
-reference — the tokens and rules that matter are reproduced here and implemented
-in `apps/web`, so the codebase is self-contained and this document is the
-authoritative summary for anyone cloning the repository.
+repository's `ui/` folder (a design specification plus desktop mockups of the
+dashboard, accounts, transactions, vault and rules screens). That folder is a
+local, untracked reference — the tokens and rules that matter are reproduced here
+and implemented in `apps/web`, so the codebase is self-contained and this
+document is the authoritative summary for anyone cloning the repository.
 
 ## Character
 
-High-trust, sovereign and quiet: pure white cards over a soft slate canvas,
-hairline borders, dense tabular structures, restrained feedback and precise
-typographic contrast. No gradients, no decorative noise, no dark-mode inversion.
+High-trust, sovereign and quiet: pure white cards floating over a soft lavender
+canvas, soft ambient shadows instead of hard borders, dense tabular structures,
+restrained feedback and precise typographic contrast. No gradients, no
+decorative noise, no dark-mode inversion.
 
 ## Tokens
 
-Defined once as CSS custom properties in `apps/web/src/styles.css`.
+Defined once as CSS custom properties in `apps/web/src/styles.css`. The values
+come from the Material-style token block at the top of
+`ui/sovereign_ledger/DESIGN.md`, which is what the mockups were built from.
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--canvas` | `#f8fafc` | Application background |
-| `--surface` | `#ffffff` | Cards, tables, inputs |
-| `--surface-sunken` | `#f1f5f9` | Table headers, sunken segments |
-| `--border` / `--border-strong` | `#e2e8f0` / `#cbd5e1` | Hairlines and hover containment |
-| `--text` / `--text-secondary` / `--text-muted` | `#0f172a` / `#334155` / `#64748b` | Headlines, body, metadata |
-| `--primary` | `#4648d4` (hover `#3a3cbe`) | Primary actions, active navigation, focus ring |
-| `--income` | `#047857` | Inflows, confirmations |
-| `--expense` | `#be123c` | Outflows, destructive actions, errors |
-| Radius | 4 px / 8 px / 12 px | Badges, controls, cards |
-| Shadow | level 1-3 | Cards, hover/popovers, modal |
+| `--canvas` | `#faf8ff` | Application background |
+| `--surface` | `#ffffff` | Cards, tables, popovers |
+| `--surface-low` | `#f2f3ff` | Tinted panels: ribbons, fieldsets, list rows, option cards |
+| `--surface-sunken` | `#eaedff` | Chips, active navigation pill, icon tiles, segmented control |
+| `--surface-high` | `#e2e7ff` | Badge inside the vault state pill |
+| `--border` / `--border-strong` | `#e8e7f4` / `#c7c4d7` | Table rows and dashed dropzones / dashed outlines, dividers |
+| `--text` / `--text-secondary` / `--text-muted` | `#131b2e` / `#464554` / `#767586` | Headlines and figures, body, metadata |
+| `--primary` / `--primary-hover` | `#4648d4` / `#3a3cbe` | Primary actions, active navigation, focused fields |
+| `--primary-soft` / `--primary-ink` | `#e1e0ff` / `#2f2ebe` | Tag pills, vault chips, icon tiles |
+| `--income` | `#006c49` | Inflows, confirmations, "zero-telemetry" states |
+| `--expense` | `#b90538` | Outflows, destructive actions, errors |
+| Radius | 4 px / 8 px / 12 px | Badges and tag pills / controls / cards and modals |
+| Shadow | level 1–3 | Cards, hover and popovers, modal and unlock card |
+
+Panels use `--shadow-1` (`0 1px 8px rgba(19, 27, 46, 0.04)`) rather than a
+visible outline; typography and figure alignment carry the structure. Circular
+elements are reserved for avatars, status dots, switches and swatches.
 
 ## Typography
 
@@ -45,50 +55,64 @@ not shift.
 
 ## Layout
 
-- Fixed 260 px sidebar with the brand, a "Vault navigation" label, the section
-  list and a vault card showing the storage engine and schema version.
-- Sticky 64 px top bar: vault state chips (unlocked, cipher, vault format) and the
-  session controls (`Lock this session`, `Lock all sessions`).
+- Fixed 260 px white sidebar: brand, a "Vault navigation" label, the six
+  sections, and a footer card showing the local vault identity (storage engine
+  and schema version) instead of a user account.
+- Sticky 64 px top bar: the vault state pill (pulsing dot, engine and schema, an
+  `AES-256` badge), the short vault id, and the session controls.
 - Content column capped at 1600 px with 24 px gutters; cards carry 24 px internal
-  padding and hairline borders.
-- Below 1024 px the sidebar becomes a horizontal, wrapping nav and cards stack.
+  padding.
+- Below 1024 px the sidebar becomes a horizontal, wrapping nav, the top bar wraps
+  and cards stack.
 
 ## Components
 
-- **Metric card:** uppercase eyebrow, monospaced value, optional delta chip.
-- **Data table:** uppercase micro-headers on a sunken row, 44 px rows, hover tint,
-  right-aligned monospaced amounts, coral for outflows and emerald for inflows.
+- **Page header (hero):** every section opens with a white card holding an
+  uppercase eyebrow, the `h1`, an optional lead paragraph, right-aligned status
+  chips and actions, and an optional sunken **ribbon** of key figures.
+- **Metric card:** eyebrow with an icon tile, a monospaced value, and a delta or
+  context chip.
+- **Panel:** tinted `#f2f3ff` block used for form fieldsets, ribbons, list rows
+  and option cards. Inputs inside a tinted panel switch to white so they stay
+  legible.
+- **Data table:** uppercase micro-headers on a tinted row with rounded ends,
+  44 px rows, hover tint, right-aligned monospaced amounts, coral for outflows
+  and emerald for inflows.
+- **Account card:** icon tile, name, type and currency, status chips and a tinted
+  balance block with the booked-movement count.
+- **Rule tile:** name, an on/off switch, the matched expression in monospace and
+  the tags it applies.
+- **Option card:** one export or import method with its explanation, controls and
+  a dashed dropzone.
 - **Status chip:** compact 2/8 px padding with tone variants (`income`, `expense`,
-  `vault`, `neutral`); the vault chip pairs with a pulsing state dot.
+  `vault`, `neutral`); `meta` and `mono` variants cover uppercase and hashed data.
+- **Tag pill:** monospaced `#name` pill tinted with the tag colour; the same pill
+  is used as a quick filter button, filled indigo when active.
+- **Switch:** 40×22 px on/off control for pausing a tagging rule.
 - **Tag picker:** a compact trigger that summarises the selection (up to two tag
   pills plus a `+N` counter) and opens a popup with a search field, a scrollable
   checklist and `Clear` / `Done` actions. Used wherever tags are chosen, so a
   vault with hundreds of tags never inflates a table row or a form.
 - **Buttons:** primary indigo (36 px, radius 8), ghost secondary, destructive
   coral-outline that only fills on an explicit destructive action.
-- **Inputs:** 36 px, hairline border, indigo focus ring with a soft halo.
+- **Inputs:** 36 px, tinted on white cards and white on tinted panels, indigo
+  focus ring with a soft halo.
 - **Banner:** inline feedback for errors, confirmations and loading.
 
 ## Mapping to implemented features
 
-Only shipping functionality is on screen. The mockup's charts, savings rate,
-spending shares and identifiers are now implemented from real data; the pieces
-that remain absent are listed at the end of this section.
+Only shipping functionality is on screen; every figure comes from the API.
 
 | Section | Contents |
 | --- | --- |
-| Dashboard | Vault id in the eyebrow, segmented period control (month / 3 months / year / custom), Export data and New transaction shortcuts, four metric cards per currency (total balance, income, expenses, net + savings rate) with deltas against the previous equal-length period, cash-flow chart (weekly income/expense bars with a net line, inline SVG), spending breakdown with a stacked share bar and percentages, average daily spend, recent transactions table (beneficiary with source subline, account, category, stacked date, amount), accounts summary and the local vault status card |
-| Accounts | Create account, status chips, archive, cascade delete |
-| Transactions | Create with notes, tags (tag picker) and status, server-side filters (account, dates, tag, status, text), inline row editing of **payee, amount, note and tags**, a status chip that switches booked ↔ pending, delete |
-| Tags | Create with color, normalized name shown, cascade delete |
-| Rules | Condition builder (AND/OR, per-field operators, amount currency), tag selection, pause/resume, backfill report |
-| Settings | Passphrase change, transaction CSV export, complete archive export, CSV preview and merge, archive replacement |
+| Dashboard | Hero with the vault engine and vault id, segmented period control (month / 3 months / year / custom), Export data and New transaction shortcuts, four metric cards per currency (total balance, income, expenses, net + savings rate) with deltas against the previous equal-length period, cash-flow chart (weekly income/expense bars with a net line, inline SVG), spending breakdown with a stacked share bar and percentages, average daily spend, recent transactions table, accounts summary and the local vault status card |
+| Accounts | Hero with the account and currency counts, create form, and one card per account with its real balance per currency and booked-movement count, archive and cascade delete |
+| Transactions | Hero with the match count, record form (notes, tag picker, status), server-side filters (text, account, tag, status, date range), quick tag-filter pills, and a table with inline editing of **payee, amount, note and tags**, a status chip that switches booked ↔ pending, the source shown as an offline-AES chip, and delete |
+| Tags | Hero with the tag count, create with colour, normalized name shown, cascade delete |
+| Rules | Hero with the rule counts and the backfill action, condition builder (AND/OR, per-field operators, amount currency), tag selection, and a side column of rule tiles with an on/off switch, the matched expression and delete |
+| Settings | Hero with the cipher and zero-cloud chips, passphrase change, and paired export and import option cards: transaction CSV, complete encrypted archive, CSV preview and merge, archive replacement |
 
-Header requirements from the mockup: vault chip with pulsing state dot plus the
-cipher badge and the vault id, Export data (routes to Settings) and the lock
-actions.
-
-The mockup's global search field was **deliberately left out of the header**:
+The mockup's global search field is **deliberately left out of the header**:
 free-text search lives in the Transactions filters, next to the other query
 controls, so there is one place to search the ledger instead of two. If a global
 search comes back later, it should reuse the same server-side query endpoint.
@@ -96,9 +120,9 @@ search comes back later, it should reuse the same server-side query endpoint.
 Deliberately absent because the product does not have them: the session timeout
 countdown (no remaining-time value is exposed by the API), the user avatar and
 account identity (Flowly has no accounts or users), transfer/top-up actions,
-filtered exports, and the budget capacity row (budgets were removed in
-ADR 0010; the card shows average daily spend and the top category instead).
+filtered exports, the ledger checksum chip and the mockups' illustrative node
+identifiers.
 
 The vault lock screen uses the same language: centered card, lock badge,
-passphrase field, the no-recovery warning, and a facts row with state, storage
-engine and vault format.
+passphrase field, the no-recovery warning, and a tinted facts row with state,
+storage engine and vault format.

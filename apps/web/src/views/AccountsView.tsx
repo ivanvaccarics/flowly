@@ -1,18 +1,38 @@
-import { useState } from "react";
-import type { Account } from "@flowly/web-contracts";
+import { useCallback, useEffect, useState } from "react";
+import type { Account, Dashboard } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
-import { Icon } from "../components/icons.js";
-import { Banner, Chip, Empty } from "../components/ui.js";
+import { Icon, type IconName } from "../components/icons.js";
+import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
-import { ACCOUNT_TYPES, CURRENCIES } from "../lib/money.js";
+import { ACCOUNT_TYPES, CURRENCIES, formatMoney } from "../lib/money.js";
+
+const TYPE_ICONS: Record<string, IconName> = {
+  "credit-card": "transactions",
+  savings: "archive",
+  investment: "archive",
+};
 
 export function AccountsView({ csrf }: { csrf: string }) {
   const accounts = useCollection<Account>("accounts", csrf, true);
+  const [balances, setBalances] = useState<Dashboard["balances"]>([]);
   const [name, setName] = useState("");
   const [type, setType] = useState("checking");
   const [currency, setCurrency] = useState("EUR");
   const [actionError, setActionError] = useState<string | undefined>(undefined);
+
+  const loadBalances = useCallback(async () => {
+    try {
+      const dashboard = await api.dashboard();
+      setBalances(dashboard.balances);
+    } catch (cause) {
+      setActionError(describeError(cause));
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadBalances();
+  }, [loadBalances]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -29,6 +49,7 @@ export function AccountsView({ csrf }: { csrf: string }) {
       updatedAt: now,
     });
     if (created) setName("");
+    await loadBalances();
   }
 
   async function remove(account: Account) {
@@ -38,7 +59,11 @@ export function AccountsView({ csrf }: { csrf: string }) {
     );
     if (!confirmed) return;
     const removed = await accounts.remove(account.id, account.revision, true);
-    if (!removed) setActionError("Could not delete: the account may have changed.");
+    if (!removed) {
+      setActionError("Could not delete: the account may have changed.");
+      return;
+    }
+    await loadBalances();
   }
 
   async function archive(account: Account) {
@@ -46,25 +71,39 @@ export function AccountsView({ csrf }: { csrf: string }) {
     try {
       await api.archiveAccount(csrf, account.id, account.revision);
       await accounts.reload();
+      await loadBalances();
     } catch (cause) {
       setActionError(describeError(cause));
     }
   }
 
+  const currencies = new Set(balances.map((line) => line.currency));
+
   return (
     <section className="view" aria-labelledby="accounts-title">
-      <div className="view-header">
-        <div>
-          <p className="eyebrow">Accounts · balances per currency</p>
-          <h1 id="accounts-title">Accounts</h1>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Accounts · balances per currency"
+        title="Accounts & resources"
+        titleId="accounts-title"
+        lead="Every account is a local endpoint: booked movements move its balance, and no currency is ever converted."
+        facts={
+          <>
+            <Chip tone="neutral">{accounts.items.length} accounts</Chip>
+            <Chip tone="neutral">
+              {currencies.size} {currencies.size === 1 ? "currency" : "currencies"}
+            </Chip>
+          </>
+        }
+      />
 
       <form className="card" onSubmit={submit}>
         <header>
-          <h2>New account</h2>
+          <div>
+            <h2>New account</h2>
+            <span className="sub">Stored only in the local keystore</span>
+          </div>
         </header>
-        <div className="fieldset">
+        <div className="fieldset framed">
           <label>
             Name
             <input value={name} onChange={(event) => setName(event.target.value)} required />
@@ -101,32 +140,28 @@ export function AccountsView({ csrf }: { csrf: string }) {
       ) : null}
       {accounts.loading ? <Banner>Loading accounts…</Banner> : null}
 
-      <div className="card">
-        <header>
-          <h2>Your accounts</h2>
-          <Chip tone="neutral">{accounts.items.length} total</Chip>
-        </header>
+      <section className="view" aria-label="Your accounts">
+        <div className="view-header-inline">
+          <h2>Active endpoints</h2>
+          <span className="sub">Balances include booked movements only</span>
+        </div>
         {accounts.items.length > 0 ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Currency</th>
-                  <th>Status</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {accounts.items.map((account) => (
-                  <tr key={account.id} className={account.archivedAt ? "archived" : undefined}>
-                    <td>
-                      <strong>{account.name}</strong>
-                    </td>
-                    <td>{account.type}</td>
-                    <td className="mono">{account.defaultCurrency}</td>
-                    <td>
+          <div className="account-grid">
+            {accounts.items.map((account) => (
+              <article
+                key={account.id}
+                className={account.archivedAt ? "account-card archived" : "account-card"}
+              >
+                <div className="account-card-head">
+                  <span className="tile">
+                    <Icon name={TYPE_ICONS[account.type] ?? "accounts"} size={22} />
+                  </span>
+                  <div className="stack" style={{ flex: 1 }}>
+                    <strong style={{ fontSize: "1rem" }}>{account.name}</strong>
+                    <span className="sub">
+                      {account.type} · {account.defaultCurrency}
+                    </span>
+                    <div className="hero-facts" style={{ justifyContent: "flex-start" }}>
                       {account.archivedAt ? (
                         <Chip tone="neutral">archived</Chip>
                       ) : (
@@ -134,38 +169,54 @@ export function AccountsView({ csrf }: { csrf: string }) {
                           active
                         </Chip>
                       )}
-                    </td>
-                    <td>
-                      <div className="cell-actions">
-                        {account.archivedAt ? null : (
-                          <button
-                            type="button"
-                            className="btn small"
-                            onClick={() => void archive(account)}
-                          >
-                            <Icon name="archive" size={14} />
-                            Archive
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn small danger"
-                          onClick={() => void remove(account)}
-                        >
-                          <Icon name="trash" size={14} />
-                          Delete all
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <Chip tone="vault" icon="lock">
+                        AES-256
+                      </Chip>
+                    </div>
+                  </div>
+                </div>
+
+                {balances
+                  .filter((line) => line.accountId === account.id)
+                  .map((line) => (
+                    <div className="account-balance" key={`${account.id}-${line.currency}`}>
+                      <span className="eyebrow">Balance · {line.currency}</span>
+                      <span className="value">{formatMoney(line.balanceMinor, line.currency)}</span>
+                      <span className="sub">
+                        {line.transactionCount} booked{" "}
+                        {line.transactionCount === 1 ? "movement" : "movements"}
+                        {line.isDefaultCurrency ? "" : " · other currency"}
+                      </span>
+                    </div>
+                  ))}
+
+                <div className="cell-actions">
+                  {account.archivedAt ? null : (
+                    <button
+                      type="button"
+                      className="btn small"
+                      onClick={() => void archive(account)}
+                    >
+                      <Icon name="archive" size={14} />
+                      Archive
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn small danger"
+                    onClick={() => void remove(account)}
+                  >
+                    <Icon name="trash" size={14} />
+                    Delete all
+                  </button>
+                </div>
+              </article>
+            ))}
           </div>
         ) : (
           <Empty>No accounts yet. Add the first one above.</Empty>
         )}
-      </div>
+      </section>
     </section>
   );
 }

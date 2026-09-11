@@ -67,7 +67,8 @@ foundation:
 - CI (`.github/workflows/ci.yml`) verifies formatting, lint, types, tests,
   contract freshness, builds, and both container architectures.
 - The vault is implemented and encrypted at rest, and the browser UI covers the
-  unlock flow, accounts, transactions, tags, tagging rules and import/export.
+  unlock flow, accounts, transactions, tags, tagging rules and import/export. It
+  is aligned with the Sovereign Ledger mockups (`docs/adr/0012`).
 - `.python-version` selects Python 3.14, and `enable_banking.py` is a standalone
   Enable Banking exploration script.
 - Local `data/`, `secrets/`, `.venv/`, and `node_modules/` paths are ignored.
@@ -306,8 +307,11 @@ The web client implements the repository's own design system — *Sovereign
 Ledger*, defined in `ui/sovereign_ledger/DESIGN.md` and the `ui/*` mockups — with
 one sidebar shell and six sections: Dashboard, Accounts, Transactions, Tags,
 Rules and Settings. Settings carries the passphrase change plus export and
-import. Only implemented features are rendered, fonts use local stacks so the app
-never needs a CDN, and `docs/DESIGN.md` records the tokens and the mapping.
+import. Each section opens with a header card (eyebrow, title, facts and
+actions), cards are white and borderless over a lavender canvas, and tinted
+panels carry nested controls. Only implemented features are rendered, fonts use
+local stacks so the app never needs a CDN, and `docs/DESIGN.md` records the
+tokens and the mapping.
 
 The two UIs follow one product design specification but are implemented with
 their platform-native toolkit:
@@ -1134,8 +1138,8 @@ it inside a single transaction after writing an encrypted snapshot.
 
 ### Phase 4 - Server analysis features
 
-Status: **complete** (2026-09-11). `pnpm verify` runs 140 tests (contracts 12,
-server 123, web 5), including the analytics and search suites. Decisions are
+Status: **complete** (2026-09-11). `pnpm verify` runs 147 tests (contracts 11,
+server 124, web 12), including the analytics and search suites. Decisions are
 recorded in `docs/adr/0008-dashboard-search-and-budget-semantics.md`; its budget
 parts are superseded by `docs/adr/0010-remove-budgets.md`.
 
@@ -1174,7 +1178,7 @@ cached in memory.
 ### Phase 5 - Server hardening and release
 
 Status: **complete for its engineering scope** (2026-09-11). `pnpm verify` runs
-146 tests (contracts 12, server 126, web 8). Two verification items cannot be
+147 tests (contracts 11, server 124, web 12). Two verification items cannot be
 finished by writing code in this repository — an independent cryptographic
 review and a full assistive-technology accessibility audit — and are tracked as
 open in `docs/security/verification.md`. Decisions are recorded in
@@ -1229,11 +1233,24 @@ Delivered:
 **Exit criteria:** the **Flowly Server MVP** passes its acceptance suite and
 requires neither Internet access nor any Flowly-operated service for core use.
 
-Met: the acceptance suite is `pnpm verify` plus `pnpm build` (146 tests), the
+Met: the acceptance suite is `pnpm verify` plus `pnpm build` (147 tests), the
 container runs with no outbound network dependency and no Flowly-operated
 service, and the deployment, backup and threat-model documentation ships with
 the repository. The independent cryptographic review and the assistive-technology
 audit remain open and are listed in `docs/security/verification.md`.
+
+#### Task `align-web-ui-with-mockups`
+
+Status: **complete** (2026-09-11), decision in `docs/adr/0012`.
+
+- Re-token the web client to the Material-style palette the mockups were built
+  from: lavender canvas, white borderless cards, tinted panels, soft shadows.
+- Give every section a hero header with status facts, actions and an optional
+  ribbon of figures, and restyle accounts (endpoint cards with real balances),
+  rules (tiles with on/off switches), settings (export/import option cards) and
+  the transactions filters (quick tag pills).
+- Keep the API surface unchanged: no new endpoint, no new runtime dependency, and
+  no figure that the vault cannot compute.
 
 ### Phase 6 - Enable Banking for Server
 

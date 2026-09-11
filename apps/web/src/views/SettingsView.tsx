@@ -1,7 +1,8 @@
 import { useState } from "react";
+import type { VaultStatus } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip } from "../components/ui.js";
+import { Banner, Chip, PageHeader, Stat } from "../components/ui.js";
 import { describeError } from "../hooks/use-workspace.js";
 
 interface CsvPreview {
@@ -16,11 +17,18 @@ interface CsvPreview {
 export interface SettingsViewProps {
   csrf: string;
   busy: boolean;
+  vaultStatus: VaultStatus | undefined;
   onChangePassphrase: (current: string, next: string) => Promise<boolean>;
   onClearError: () => void;
 }
 
-export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: SettingsViewProps) {
+export function SettingsView({
+  csrf,
+  busy,
+  vaultStatus,
+  onChangePassphrase,
+  onClearError,
+}: SettingsViewProps) {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [passphraseState, setPassphraseState] = useState<"idle" | "ok" | "error">("idle");
@@ -60,15 +68,30 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
 
   return (
     <section className="view" aria-labelledby="settings-title">
-      <div className="view-header">
-        <div>
-          <p className="eyebrow">Settings · passphrase and portable data</p>
-          <h1 id="settings-title">Settings</h1>
-        </div>
-        <Chip tone="vault" icon="shield">
-          AES-256-GCM
-        </Chip>
-      </div>
+      <PageHeader
+        eyebrow="Settings · passphrase and portable data"
+        title="Settings & vault data"
+        titleId="settings-title"
+        lead="Configure the cryptographic parameters of the local vault, export your ledger and import historical files without giving up sovereignty."
+        facts={
+          <>
+            <Chip tone="vault" icon="shield">
+              AES-256-GCM
+            </Chip>
+            <Chip tone="income" icon="check">
+              zero-cloud
+            </Chip>
+          </>
+        }
+        ribbon={
+          <>
+            <Stat label="Storage engine" value={vaultStatus?.storageEngine ?? "sqlcipher"} />
+            <Stat label="Schema" value={`v${vaultStatus?.schemaVersion ?? "?"}`} />
+            <Stat label="Vault format" value={`v${vaultStatus?.vaultFormatVersion ?? 1}`} />
+            <Stat label="Export format" value={`v${vaultStatus?.exportFormatVersion ?? 1}`} />
+          </>
+        }
+      />
 
       <form
         className="card"
@@ -85,10 +108,12 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
         }}
       >
         <header>
-          <h2>Passphrase</h2>
-          <span className="sub">Re-wraps the vault key; your data is not re-encrypted</span>
+          <div>
+            <h2>Passphrase</h2>
+            <span className="sub">Re-wraps the vault key; your data is not re-encrypted</span>
+          </div>
         </header>
-        <div className="fieldset">
+        <div className="fieldset framed">
           <label>
             Current passphrase
             <input
@@ -126,77 +151,159 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
 
       <div className="card">
         <header>
-          <h2>Export</h2>
-          <span className="sub">Everything stays on your device</span>
+          <div>
+            <h2>Portable export</h2>
+            <span className="sub">Everything stays on your device — no upload, no telemetry</span>
+          </div>
+          <Chip tone="neutral">2 methods</Chip>
         </header>
-        <div className="fieldset">
-          <button
-            type="button"
-            className="btn"
-            onClick={() =>
-              void run(async () => {
-                const csv = await api.exportCsv();
-                download(csv, "flowly-transactions.csv", "text/csv");
-                setStatus("Transaction CSV exported (plain text, not encrypted).");
-              })
-            }
-          >
-            <Icon name="download" size={16} />
-            Export transactions CSV
-          </button>
-        </div>
-        <div className="fieldset">
-          <label>
-            Archive password
-            <input
-              type="password"
-              value={archivePassword}
-              onChange={(event) => setArchivePassword(event.target.value)}
-              placeholder="at least 8 characters"
-            />
-          </label>
-          <button
-            type="button"
-            className="btn"
-            disabled={archivePassword.length < 8}
-            onClick={() =>
-              void run(async () => {
-                const archive = await api.exportArchive(csrf, archivePassword);
-                download(archive, "flowly-vault.flowly", "application/octet-stream");
-                setStatus("Complete portable archive exported (encrypted).");
-              })
-            }
-          >
-            <Icon name="download" size={16} />
-            Export complete archive
-          </button>
+        <div className="option-grid">
+          <section className="option-card">
+            <h3>
+              <Icon name="download" size={18} />
+              Transactions CSV
+            </h3>
+            <p className="sub">
+              Universal tabular format, readable in any spreadsheet tool. Plain text: it is not
+              encrypted.
+            </p>
+            <button
+              type="button"
+              className="btn block"
+              onClick={() =>
+                void run(async () => {
+                  const csv = await api.exportCsv();
+                  download(csv, "flowly-transactions.csv", "text/csv");
+                  setStatus("Transaction CSV exported (plain text, not encrypted).");
+                })
+              }
+            >
+              <Icon name="download" size={16} />
+              Export transactions CSV
+            </button>
+          </section>
+
+          <section className="option-card">
+            <h3>
+              <Icon name="shield" size={18} />
+              Complete encrypted archive
+            </h3>
+            <p className="sub">
+              Full snapshot of accounts, ledger, tags and rules in a password-encrypted{" "}
+              <span className="mono">.flowly</span> file.
+            </p>
+            <label>
+              Archive password
+              <input
+                type="password"
+                value={archivePassword}
+                onChange={(event) => setArchivePassword(event.target.value)}
+                placeholder="at least 8 characters"
+              />
+            </label>
+            <button
+              type="button"
+              className="btn primary block"
+              disabled={archivePassword.length < 8}
+              onClick={() =>
+                void run(async () => {
+                  const archive = await api.exportArchive(csrf, archivePassword);
+                  download(archive, "flowly-vault.flowly", "application/octet-stream");
+                  setStatus("Complete portable archive exported (encrypted).");
+                })
+              }
+            >
+              <Icon name="download" size={16} />
+              Export complete archive
+            </button>
+          </section>
         </div>
       </div>
 
       <div className="card">
         <header>
-          <h2>Import</h2>
-          <span className="sub">A CSV merge is additive; an archive replaces the vault</span>
+          <div>
+            <h2>Import into the vault</h2>
+            <span className="sub">A CSV merge is additive; an archive replaces the vault</span>
+          </div>
         </header>
 
-        <div className="fieldset">
-          <label>
-            Transaction CSV
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(event) =>
-                void run(async () => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  const content = await file.text();
-                  setCsvContent(content);
-                  setCsvPreview(await api.previewCsv(csrf, content));
-                  setStatus(undefined);
-                })
-              }
-            />
-          </label>
+        <div className="option-grid">
+          <section className="option-card">
+            <h3>
+              <Icon name="upload" size={18} />
+              Transactions CSV
+            </h3>
+            <p className="sub">
+              Incremental and additive: importing never deletes an existing record.
+            </p>
+            <div className="dropzone">
+              <Icon name="upload" size={22} />
+              <span className="sub">Choose a bank or provider CSV export</span>
+              <label>
+                Transaction CSV
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(event) =>
+                    void run(async () => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      const content = await file.text();
+                      setCsvContent(content);
+                      setCsvPreview(await api.previewCsv(csrf, content));
+                      setStatus(undefined);
+                    })
+                  }
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="option-card">
+            <h3>
+              <Icon name="archive" size={18} />
+              Complete archive
+            </h3>
+            <p className="sub">
+              Restoring a snapshot <strong>replaces</strong> what is in the vault right now.
+            </p>
+            <label>
+              Archive password
+              <input
+                type="password"
+                value={archivePassword}
+                onChange={(event) => setArchivePassword(event.target.value)}
+                placeholder="unlock the archive"
+              />
+            </label>
+            <div className="dropzone">
+              <Icon name="lock" size={22} />
+              <span className="sub">Choose a .flowly archive</span>
+              <label>
+                Complete archive (.flowly)
+                <input
+                  type="file"
+                  accept=".flowly,application/octet-stream"
+                  onChange={(event) =>
+                    void run(async () => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      const confirmed = window.confirm(
+                        "Importing a complete archive replaces every account, transaction and rule in this vault. Continue?",
+                      );
+                      if (!confirmed) return;
+                      const base64 = toBase64(new Uint8Array(await file.arrayBuffer()));
+                      const report = await api.importArchive(csrf, archivePassword, base64);
+                      setStatus(
+                        `Archive imported: ${report.accounts} accounts, ${report.transactions} transactions, ${report.tags} tags, ${report.taggingRules} rules.`,
+                      );
+                    })
+                  }
+                />
+              </label>
+            </div>
+          </section>
         </div>
 
         {csvPreview ? (
@@ -237,31 +344,6 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
             </div>
           </div>
         ) : null}
-
-        <div className="fieldset">
-          <label>
-            Complete archive (.flowly)
-            <input
-              type="file"
-              accept=".flowly,application/octet-stream"
-              onChange={(event) =>
-                void run(async () => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  const confirmed = window.confirm(
-                    "Importing a complete archive replaces every account, transaction and rule in this vault. Continue?",
-                  );
-                  if (!confirmed) return;
-                  const base64 = toBase64(new Uint8Array(await file.arrayBuffer()));
-                  const report = await api.importArchive(csrf, archivePassword, base64);
-                  setStatus(
-                    `Archive imported: ${report.accounts} accounts, ${report.transactions} transactions, ${report.tags} tags, ${report.taggingRules} rules.`,
-                  );
-                })
-              }
-            />
-          </label>
-        </div>
       </div>
 
       {status ? <Banner tone="ok">{status}</Banner> : null}

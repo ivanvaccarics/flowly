@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Tag } from "@flowly/web-contracts";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, Empty } from "../components/ui.js";
+import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 
 export function TagsView({ csrf }: { csrf: string }) {
@@ -39,18 +39,22 @@ export function TagsView({ csrf }: { csrf: string }) {
 
   return (
     <section className="view" aria-labelledby="tags-title">
-      <div className="view-header">
-        <div>
-          <p className="eyebrow">Taxonomy · case-insensitive, Unicode-aware</p>
-          <h1 id="tags-title">Tags</h1>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Taxonomy · case-insensitive, Unicode-aware"
+        title="Tags"
+        titleId="tags-title"
+        lead="Tags bucket spending and drive the tagging rules. Deleting one removes it from every transaction and rule that used it."
+        facts={<Chip tone="neutral">{tags.items.length} defined</Chip>}
+      />
 
       <form className="card" onSubmit={submit}>
         <header>
-          <h2>New tag</h2>
+          <div>
+            <h2>New tag</h2>
+            <span className="sub">The colour is only used by the interface</span>
+          </div>
         </header>
-        <div className="fieldset">
+        <div className="fieldset framed">
           <label>
             Name
             <input value={name} onChange={(event) => setName(event.target.value)} required />
@@ -70,7 +74,10 @@ export function TagsView({ csrf }: { csrf: string }) {
 
       <div className="card">
         <header>
-          <h2>Your tags</h2>
+          <div>
+            <h2>Your tags</h2>
+            <span className="sub">Normalized names keep the taxonomy predictable</span>
+          </div>
           <Chip tone="neutral">{tags.items.length} total</Chip>
         </header>
         {tags.items.length > 0 ? (
