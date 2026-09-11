@@ -38,7 +38,7 @@ vault, you export it and import it. That's it. 🔐
 | Useless without the Internet | The server needs only your private network |
 | They hold the keys | Your passphrase unlocks your encryption key |
 
-> 🧭 **One rule we never break:** when the vault is locked, there is nothing
+> 🧭 **One promise we never break:** when the vault is locked, there is nothing
 > readable on disk. Not in the database, not in journals, not in caches, not in
 > logs.
 
@@ -54,7 +54,16 @@ ever gets overwritten. 📝
 
 ### 🏷️ Tags that behave
 Unicode-aware, case-insensitive matching with the casing you typed preserved.
-Add colors, filter by them, live with them.
+Add colors, filter by them, live with them. Tags you add by hand and tags added
+by a rule share the same set — a rule never removes a tag you chose.
+
+### 🪄 Rules that tag for you
+Write a rule once and Flowly keeps applying it. Conditions combine with AND or
+OR over your note, the payee, the imported description, the amount or the
+account — "notes contain rent", "payee is ACME, or amount is over 1000" — and
+assign one or more tags. Rules run on new transactions and imports; you can also
+apply them to what you already have, with a preview of exactly what will change.
+Rules only add tags, and deleting a rule never takes a tag away.
 
 ### 🌍 Multi-currency, honestly
 Every amount is stored as an **integer in minor units** — no floating-point
@@ -95,9 +104,10 @@ work.*
 ### 📦 Your data, portable
 - 📄 **Transaction CSV** — clean, standard, spreadsheet-ready.
 - 🗃️ **Complete portable export** — a password-encrypted, versioned archive with
-  everything (accounts, transactions, tags, budgets, preferences, and recurring
-  rules once Phase 7 lands) and a checksum manifest. This is the supported way to
-  move a complete vault between independent server and native deployments.
+  everything (accounts, transactions, tags, tagging rules, budgets, preferences,
+  and recurring rules once Phase 7 lands) and a checksum manifest. This is the
+  supported way to move a complete vault between independent server and native
+  deployments.
 - 🛡️ Spreadsheet formula-injection protection on export.
 - ✅ Import with a **preview first**: transaction CSVs merge after duplicate
   checks; complete portable archives always replace the destination vault after
@@ -152,7 +162,7 @@ no release yet.
 | 0️⃣ | Server storage, Docker and private-network security feasibility | 🔜 Up next |
 | 1️⃣ | Server foundation, contracts and TypeScript domain | ⏳ Planned |
 | 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ⏳ Planned |
-| 3️⃣ | Server accounts, transactions, tags, notes and data portability | ⏳ Planned |
+| 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ⏳ Planned |
 | 4️⃣ | Server dashboard, search and budgets | ⏳ Planned |
 | 5️⃣ | Server hardening and release | ⏳ Planned |
 | 6️⃣ | Enable Banking for Server | 🔮 Post-MVP |

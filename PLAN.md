@@ -21,6 +21,8 @@ The first release is the **Flowly Server MVP**. It includes:
 - Financial accounts such as bank accounts, cards, cash, and wallets
 - Manual transaction management
 - Transaction tags and user-authored notes
+- Manual tagging rules that apply tags automatically to new and imported
+  transactions
 - Multi-currency support
 - Search and advanced filters
 - Dashboard and summaries
@@ -81,7 +83,8 @@ hardened.
 | Access boundary | Private LAN or user-managed VPN only |
 | Delivery order | Release the server, then Enable Banking for Server, then recurring transactions, then Flutter |
 | Future bank integration | A separate trusted backend/connector is allowed |
-| Additional MVP scope | Dashboard, advanced search, multi-currency, budgets |
+| Additional MVP scope | Dashboard, advanced search, multi-currency, budgets, manual tagging rules |
+| Auto-tagging rules | Server MVP, Phase 3: one AND/OR condition group over note, description, payee, amount, or account, adding one or more tags; tags are only added, provenance is not tracked, and editing a transaction does not re-run rules |
 | Next feature after the MVP | Recurring transactions in Phase 7, delivered after Enable Banking for Server and before Flutter |
 
 ## 4. Architecture Options Considered
@@ -220,6 +223,7 @@ The server and native implementations own the same behavior:
 - Money and currency invariants
 - Transaction validation
 - Tags
+- Tagging rule evaluation
 - Budgets and budget consumption
 - Recurrence rules and occurrence generation
 - Dashboard calculations
@@ -238,6 +242,8 @@ Use-case services coordinate domain rules through interfaces:
 - `AccountRepository`
 - `TransactionRepository`
 - `TagRepository`
+- `TaggingRuleRepository`
+- `TaggingRuleService`
 - `BudgetRepository`
 - `RecurringRuleRepository`
 - `ImportExportService`
@@ -249,6 +255,10 @@ Use-case services coordinate domain rules through interfaces:
 
 Every write spanning multiple entities must run in an atomic storage
 transaction.
+
+Tagging rule evaluation is deterministic and runs inside the same atomic write
+as the transaction creation or import batch, so applied tags never diverge from
+the persisted transactions.
 
 Mutable records exposed by the server API include an opaque revision. Updates
 use optimistic concurrency: a stale revision returns an explicit conflict and
@@ -348,7 +358,48 @@ overwrites user content.
 Tag comparison is Unicode-normalized and case-insensitive. Display casing is
 preserved.
 
-### 7.4 Budgets
+### 7.4 Tagging rules
+
+Delivered in the Server MVP with Phase 3. Rules are authored by the user and
+apply automatically to new and imported transactions.
+
+- `id`
+- `name`
+- `enabled`
+- `combinator`: `and` or `or`
+- `conditions`: ordered list of `{ field, operator, value }`
+- `tagIds`: one or more tags to add
+- `createdAt`
+- `updatedAt`
+
+Supported condition fields and operators:
+
+- `userNote contains`, `description contains` — Unicode-normalized,
+  case-insensitive substring match
+- `payee is`, `payee contains` — normalized equality or substring match
+- `amountMinor greater than`, `less than`, `equals` — signed minor units, where
+  inflows are positive and outflows are negative; each amount condition carries
+  a currency and matches only transactions in that currency, with no implicit
+  conversion
+- `accountId is` — exact account identifier
+
+A rule joins its conditions with a single AND or OR. Nested groups are out of
+scope for the MVP. Every rule that matches applies its tags, and the resulting
+tags are a set, so evaluation is order-independent.
+
+A rule holds at most 25 conditions and assigns at most 25 tags; the API and the
+editor enforce both limits.
+
+Rules run when a transaction is created manually, merged from CSV, imported
+from Enable Banking (Phase 6), or generated from a recurring rule (Phase 7).
+Editing an existing transaction does not re-run rules. An explicit backfill
+action applies rules to existing transactions and is idempotent.
+
+Rules only add tags. They never remove tags or modify other fields, and Flowly
+does not track which rule added which tag: editing or deleting a rule leaves
+previously applied tags in place.
+
+### 7.5 Budgets
 
 - `id`
 - `name`
@@ -363,7 +414,7 @@ preserved.
 Budget totals include booked outflows by default. Pending transactions and
 transfers are independently configurable.
 
-### 7.5 Recurring rules
+### 7.6 Recurring rules
 
 Delivered in Phase 7, after Enable Banking for Server and before Flutter. The
 Server MVP ships without recurring rules.
@@ -379,7 +430,7 @@ Server MVP ships without recurring rules.
 Generation produces local transaction occurrences when the app is opened. It
 does not require a background cloud scheduler.
 
-### 7.6 Operational metadata
+### 7.7 Operational metadata
 
 Persist:
 
@@ -525,11 +576,12 @@ Provide two workflows:
    in spreadsheet tools.
 2. **Complete portable export:** a password-encrypted, versioned archive
    containing CSV files for accounts, transactions, tags, transaction-tag
-   links, budgets, and preferences, plus a small manifest containing format and
-   checksum metadata.
+   links, tagging rules, budgets, and preferences, plus a small manifest
+   containing format and checksum metadata.
 
 The complete export is the supported device-to-device transfer format. The
 archive contents remain CSV-oriented while preserving normalized relationships.
+Tagging rules are part of format version 1 because they ship in the Server MVP.
 Recurring rules join the archive in Phase 7 through a versioned format bump that
 keeps the previous version importable.
 
@@ -567,7 +619,8 @@ Import is a staged, transactional operation:
 3. Parse in a worker/background task.
 4. Validate headers, types, dates, amounts, currencies, references, file size,
    and row count.
-5. Show a preview with errors and duplicate counts.
+5. Show a preview with errors and duplicate counts; for a transaction CSV merge,
+   also show the tags that tagging rules would add.
 6. For a transaction CSV, preview and merge valid rows. For a complete portable
   archive, confirm replacement of the entire current vault.
 7. Write atomically.
@@ -591,7 +644,7 @@ Deduplication order:
 
 An import must never silently discard an invalid or conflicting row.
 
-## 11. Dashboard, Search, Multi-Currency, Budgets, and Recurrence
+## 11. Dashboard, Search, Multi-Currency, Budgets, Recurrence, and Tagging Rules
 
 ### 11.1 Dashboard
 
@@ -644,6 +697,20 @@ Delivered in Phase 7, after Enable Banking for Server and before Flutter.
 Rules use calendar-aware arithmetic, not fixed day counts for monthly or yearly
 periods. Time-zone and end-of-month behavior must be covered by tests.
 
+### 11.6 Tagging rules
+
+Rules are managed in a dedicated settings area with a list view and an editor
+for name, conditions, and tags.
+
+- Creating or editing a rule previews how many existing transactions match and
+  shows a small sample before saving.
+- Each rule can be paused without deleting it.
+- A backfill action applies rules to existing transactions, scoped by optional
+  account, date range, or the current search filters, with a preview count and a
+  report of how many transactions changed. Backfill is idempotent.
+- The import preview labels the tags that tagging rules would add, so imports
+  stay predictable.
+
 ## 12. Enable Banking Integration
 
 Enable Banking is delivered in two steps: Phase 6 integrates the connector with
@@ -682,6 +749,8 @@ The connector is an ingestion channel, not the canonical database:
   window.
 - User notes and tags remain local and are never overwritten by provider
   refreshes.
+- Tagging rules run on the imported batch, so imported transactions land with
+  their tags in one atomic write.
 
 ### 12.3 Provider deduplication
 
@@ -808,6 +877,9 @@ Before reusing any logic from `enable_banking.py`:
   and CSV round trips during Server MVP development
 - Server storage contract, migration, crypto known-answer, and tamper tests
 - React component and accessibility tests
+- Tagging rule contract, normalization, AND/OR, amount-currency, account,
+  import-preview, and idempotent backfill tests in Phase 3, with golden
+  rule-evaluation vectors shared with Dart
 - Migration tests from every released schema
 - Multi-architecture container, HTTPS, session, restart, concurrent-edit, and
   update tests on Linux amd64/arm64 and Docker Desktop on macOS/Windows
@@ -873,11 +945,11 @@ migrate, export, and delete an encrypted vault without plaintext artifacts.
 
 - Define canonical JSON schemas, CSV/archive schemas, fixture formats, and
   versioning conventions without coupling them to TypeScript storage details.
-- Implement TypeScript money, currency, account, transaction, tag, budget, and
-  recurrence models and invariants.
+- Implement TypeScript money, currency, account, transaction, tag, tagging-rule,
+  budget, and recurrence models and invariants.
 - Define server repository and platform-service interfaces.
-- Add golden expected results that the later Dart implementation must consume
-  unchanged.
+- Add golden expected results, including tagging-rule evaluation vectors, that
+  the later Dart implementation must consume unchanged.
 
 **Exit criteria:** the TypeScript domain suite runs without UI or infrastructure
 dependencies, and the React UI renders a locked-vault shell from the server API.
@@ -911,9 +983,22 @@ locked state, and concurrent browser edits never overwrite silently.
 - Add archive/cascade rules, destructive confirmations, validation, accessible
   forms, and actionable error states.
 
+#### Task `implement-server-auto-tagging`
+
+- Implement tagging-rule CRUD, enable/pause state, validation, and the
+  deterministic rule engine in the server API and React UI.
+- Run rules on manual transaction creation and CSV merge, keeping rule
+  evaluation inside the same atomic write as the transaction batch.
+- Show the tags that rules would add in the import preview and in the rule
+  editor's live match preview.
+- Add the backfill action scoped by optional account, date range, or current
+  search filters, with a match preview and a durable change report.
+
 #### Task `implement-server-csv-transfer`
 
 - Define and document export format version 1.
+- Carry tagging rules in the complete portable export as part of format version
+  1.
 - Implement transaction CSV and password-encrypted complete portable exports in
   TypeScript.
 - Implement preview, validation, CSV merge, complete-vault replace, encrypted
@@ -922,7 +1007,8 @@ locked state, and concurrent browser edits never overwrite silently.
   protection.
 
 **Exit criteria:** server exports round-trip without changing IDs, amounts,
-dates, relationships, or notes; complete imports always replace atomically.
+dates, relationships, notes, or tagging rules; complete imports always replace
+atomically.
 
 ### Phase 4 - Server analysis and budgeting features
 
@@ -981,6 +1067,7 @@ requires neither Internet access nor any Flowly-operated service for core use.
 
 - Implement the connector, provider adapter, server authorization flow,
   one-time delivery, pending-to-booked reconciliation, and idempotent import.
+- Apply tagging rules to imported transactions before the batch is committed.
 - Add sandbox integration tests and operational monitoring without sensitive
   payload logging.
 
@@ -1011,6 +1098,7 @@ contracts, storage, generation, UI, and portability.
   deterministic next-due handling and no background server scheduler.
 - Add the upcoming-recurring panel to the dashboard and the multi-currency
   exclusion and explicit-conversion rules for generated occurrences.
+- Apply tagging rules to generated occurrences.
 - Add property, end-of-month, time-zone, and archive round-trip tests against
   the shared fixtures.
 
@@ -1051,6 +1139,8 @@ closed on tampering, and matches the server domain and crypto vectors.
 
 - Implement accounts, transactions, tags, notes, validation, and adaptive
   navigation in Flutter.
+- Implement tagging-rule CRUD, the rule engine, and backfill in Flutter,
+  validated against the shared rule-evaluation fixtures.
 
 #### Task `implement-native-csv-transfer`
 
@@ -1093,6 +1183,8 @@ suite and remain independent vaults with no automatic server synchronization.
   reconciliation, and idempotent import into each local native vault.
 - Run the same sanitized provider fixtures and deduplication expectations used
   by the server.
+- Apply tagging rules to imported transactions and verify parity with server
+  results.
 
 **Exit criteria:** every supported native target can explicitly import from
 Enable Banking without receiving provider application secrets, synchronizing
@@ -1122,7 +1214,8 @@ recovery point.
 | `implement-server-vault` | `scaffold-server`, `define-contracts-and-server-domain` |
 | `implement-server-storage` | `implement-server-vault` |
 | `implement-server-core-finance` | `implement-server-storage` |
-| `implement-server-csv-transfer` | `implement-server-core-finance` |
+| `implement-server-auto-tagging` | `implement-server-core-finance` |
+| `implement-server-csv-transfer` | `implement-server-auto-tagging` |
 | `implement-server-dashboard-search` | `implement-server-core-finance` |
 | `implement-server-budgets` | `implement-server-core-finance` |
 | `integrate-server-deployment` | `implement-server-csv-transfer`, `implement-server-dashboard-search`, `implement-server-budgets` |
@@ -1157,6 +1250,8 @@ The first MVP is complete at the end of Phase 5 only when:
   concurrent browser sessions on a private network.
 - Accounts, transactions, notes, tags, budgets, search, and dashboards work
   without Internet access.
+- Tagging rules apply to new and imported transactions, backfill is idempotent,
+  and rules round-trip in the complete portable export.
 - Multi-currency values are represented without floating-point errors or
   misleading aggregation.
 - Manual transaction CSV and password-encrypted complete portable exports work.
@@ -1190,6 +1285,9 @@ The first MVP is complete at the end of Phase 5 only when:
 - Recurring rules, occurrence generation, and upcoming-recurring widgets in the
   Server MVP (delivered in Phase 7)
 - Background server scheduling for recurring transactions
+- Nested boolean condition groups, tag-removal actions, rule-driven edits to
+  payee or note, rule re-evaluation when a transaction is edited, and background
+  rule scheduling in the Server MVP
 
 ## 21. Key Risks and Mitigations
 
@@ -1206,6 +1304,8 @@ The first MVP is complete at the end of Phase 5 only when:
 | Biometric APIs vary | Capability detection and passphrase fallback |
 | Multi-currency summaries can mislead | Never aggregate unlike currencies without explicit conversion data |
 | Recurrence calendar edge cases | Calendar-aware library plus property and time-zone tests |
+| Tagging rules label transactions unexpectedly | Live match preview, per-rule pause, rule-applied tags labeled in import previews, and explicit backfill instead of silent retroactive changes |
+| Rule evaluation slows large imports | In-memory evaluation over the imported batch, bounded condition counts per rule, and import performance fixtures |
 | Future provider credentials leak from clients | Separate backend connector with managed secret custody |
 | Existing prototype encourages unsafe patterns | Sanitize, isolate, and retire it before production integration |
 
