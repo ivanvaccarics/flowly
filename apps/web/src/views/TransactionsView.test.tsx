@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TransactionsView } from "./TransactionsView.js";
 
@@ -126,14 +126,15 @@ describe("transactions view", () => {
     expect(screen.queryByText("± tag")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
 
-    // The create form also renders a Coffee checkbox; the row's edit mode is the
-    // one pre-checked because the transaction already carries the tag.
-    const boxes = (await screen.findAllByRole("checkbox", {
+    // Tags are chosen from the compact picker, not from an inline checkbox list.
+    fireEvent.click(await screen.findByRole("button", { name: /Edit tags for Bar Centrale/ }));
+    const dialog = await screen.findByRole("dialog", { name: /Edit tags for Bar Centrale/ });
+    const tagCheckbox = within(dialog).getByRole("checkbox", {
       name: /Coffee/,
-    })) as HTMLInputElement[];
-    const tagCheckbox = boxes.find((box) => box.checked);
-    if (!tagCheckbox) throw new Error("the edit row shows the current tags pre-selected");
+    }) as HTMLInputElement;
+    expect(tagCheckbox.checked).toBe(true);
     fireEvent.click(tagCheckbox);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 

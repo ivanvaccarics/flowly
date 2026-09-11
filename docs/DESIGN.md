@@ -60,6 +60,10 @@ not shift.
   right-aligned monospaced amounts, coral for outflows and emerald for inflows.
 - **Status chip:** compact 2/8 px padding with tone variants (`income`, `expense`,
   `vault`, `neutral`); the vault chip pairs with a pulsing state dot.
+- **Tag picker:** a compact trigger that summarises the selection (up to two tag
+  pills plus a `+N` counter) and opens a popup with a search field, a scrollable
+  checklist and `Clear` / `Done` actions. Used wherever tags are chosen, so a
+  vault with hundreds of tags never inflates a table row or a form.
 - **Buttons:** primary indigo (36 px, radius 8), ghost secondary, destructive
   coral-outline that only fills on an explicit destructive action.
 - **Inputs:** 36 px, hairline border, indigo focus ring with a soft halo.
@@ -75,7 +79,7 @@ that remain absent are listed at the end of this section.
 | --- | --- |
 | Dashboard | Vault id in the eyebrow, segmented period control (month / 3 months / year / custom), Export data and New transaction shortcuts, four metric cards per currency (total balance, income, expenses, net + savings rate) with deltas against the previous equal-length period, cash-flow chart (weekly income/expense bars with a net line, inline SVG), spending breakdown with a stacked share bar and percentages, average daily spend, recent transactions table (beneficiary with source subline, account, category, stacked date, amount), accounts summary and the local vault status card |
 | Accounts | Create account, status chips, archive, cascade delete |
-| Transactions | Create with notes, tags and status, server-side filters (account, dates, tag, status, text), inline row editing of note **and** tags, a status chip that switches booked ↔ pending, delete |
+| Transactions | Create with notes, tags (tag picker) and status, server-side filters (account, dates, tag, status, text), inline row editing of note **and** tags, a status chip that switches booked ↔ pending, delete |
 | Tags | Create with color, normalized name shown, cascade delete |
 | Rules | Condition builder (AND/OR, per-field operators, amount currency), tag selection, pause/resume, backfill report |
 | Settings | Passphrase change, transaction CSV export, complete archive export, CSV preview and merge, archive replacement |

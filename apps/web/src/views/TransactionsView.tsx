@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Account, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
+import { TagPicker } from "../components/TagPicker.js";
 import { Banner, Chip, Empty, Money } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
@@ -219,27 +220,12 @@ export function TransactionsView({ csrf }: { csrf: string }) {
         </div>
         <fieldset className="fieldset">
           <legend>Tags</legend>
-          {tags.items.length === 0 ? (
-            <span className="sub">No tags yet — create them in the Tags section.</span>
-          ) : (
-            tags.items.map((tag) => (
-              <label key={tag.id} className="checkline">
-                <input
-                  type="checkbox"
-                  checked={selectedTags.includes(tag.id)}
-                  onChange={(event) =>
-                    setSelectedTags((current) =>
-                      event.target.checked
-                        ? [...current, tag.id]
-                        : current.filter((id) => id !== tag.id),
-                    )
-                  }
-                />
-                <span className="swatch" style={{ background: tag.color ?? "#4648d4" }} />
-                {tag.name}
-              </label>
-            ))
-          )}
+          <TagPicker
+            tags={tags.items}
+            selected={selectedTags}
+            onChange={setSelectedTags}
+            label="Select tags for the new transaction"
+          />
         </fieldset>
         <div>
           <button type="submit" className="btn primary">
@@ -362,33 +348,12 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                   </td>
                   <td>
                     {editing?.id === transaction.id ? (
-                      <span className="tag-choices">
-                        {tags.items.length === 0 ? (
-                          <span className="sub">No tags yet</span>
-                        ) : (
-                          tags.items.map((tag) => (
-                            <label key={tag.id} className="checkline">
-                              <input
-                                type="checkbox"
-                                checked={editing.tagIds.includes(tag.id)}
-                                onChange={(event) =>
-                                  setEditing({
-                                    ...editing,
-                                    tagIds: event.target.checked
-                                      ? [...editing.tagIds, tag.id]
-                                      : editing.tagIds.filter((id) => id !== tag.id),
-                                  })
-                                }
-                              />
-                              <span
-                                className="swatch"
-                                style={{ background: tag.color ?? "#4648d4" }}
-                              />
-                              {tag.name}
-                            </label>
-                          ))
-                        )}
-                      </span>
+                      <TagPicker
+                        tags={tags.items}
+                        selected={editing.tagIds}
+                        onChange={(tagIds) => setEditing({ ...editing, tagIds })}
+                        label={`Edit tags for ${transaction.payee ?? transaction.id}`}
+                      />
                     ) : transaction.tagIds.length === 0 ? (
                       <span className="muted">—</span>
                     ) : (
