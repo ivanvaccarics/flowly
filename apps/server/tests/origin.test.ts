@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { call, makeConfig, startHarness } from "./helpers/api.js";
+import { makeConfig, startHarness } from "./helpers/api.js";
 
 /**
  * Regression: the server serves the web app itself, so a browser calling the
