@@ -10,8 +10,9 @@ Read this before trusting Flowly with data you care about.
   you also remember its password. Store both, separately.
 - **The server is not a backup.** A broken disk, a lost container or a deleted
   volume means a lost vault. Copy archives off the host.
-- **Plain transaction CSV is not encrypted.** Treat it like a printed bank
-  statement.
+- **Plain exports are not encrypted.** The transaction CSV and the "every table"
+  ZIP are readable by anyone who opens them: treat them like a printed bank
+  statement, and prefer the encrypted archive for backups.
 - **A restore replaces the vault.** Importing a complete archive overwrites the
   destination vault after an explicit confirmation; an encrypted snapshot of the
   previous content is written first, but the import itself is not reversible

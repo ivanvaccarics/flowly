@@ -16,6 +16,7 @@ open before a public release.
 | Optimistic concurrency | `apps/server/tests/api.test.ts`, `vault.test.ts` |
 | Tagging rules and backfill | `apps/server/tests/tagging.test.ts` |
 | CSV and archive round trips, failure modes | `apps/server/tests/portability.test.ts` |
+| Plain-text tables ZIP structure, checksums and CRCs | `apps/server/tests/export-tables.test.ts` |
 | Dashboard and search | `apps/server/tests/analytics.test.ts`, `search.test.ts` |
 | API surface and deployment behaviour | `apps/server/tests/api-phase3.test.ts`, `api-phase4.test.ts`, `api-phase5.test.ts` |
 | UI behaviour and accessibility structure | `apps/web/src/**/*.test.tsx` |

@@ -1,7 +1,8 @@
 # Export format version 1
 
-Two export workflows share this document: the plain **transaction CSV** for
-spreadsheets, and the password-encrypted **complete portable archive** that
+Three export workflows share this document: the plain **transaction CSV** for
+spreadsheets, the plain **tables ZIP** that hands every table back for use
+outside Flowly, and the password-encrypted **complete portable archive** that
 moves a whole vault between independent deployments.
 
 ## Transaction CSV
@@ -49,6 +50,25 @@ Rules for reading:
   transaction and rolls back on any failure.
 - Tagging rules are part of version 1 because they ship in the Server MVP;
   recurring rules join through a later version bump in Phase 7.
+
+## Tables ZIP (`flowly-tables-v1`)
+
+`GET /api/export/tables.zip` returns one folder named
+`flowly-export-<yyyy-mm-dd>/` containing `README.txt`, `manifest.json`,
+`accounts.csv`, `transactions.csv`, `tags.csv`, `tagging_rules.csv` and
+`recurring_rules.csv`.
+
+- `accounts.csv`, `tags.csv` and `transactions.csv` use the column order
+  documented above, so the ledger can be merged back through the CSV import.
+- `tagging_rules.csv` carries `id, name, enabled, combinator, conditions,
+  tag_names, created_at, updated_at`; `conditions` is the JSON condition array in
+  a single cell and `tag_names` joins tag names with `|`.
+- `recurring_rules.csv` carries the rule plus its template (`account_id,
+  account_name, amount, currency, payee, user_note, tag_names`).
+- `manifest.json` holds `format`, `exportedAt`, the vault id, `encrypted: false`,
+  per-table row counts and a SHA-256 for every file.
+- The export is plain text and is **not** a restore format; the encrypted archive
+  above is the supported way to restore or move a vault.
 
 ## Versioning
 

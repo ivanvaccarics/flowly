@@ -14,11 +14,14 @@ import {
   parseAccountsCsv,
   parseTagsCsv,
   parseTransactionCsv,
+  recurringRulesToCsv,
+  taggingRulesToCsv,
   tagsToCsv,
   transactionsToCsv,
   type CsvParseError,
 } from "../portability/csv.js";
 import { readArchive, writeArchive, type ArchiveManifest } from "../portability/archive.js";
+import { createZip } from "../portability/zip.js";
 import { ImportError } from "../portability/errors.js";
 import type { Vault } from "../vault/vault.js";
 import type { TaggingRuleService } from "./tagging-rule-service.js";
@@ -58,6 +61,12 @@ export interface ArchiveImportReport {
   manifest: ArchiveManifest;
 }
 
+export interface TablesExport {
+  content: Buffer;
+  filename: string;
+  counts: Record<string, number>;
+}
+
 export interface ImportExportServiceOptions {
   vault: Vault;
   taggingRules: TaggingRuleService;
@@ -85,6 +94,81 @@ export class ImportExportService {
       this.vault.tags.list(),
     ]);
     return transactionsToCsv(transactions, tags);
+  }
+
+  /**
+   * Every table as a plain CSV inside one ZIP: the "take my data and leave"
+   * export. Nothing is encrypted and nothing is written to the server's disk —
+   * the archive is built in memory and handed to the browser.
+   */
+  async exportTablesZip(): Promise<TablesExport> {
+    const [accounts, transactions, tags, taggingRules, recurringRules] = await Promise.all([
+      this.vault.accounts.list(),
+      this.vault.transactions.list(),
+      this.vault.tags.list(),
+      this.vault.taggingRules.list(),
+      this.vault.recurringRules.list(),
+    ]);
+
+    const exportedAt = this.clock.nowIso();
+    const folder = `flowly-export-${exportedAt.slice(0, 10)}`;
+    const files = [
+      { name: "accounts.csv", rows: accounts.length, content: accountsToCsv(accounts) },
+      {
+        name: "transactions.csv",
+        rows: transactions.length,
+        content: transactionsToCsv(transactions, tags),
+      },
+      { name: "tags.csv", rows: tags.length, content: tagsToCsv(tags) },
+      {
+        name: "tagging_rules.csv",
+        rows: taggingRules.length,
+        content: taggingRulesToCsv(taggingRules, tags),
+      },
+      {
+        name: "recurring_rules.csv",
+        rows: recurringRules.length,
+        content: recurringRulesToCsv(recurringRules, accounts, tags),
+      },
+    ].map((file) => ({ ...file, content: Buffer.from(file.content, "utf8") }));
+
+    const counts = {
+      accounts: accounts.length,
+      transactions: transactions.length,
+      tags: tags.length,
+      taggingRules: taggingRules.length,
+      recurringRules: recurringRules.length,
+    };
+    const manifest = {
+      format: "flowly-tables-v1",
+      exportedAt,
+      vaultId: this.vault.header.vaultId,
+      encrypted: false,
+      counts,
+      files: files.map((file) => ({
+        name: file.name,
+        rows: file.rows,
+        bytes: file.content.length,
+        sha256: sha256Hex(file.content),
+      })),
+    };
+
+    const content = createZip(
+      [
+        {
+          name: `${folder}/README.txt`,
+          content: Buffer.from(tablesReadme(exportedAt, counts), "utf8"),
+        },
+        {
+          name: `${folder}/manifest.json`,
+          content: Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, "utf8"),
+        },
+        ...files.map((file) => ({ name: `${folder}/${file.name}`, content: file.content })),
+      ],
+      { modifiedAt: new Date(exportedAt) },
+    );
+
+    return { content, filename: `${folder}.zip`, counts };
   }
 
   async exportArchive(
@@ -410,6 +494,43 @@ function parseJsonArray(content: Buffer | undefined, name: string): unknown[] {
 /** Exported for tests that need the same hashing used by the manifest. */
 export function sha256Hex(content: Buffer | string): string {
   return createHash("sha256").update(content).digest("hex");
+}
+
+/** The note that travels inside the plain-text ZIP export. */
+function tablesReadme(exportedAt: string, counts: Record<string, number>): string {
+  return `Flowly - plain-text data export
+Exported: ${exportedAt}
+Rows: ${counts.accounts} accounts, ${counts.transactions} transactions, ${counts.tags} tags,
+      ${counts.taggingRules} tagging rules, ${counts.recurringRules} recurring rules
+
+WHAT THIS IS
+  Every table in your Flowly vault as a CSV file, so you can read, archive or
+  reuse your data without Flowly.
+
+FILES
+  accounts.csv         one row per account
+  transactions.csv     one row per transaction, same format as the single-file CSV export
+  tags.csv             one row per tag
+  tagging_rules.csv    one row per tagging rule; "conditions" is a JSON array
+  recurring_rules.csv  one row per recurring rule
+  manifest.json        row counts and a SHA-256 checksum per file
+
+THIS EXPORT IS PLAIN TEXT
+  It is not encrypted and it is not a backup: anyone who opens these files reads
+  your finances. Keep the ZIP somewhere you trust, and use the encrypted .flowly
+  archive for backups and for moving a vault to another Flowly.
+
+RESTORING
+  Flowly restores from the encrypted .flowly archive, not from this ZIP.
+  transactions.csv uses the documented export format, so a ledger can still be
+  merged back through "Import transactions CSV" in Settings.
+
+FORMATS
+  Amounts are decimal strings in the row's ISO 4217 currency, dates are ISO 8601,
+  and spreadsheet-facing fields are protected against formula injection.
+  contracts/csv/export-format-v1.md documents accounts.csv, transactions.csv and
+  tags.csv.
+`;
 }
 
 export type { Tag };

@@ -134,7 +134,7 @@ Only shipping functionality is on screen; every figure comes from the API.
 | Transactions | Hero with the match count, record form (notes, tag picker, status), server-side filters (text, account, tag, status, date range), quick tag-filter pills, and a table with inline editing of **payee, amount, note and tags**, a status chip that switches booked ↔ pending, the source shown as an offline-AES chip, and delete |
 | Tags | Hero with the tag count, create with a palette colour (or a custom hex value), **inline rename and recolour** of an existing tag, and cascade delete |
 | Rules | Hero with the rule counts and the backfill action, condition builder (AND/OR, per-field operators, amount currency), tag selection, and a side column of rule tiles with an on/off switch, the matched expression and delete |
-| Settings | Hero with the cipher and zero-cloud chips, passphrase change, and paired export and import option cards: transaction CSV, complete encrypted archive, CSV preview and merge, archive replacement |
+| Settings | Hero with the cipher and zero-cloud chips, passphrase change, and paired export and import option cards: transaction CSV, every table as a plain ZIP, complete encrypted archive, CSV preview and merge, archive replacement |
 
 The mockup's global search field is **deliberately left out of the header**:
 free-text search lives in the Transactions filters, next to the other query

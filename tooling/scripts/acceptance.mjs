@@ -287,6 +287,17 @@ await step("transaction CSV exports", async () => {
   return `${text.split("\r\n").length - 2} rows`;
 });
 
+await step("every table exports as a plain ZIP", async () => {
+  const { status, buffer } = await call("/api/export/tables.zip", { raw: true });
+  expect(status === 200, `tables export returned ${status}`);
+  expect(buffer.subarray(0, 2).toString("latin1") === "PK", "the ZIP magic bytes are missing");
+  const text = buffer.toString("latin1");
+  for (const name of ["accounts.csv", "transactions.csv", "tags.csv", "manifest.json"]) {
+    expect(text.includes(name), `the ZIP does not list ${name}`);
+  }
+  return `${(buffer.length / 1024).toFixed(1)} KiB`;
+});
+
 await step("complete archive exports", async () => {
   const { status, buffer } = await call("/api/export/archive", {
     method: "POST",

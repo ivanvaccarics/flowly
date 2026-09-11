@@ -76,7 +76,7 @@ passphrase, instead of showing a locked vault you cannot open.
 The unit, integration and contract suites are separate:
 
 ```bash
-pnpm verify          # format, lint, secret scan, types, 148 tests
+pnpm verify          # format, lint, secret scan, types, 150 tests
 pnpm build           # compile the server, bundle the UI
 pnpm release:check   # license policy for runtime dependencies
 ```
@@ -141,6 +141,8 @@ you should see.
 | Do this | Expect |
 | --- | --- |
 | Export transactions CSV | A spreadsheet-friendly file; negative amounts stay plain numbers |
+| Download every table (ZIP), accept the plain-text warning | One ZIP with `accounts.csv`, `transactions.csv`, `tags.csv`, `tagging_rules.csv`, `recurring_rules.csv`, a manifest and a README; `unzip -t` reports no errors |
+| Open the ZIP's `transactions.csv` and merge it back through the CSV import preview | The rows are recognised as duplicates instead of being written twice |
 | Import that CSV back, first through the preview | Preview shows valid rows, duplicates and any new tags before anything is written |
 | Confirm the merge | Report says how many rows were created and how many duplicates were skipped |
 | Import a malformed CSV | Per-line errors; nothing is written for the invalid rows |

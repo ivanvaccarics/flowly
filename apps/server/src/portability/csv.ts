@@ -1,6 +1,8 @@
 import type { Account } from "../domain/account.js";
 import { formatMinorToAmount, parseAmountToMinor } from "../domain/money.js";
+import type { RecurringRule } from "../domain/recurring.js";
 import type { Tag } from "../domain/tag.js";
+import type { TaggingRule } from "../domain/tagging-rule.js";
 import type { Transaction, TransactionSource, TransactionStatus } from "../domain/transaction.js";
 import { DomainError } from "../domain/errors.js";
 import { assertIsoDate, assertUuid, isUuid, normalizeTagName } from "../domain/values.js";
@@ -31,6 +33,37 @@ export const ACCOUNT_CSV_HEADER = [
 ] as const;
 
 export const TAG_CSV_HEADER = ["id", "name", "normalized_name", "color"] as const;
+
+export const TAGGING_RULE_CSV_HEADER = [
+  "id",
+  "name",
+  "enabled",
+  "combinator",
+  "conditions",
+  "tag_names",
+  "created_at",
+  "updated_at",
+] as const;
+
+export const RECURRING_RULE_CSV_HEADER = [
+  "id",
+  "name",
+  "active",
+  "frequency",
+  "interval",
+  "start_date",
+  "end_date",
+  "next_due_date",
+  "account_id",
+  "account_name",
+  "amount",
+  "currency",
+  "payee",
+  "user_note",
+  "tag_names",
+  "created_at",
+  "updated_at",
+] as const;
 
 const FORMULA_TRIGGER = /^[=+@\t\r]/;
 const PLAIN_NUMBER = /^-?\d+(?:\.\d+)?$/;
@@ -154,6 +187,58 @@ export function tagsToCsv(tags: readonly Tag[]): string {
   return encodeCsv([
     [...TAG_CSV_HEADER],
     ...tags.map((tag) => [tag.id, tag.name, tag.normalizedName, tag.color ?? ""]),
+  ]);
+}
+
+/**
+ * Tagging rules are nested, so the conditions travel as one JSON cell and stay
+ * lossless while the file remains readable in a spreadsheet.
+ */
+export function taggingRulesToCsv(rules: readonly TaggingRule[], tags: readonly Tag[]): string {
+  const namesById = new Map(tags.map((tag) => [tag.id, tag.name]));
+  return encodeCsv([
+    [...TAGGING_RULE_CSV_HEADER],
+    ...rules.map((rule) => [
+      rule.id,
+      rule.name,
+      String(rule.enabled),
+      rule.combinator,
+      JSON.stringify(rule.conditions),
+      rule.tagIds.map((id) => namesById.get(id) ?? id).join("|"),
+      rule.createdAt,
+      rule.updatedAt,
+    ]),
+  ]);
+}
+
+export function recurringRulesToCsv(
+  rules: readonly RecurringRule[],
+  accounts: readonly Account[],
+  tags: readonly Tag[],
+): string {
+  const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
+  const tagNames = new Map(tags.map((tag) => [tag.id, tag.name]));
+  return encodeCsv([
+    [...RECURRING_RULE_CSV_HEADER],
+    ...rules.map((rule) => [
+      rule.id,
+      rule.name,
+      String(rule.active),
+      rule.frequency,
+      String(rule.interval),
+      rule.startDate,
+      rule.endDate ?? "",
+      rule.nextDueDate ?? "",
+      rule.template.accountId,
+      accountNames.get(rule.template.accountId) ?? "",
+      formatMinorToAmount(rule.template.amountMinor, rule.template.currency),
+      rule.template.currency,
+      rule.template.payee ?? "",
+      rule.template.userNote ?? "",
+      (rule.template.tagIds ?? []).map((id) => tagNames.get(id) ?? id).join("|"),
+      rule.createdAt,
+      rule.updatedAt,
+    ]),
   ]);
 }
 

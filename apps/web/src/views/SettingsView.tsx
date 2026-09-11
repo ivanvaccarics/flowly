@@ -155,7 +155,7 @@ export function SettingsView({
             <h2>Portable export</h2>
             <span className="sub">Everything stays on your device — no upload, no telemetry</span>
           </div>
-          <Chip tone="neutral">2 methods</Chip>
+          <Chip tone="neutral">3 methods</Chip>
         </header>
         <div className="option-grid">
           <section className="option-card">
@@ -180,6 +180,35 @@ export function SettingsView({
             >
               <Icon name="download" size={16} />
               Export transactions CSV
+            </button>
+          </section>
+
+          <section className="option-card">
+            <h3>
+              <Icon name="archive" size={18} />
+              Every table as CSV files
+            </h3>
+            <p className="sub">
+              One CSV per table — accounts, transactions, tags, rules — plus a manifest, packaged in
+              a ZIP so you can take your data elsewhere. Plain text: it is not encrypted.
+            </p>
+            <button
+              type="button"
+              className="btn block"
+              onClick={() =>
+                void run(async () => {
+                  const confirmed = window.confirm(
+                    "This downloads your whole vault as plain, unencrypted CSV files. Anyone who opens the ZIP reads your finances. Continue?",
+                  );
+                  if (!confirmed) return;
+                  const { content, filename } = await api.exportTablesZip();
+                  download(content, filename, "application/zip");
+                  setStatus("Every table exported as a plain-text ZIP (not encrypted).");
+                })
+              }
+            >
+              <Icon name="download" size={16} />
+              Download every table (ZIP)
             </button>
           </section>
 

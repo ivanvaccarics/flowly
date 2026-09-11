@@ -37,8 +37,8 @@ What works today (end of Phase 3):
 - create, unlock, lock-this-session, lock-all and change-passphrase
 - accounts, transactions with notes and tags, and tag management
 - tagging rules with an explicit backfill over existing transactions
-- transaction CSV export/import with preview, plus the encrypted complete
-  archive
+- transaction CSV export/import with preview, a plain ZIP with one CSV per
+  table for taking your data elsewhere, plus the encrypted complete archive
 
 Useful commands:
 

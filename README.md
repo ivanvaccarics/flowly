@@ -188,9 +188,12 @@ carrying its status facts and actions; accounts are endpoint cards with their re
 balances, rules are tiles with an on/off switch, and the ledger's filters include
 quick tag pills. Accounts can be archived and restored, tags can be renamed and
 recoloured in place, and Settings holds the passphrase change plus export and
-import, where a CSV merge is additive and a complete archive replaces the vault
-after an explicit confirmation and an encrypted safety snapshot. Deleting an
-account or a tag asks for a cascade and tells you how many records are affected.
+import. Export comes in three shapes: the single transaction CSV, a plain ZIP
+with one CSV per table (and a manifest) for taking everything elsewhere, and the
+password-encrypted complete archive. Import is additive for a CSV merge and
+replaces the vault for a complete archive, after an explicit confirmation and an
+encrypted safety snapshot. Deleting an account or a tag asks for a cascade and
+tells you how many records are affected.
 The product mark (SVG logo, favicon and iOS icon) ships in `apps/web/public` and
 is documented in [docs/DESIGN.md](docs/DESIGN.md), along with the tokens and the
 mapping to what actually ships.

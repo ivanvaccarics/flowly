@@ -397,6 +397,16 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     return csv;
   });
 
+  app.get("/api/export/tables.zip", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    const tables = await importExport(context).exportTablesZip();
+    reply.header("content-type", "application/zip");
+    reply.header("content-disposition", `attachment; filename="${tables.filename}"`);
+    reply.header("x-flowly-export-rows", String(tables.counts["transactions"] ?? 0));
+    return reply.send(tables.content);
+  });
+
   app.post("/api/export/archive", async (request, reply) => {
     const context = requireContext(request, reply);
     if (!context) return errorBody(reply);

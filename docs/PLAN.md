@@ -599,11 +599,15 @@ never the user's passphrase.
 
 ### 10.1 Export formats
 
-Provide two workflows:
+Provide three workflows:
 
 1. **Transaction CSV:** one human-readable RFC 4180-compatible CSV for analysis
    in spreadsheet tools.
-2. **Complete portable export:** a password-encrypted, versioned archive
+2. **Plain-text tables ZIP:** one CSV per table plus a manifest, so a user who
+   leaves Flowly takes every record with them in a format any tool reads
+   (`docs/adr/0014`). Built in memory, never written to the server's disk, and
+   explicitly not a restore path.
+3. **Complete portable export:** a password-encrypted, versioned archive
    containing CSV files for accounts, transactions, tags, transaction-tag
    links, tagging rules, and preferences, plus a small manifest
    containing format and checksum metadata.
@@ -1139,8 +1143,8 @@ it inside a single transaction after writing an encrypted snapshot.
 
 ### Phase 4 - Server analysis features
 
-Status: **complete** (2026-09-11). `pnpm verify` runs 148 tests (contracts 11,
-server 125, web 12), including the analytics and search suites. Decisions are
+Status: **complete** (2026-09-11). `pnpm verify` runs 150 tests (contracts 11,
+server 127, web 12), including the analytics and search suites. Decisions are
 recorded in `docs/adr/0008-dashboard-search-and-budget-semantics.md`; its budget
 parts are superseded by `docs/adr/0010-remove-budgets.md`.
 
@@ -1179,7 +1183,7 @@ cached in memory.
 ### Phase 5 - Server hardening and release
 
 Status: **complete for its engineering scope** (2026-09-11). `pnpm verify` runs
-148 tests (contracts 11, server 125, web 12). Two verification items cannot be
+150 tests (contracts 11, server 127, web 12). Two verification items cannot be
 finished by writing code in this repository — an independent cryptographic
 review and a full assistive-technology accessibility audit — and are tracked as
 open in `docs/security/verification.md`. Decisions are recorded in
@@ -1234,7 +1238,7 @@ Delivered:
 **Exit criteria:** the **Flowly Server MVP** passes its acceptance suite and
 requires neither Internet access nor any Flowly-operated service for core use.
 
-Met: the acceptance suite is `pnpm verify` plus `pnpm build` (148 tests), the
+Met: the acceptance suite is `pnpm verify` plus `pnpm build` (150 tests), the
 container runs with no outbound network dependency and no Flowly-operated
 service, and the deployment, backup and threat-model documentation ships with
 the repository. The independent cryptographic review and the assistive-technology

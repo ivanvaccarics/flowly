@@ -141,6 +141,13 @@ export const api = {
     if (!response.ok) throw new ApiError(response.status, "export_failed", "export failed");
     return response.text();
   },
+  exportTablesZip: async () => {
+    const response = await fetch("/api/export/tables.zip", { credentials: "same-origin" });
+    if (!response.ok) throw new ApiError(response.status, "export_failed", "export failed");
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? "flowly-export.zip";
+    return { content: await response.arrayBuffer(), filename };
+  },
   exportArchive: async (csrf: string, password: string) => {
     const response = await fetch("/api/export/archive", {
       method: "POST",
