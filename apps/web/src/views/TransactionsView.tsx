@@ -34,6 +34,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
   const [amount, setAmount] = useState("");
   const [payee, setPayee] = useState("");
   const [userNote, setUserNote] = useState("");
+  const [status, setStatus] = useState<"booked" | "pending">("booked");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [editing, setEditing] = useState<{ id: string; note: string } | undefined>(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
@@ -89,7 +90,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
         bookingDate,
         amountMinor,
         currency,
-        status: "booked",
+        status,
         source: "manual",
         tagIds: selectedTags,
         createdAt: now,
@@ -101,6 +102,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
       setPayee("");
       setUserNote("");
       setSelectedTags([]);
+      setStatus("booked");
       await load();
     } catch (cause) {
       setFormError(describeError(cause));
@@ -140,6 +142,19 @@ export function TransactionsView({ csrf }: { csrf: string }) {
     if (!window.confirm("Delete this transaction?")) return;
     try {
       await api.remove(csrf, "transactions", transaction.id, transaction.revision);
+      await load();
+    } catch (cause) {
+      setError(describeError(cause));
+    }
+  }
+
+  async function toggleStatus(transaction: Transaction) {
+    const next: "booked" | "pending" = transaction.status === "booked" ? "pending" : "booked";
+    try {
+      await api.update<Transaction>(csrf, "transactions", transaction.id, {
+        ...transaction,
+        status: next,
+      });
       await load();
     } catch (cause) {
       setError(describeError(cause));
@@ -202,6 +217,16 @@ export function TransactionsView({ csrf }: { csrf: string }) {
           <label>
             Note
             <input value={userNote} onChange={(event) => setUserNote(event.target.value)} />
+          </label>
+          <label>
+            Status
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as "booked" | "pending")}
+            >
+              <option value="booked">booked</option>
+              <option value="pending">pending</option>
+            </select>
           </label>
         </div>
         <fieldset className="fieldset">
@@ -283,7 +308,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
           </select>
         </label>
         <label>
-          Status
+          Filter by status
           <select
             value={filters.status}
             onChange={(event) => setFilters({ ...filters, status: event.target.value })}
@@ -318,6 +343,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                 <th>Payee</th>
                 <th>Note</th>
                 <th>Tags</th>
+                <th>Status</th>
                 <th>Source</th>
                 <th style={{ textAlign: "right" }}>Amount</th>
                 <th />
@@ -375,10 +401,19 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                     ) : null}
                   </td>
                   <td>
-                    <Chip tone={transaction.status === "booked" ? "neutral" : "vault"}>
-                      {transaction.source}
-                    </Chip>
+                    <button
+                      type="button"
+                      className="chip-button"
+                      title="Switch between booked and pending"
+                      aria-label={`Set status for ${transaction.payee ?? transaction.id}`}
+                      onClick={() => void toggleStatus(transaction)}
+                    >
+                      <Chip tone={transaction.status === "booked" ? "income" : "vault"}>
+                        {transaction.status}
+                      </Chip>
+                    </button>
                   </td>
+                  <td className="mono sub">{transaction.source}</td>
                   <td>
                     <Money minor={transaction.amountMinor} currency={transaction.currency} />
                   </td>

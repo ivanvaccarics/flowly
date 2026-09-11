@@ -595,6 +595,17 @@ h3 {
   text-transform: uppercase;
 }
 
+.chip-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chip-button:hover .chip {
+  border-color: var(--border-strong);
+}
+
 .pulse {
   width: 8px;
   height: 8px;

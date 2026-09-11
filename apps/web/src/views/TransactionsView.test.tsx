@@ -80,6 +80,9 @@ describe("transactions view", () => {
     await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
     expect(screen.getByText("-12.30 EUR")).toBeTruthy();
     expect(screen.getAllByText("Coffee").length).toBeGreaterThan(0);
+    // The status of every row is visible, and it is switchable.
+    expect(screen.getByRole("button", { name: /Set status for Bar Centrale/ })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Status" })).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Search"), { target: { value: "espresso" } });
     await waitFor(() => expect(requests.some((url) => url.includes("q=espresso"))).toBe(true));

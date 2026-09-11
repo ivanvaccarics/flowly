@@ -317,6 +317,7 @@ export function DashboardView({
                       <th>Beneficiary / cause</th>
                       <th>Method / account</th>
                       <th>Category</th>
+                      <th>Status</th>
                       <th>Date</th>
                       <th style={{ textAlign: "right" }}>Amount</th>
                     </tr>
@@ -372,6 +373,11 @@ export function DashboardView({
                                 );
                               })
                             )}
+                          </td>
+                          <td>
+                            <Chip tone={transaction.status === "booked" ? "income" : "vault"}>
+                              {transaction.status}
+                            </Chip>
                           </td>
                           <td>
                             <span className="stack mono date-cell">
