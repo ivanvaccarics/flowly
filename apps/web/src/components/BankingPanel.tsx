@@ -11,6 +11,7 @@ import { useBanking } from "../hooks/use-banking.js";
 import { BankAccountMapping, type DiscoveredAccount } from "./BankAccountMapping.js";
 import { Icon } from "./icons.js";
 import { Banner, Chip, Empty } from "./ui.js";
+import { describeBankAuthorizationError } from "../lib/banking-errors.js";
 import { formatMoney } from "../lib/money.js";
 
 const STATUS_LABEL: Record<BankLinkSummary["status"], string> = {
@@ -29,6 +30,7 @@ export function BankingPanel({ csrf }: { csrf: string }) {
   const [country, setCountry] = useState("IT");
   const [psuType, setPsuType] = useState<"personal" | "business">("personal");
   const [notice, setNotice] = useState<string | undefined>(undefined);
+  const [pending, setPending] = useState<StartedAuthorization | undefined>(undefined);
 
   const loadAccounts = useCallback(async () => {
     try {
@@ -53,6 +55,7 @@ export function BankingPanel({ csrf }: { csrf: string }) {
 
   const configured = banking.status?.configured ?? false;
   const links = banking.status?.links ?? [];
+  const waitingLink = links.find((link) => link.status === "pending");
 
   async function loadBanks() {
     const response = await banking.run(() => api.listAspsps({ country, psuType }));
@@ -68,8 +71,36 @@ export function BankingPanel({ csrf }: { csrf: string }) {
       }),
     );
     if (!started) return;
-    // The bank takes over from here and redirects back to the callback URL.
-    window.location.assign(started.url);
+    // The bank takes over in another tab, so this page - and the paste
+    // fallback - survive a callback host the browser cannot reach.
+    setPending({ ...started, aspspName: aspsp.name });
+  }
+
+  /**
+   * Completes the authorization from the URL the browser was redirected to.
+   * This is the fallback when the registered callback URL is not reachable from
+   * the browser, and the only way to surface an Enable Banking error parameter.
+   */
+  async function completeFromRedirect(raw: string): Promise<boolean> {
+    const parsed = parseRedirect(raw);
+    if (parsed.error) {
+      setNotice(describeBankAuthorizationError(parsed.error, parsed.description));
+      return false;
+    }
+    if (!parsed.code || !parsed.state) {
+      setNotice("That URL has no authorization code. Paste the address you were redirected to.");
+      return false;
+    }
+    const { code, state } = { code: parsed.code, state: parsed.state };
+    const result = await banking.run(() => api.completeBankingAuthorization(csrf, { code, state }));
+    if (!result) return false;
+    setPending(undefined);
+    setNotice(
+      `${result.aspsp.name} is connected. Link its accounts below${
+        result.accounts.length > 0 ? ` (${result.accounts.length} shared)` : ""
+      }.`,
+    );
+    return true;
   }
 
   async function mapAccount(
@@ -121,6 +152,24 @@ export function BankingPanel({ csrf }: { csrf: string }) {
           psuType={psuType}
           onCountry={setCountry}
           onPsuType={setPsuType}
+          onDisconnect={() => {
+            const confirmed = window.confirm(
+              "Disconnect Enable Banking? The stored application key and every bank link are removed. Imported transactions stay in your vault.",
+            );
+            if (!confirmed) return;
+            void banking
+              .run(() => api.deleteBankingConfig(csrf))
+              .then((result) => {
+                if (!result) return;
+                setPending(undefined);
+                setAspsps(undefined);
+                setNotice(
+                  `Enable Banking disconnected${
+                    result.deletedLinks > 0 ? `, ${result.deletedLinks} bank link(s) removed` : ""
+                  }. Imported transactions were kept.`,
+                );
+              });
+          }}
           onToggleAutoSync={(autoSync) =>
             void banking.run(() =>
               api.saveBankingConfig(csrf, {
@@ -147,6 +196,16 @@ export function BankingPanel({ csrf }: { csrf: string }) {
           }
         />
       )}
+
+      {configured && (pending || waitingLink) ? (
+        <PendingAuthorization
+          pending={pending}
+          link={waitingLink}
+          busy={banking.busy}
+          onComplete={completeFromRedirect}
+          onCancel={() => setPending(undefined)}
+        />
+      ) : null}
 
       {configured ? (
         <div className="card">
@@ -192,9 +251,9 @@ export function BankingPanel({ csrf }: { csrf: string }) {
             aspsps.length === 0 ? (
               <Empty>No bank in this country offers account information.</Empty>
             ) : (
-              <ul className="stack" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              <ul className="stack rule-list" style={{ listStyle: "none", padding: 0, margin: 0 }}>
                 {aspsps.map((aspsp) => (
-                  <li key={`${aspsp.country}-${aspsp.name}`} className="tile">
+                  <li key={`${aspsp.country}-${aspsp.name}`} className="rule-tile">
                     <header className="rule-tile-head">
                       <div className="stack">
                         <strong>{aspsp.name}</strong>
@@ -286,6 +345,7 @@ function ConfiguredSummary({
   psuType,
   onCountry,
   onPsuType,
+  onDisconnect,
   onToggleAutoSync,
 }: {
   fingerprint: string;
@@ -298,6 +358,7 @@ function ConfiguredSummary({
   psuType: "personal" | "business";
   onCountry: (value: string) => void;
   onPsuType: (value: "personal" | "business") => void;
+  onDisconnect: () => void;
   onToggleAutoSync: (value: boolean) => void;
 }) {
   return (
@@ -336,6 +397,10 @@ function ConfiguredSummary({
         />
         Refresh my banks every time I unlock the vault
       </label>
+      <button type="button" className="btn danger" disabled={busy} onClick={onDisconnect}>
+        <Icon name="trash" size={16} />
+        Disconnect Enable Banking
+      </button>
     </div>
   );
 }
@@ -479,7 +544,7 @@ function LinkCard({
   }));
 
   return (
-    <section className="tile" style={{ marginTop: 8 }}>
+    <section className="rule-tile">
       <header className="rule-tile-head">
         <div className="stack">
           <strong>{link.aspspName}</strong>
@@ -535,6 +600,10 @@ function LinkCard({
             </tbody>
           </table>
         </div>
+      ) : link.status === "pending" ? (
+        <Empty>
+          Waiting for the authorization at the bank. Finish it above, then the accounts appear here.
+        </Empty>
       ) : (
         <Empty>No accounts were shared by this bank.</Empty>
       )}
@@ -560,4 +629,133 @@ function LinkCard({
 
 function formatStamp(value: string): string {
   return new Date(value).toISOString().replace("T", " ").slice(0, 16);
+}
+
+interface StartedAuthorization {
+  linkId: string;
+  url: string;
+  state: string;
+  expiresAt: string;
+  aspspName: string;
+}
+
+interface ParsedRedirect {
+  code?: string;
+  state?: string;
+  error?: string;
+  description?: string;
+}
+
+/**
+ * Reads the query parameters of the URL the browser was redirected to, whether
+ * the user pasted a full URL or only the `?code=…&state=…` part.
+ */
+function parseRedirect(raw: string): ParsedRedirect {
+  const value = raw.trim();
+  if (value === "") return {};
+  let search = "";
+  try {
+    search = new URL(value).search;
+  } catch {
+    search = value.startsWith("?") ? value : `?${value}`;
+  }
+  const params = new URLSearchParams(search);
+  const code = params.get("code");
+  const state = params.get("state");
+  const error = params.get("error");
+  const description = params.get("error_description");
+  return {
+    ...(code ? { code } : {}),
+    ...(state ? { state } : {}),
+    ...(error ? { error } : {}),
+    ...(description ? { description } : {}),
+  };
+}
+
+/**
+ * Keeps the authorization step recoverable. The registered callback URL may be
+ * a host the browser cannot reach (a VPN name, a port that is not published),
+ * in which case the address bar still carries the code and the user pastes it
+ * back here.
+ */
+function PendingAuthorization({
+  pending,
+  link,
+  busy,
+  onComplete,
+  onCancel,
+}: {
+  pending: StartedAuthorization | undefined;
+  link: BankLinkSummary | undefined;
+  busy: boolean;
+  onComplete: (raw: string) => Promise<boolean>;
+  onCancel: () => void;
+}) {
+  const [redirect, setRedirect] = useState("");
+  const [working, setWorking] = useState(false);
+  const bankName = pending?.aspspName ?? link?.aspspName ?? "your bank";
+
+  async function complete() {
+    setWorking(true);
+    try {
+      if (await onComplete(redirect)) setRedirect("");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  return (
+    <section className="rule-tile" aria-live="polite">
+      <header className="rule-tile-head">
+        <div className="stack">
+          <strong>Finish the authorization at {bankName}</strong>
+          <span className="sub">
+            Authorize the consent at your bank, then come back to this page.
+          </span>
+        </div>
+        <Chip tone="vault">waiting</Chip>
+      </header>
+
+      <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
+        {pending ? (
+          <a className="btn primary" href={pending.url} target="_blank" rel="noreferrer noopener">
+            <Icon name="bank" size={16} />
+            Open the bank page
+          </a>
+        ) : null}
+        {pending ? (
+          <button type="button" className="btn" disabled={busy} onClick={onCancel}>
+            Cancel
+          </button>
+        ) : null}
+      </div>
+
+      <label>
+        URL you were redirected to
+        <input
+          value={redirect}
+          onChange={(event) => setRedirect(event.target.value)}
+          placeholder="https://…/enablebanking/auth_callback?code=…&state=…"
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </label>
+      <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
+        <button
+          type="button"
+          className="btn primary"
+          disabled={busy || working || redirect.trim() === ""}
+          onClick={() => void complete()}
+        >
+          <Icon name="check" size={16} />
+          {working ? "Completing…" : "Complete connection"}
+        </button>
+      </div>
+      <p className="muted">
+        If the callback page does not open, copy the full address from the browser bar and paste it
+        here: Flowly reads the code from it. Enable Banking may also append an <code>error</code>{" "}
+        parameter, which is shown right after you complete.
+      </p>
+    </section>
+  );
 }

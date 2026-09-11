@@ -147,7 +147,9 @@ credentials Enable Banking returns.
 | Settings → Connect to Enable Banking: paste a wrong application id or a callback URL that is not registered for the application | A clear rejection; nothing is stored |
 | Fill in the application id, choose a `.pem` key and the registered callback URL, press **Verify and save** | The card switches to the configured state and shows the application name, environment and a short key fingerprint — never the key |
 | Press **Load available banks** for your country | The banks Enable Banking offers in that country, with a **Connect** button each |
-| Press **Connect** and finish the authorization at the bank | The browser returns to `/enablebanking/auth_callback` and Flowly lists the shared accounts |
+| Press **Connect**, then **Open the bank page** and finish the authorization at the bank | The browser returns to `/enablebanking/auth_callback` and Flowly lists the shared accounts |
+| When the callback host is not reachable, copy the redirect URL from the address bar into **URL you were redirected to** and press **Complete connection** | Same result; an Enable Banking `error=` parameter is shown as plain text |
+| Press **Disconnect Enable Banking** and confirm | The application key, the links and the raw payloads disappear; imported accounts and transactions stay |
 | Choose **Create a new account** for one and **Ignore** for another | The created account appears under Accounts with the bank as institution; the ignored one is never imported |
 | Press **Sync now** on the dashboard | Report with created/updated/unchanged counts; the imported rows appear in Transactions with source `enable-banking` |
 | Re-run the sync | Nothing is duplicated: the report says `0 new`, `1 unchanged` |

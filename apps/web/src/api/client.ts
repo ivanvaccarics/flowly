@@ -321,7 +321,7 @@ export const api = {
       { method: "PUT", csrf, body },
     ),
   deleteBankingConfig: (csrf: string) =>
-    request<{ deleted: boolean }>("/api/banking/enable-banking/config", {
+    request<{ deleted: boolean; deletedLinks: number }>("/api/banking/enable-banking/config", {
       method: "DELETE",
       csrf,
     }),

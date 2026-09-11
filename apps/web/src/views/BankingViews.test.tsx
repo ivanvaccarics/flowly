@@ -211,6 +211,208 @@ describe("Enable Banking in Settings", () => {
     expect(screen.getByRole("button", { name: /Unlink/ })).toBeTruthy();
     expect(screen.getByText("1234.56 EUR")).toBeTruthy();
   });
+
+  it("keeps the authorization recoverable: paste the redirect back into Flowly", async () => {
+    const calls = mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+      "/api/banking/enable-banking/aspsps": () =>
+        json({
+          items: [
+            {
+              name: "UniCredit",
+              country: "IT",
+              beta: false,
+              psuTypes: ["personal", "business"],
+              sandboxUsers: [],
+              methods: [],
+            },
+          ],
+        }),
+      "/api/banking/enable-banking/authorize": () =>
+        json({
+          linkId: LINK.id,
+          url: "https://auth.enablebanking.com/ais/start?sessionid=abc",
+          state: "state-1",
+          expiresAt: "2026-09-11T09:15:00.000Z",
+        }),
+      "/api/banking/enable-banking/callback": () =>
+        json({
+          link: LINK,
+          accounts: [],
+          aspsp: { name: "UniCredit", country: "IT" },
+        }),
+    });
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        vaultStatus={unlockedStatus}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("mytest-app")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Load available banks/ }));
+    await waitFor(() => expect(screen.getByText("UniCredit")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /^Connect$/ }));
+
+    // No navigation: the page stays, and the bank opens in another tab on demand.
+    await waitFor(() =>
+      expect(screen.getByText(/Finish the authorization at UniCredit/)).toBeTruthy(),
+    );
+    expect(screen.getByRole("link", { name: /Open the bank page/ }).getAttribute("href")).toContain(
+      "auth.enablebanking.com",
+    );
+
+    const field = screen.getByLabelText("URL you were redirected to");
+    fireEvent.change(field, {
+      target: {
+        value: "http://localhost:8443/enablebanking/auth_callback?code=abc&state=state-1",
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Complete connection/ }));
+    await waitFor(() =>
+      expect(screen.getByText(/UniCredit is connected\. Link its accounts below/)).toBeTruthy(),
+    );
+    const callback = calls.find((call) => call.path.endsWith("/callback"));
+    expect(callback?.body).toEqual({ code: "abc", state: "state-1" });
+  });
+
+  it("surfaces an Enable Banking error from the pasted redirect", async () => {
+    const calls = mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [{ ...LINK, status: "pending", accounts: [] }],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+    });
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        vaultStatus={unlockedStatus}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Finish the authorization at UniCredit/)).toBeTruthy(),
+    );
+    fireEvent.change(screen.getByLabelText("URL you were redirected to"), {
+      target: {
+        value:
+          "https://flowly.test/enablebanking/auth_callback?state=x&error=server_error&error_description=Bank%20failed",
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Complete connection/ }));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Enable Banking reported an internal error at the bank/),
+      ).toBeTruthy(),
+    );
+    expect(calls.some((call) => call.path.endsWith("/callback"))).toBe(false);
+  });
+
+  it("disconnects Enable Banking completely, keeping the transactions", async () => {
+    const calls = mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [LINK],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+      "/api/banking/enable-banking/config": () => json({ deleted: true, deletedLinks: 1 }),
+    });
+    vi.stubGlobal("confirm", () => true);
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        vaultStatus={unlockedStatus}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Disconnect Enable Banking/ })).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Disconnect Enable Banking/ }));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Enable Banking disconnected, 1 bank link\(s\) removed/),
+      ).toBeTruthy(),
+    );
+    const removal = calls.find((call) => call.method === "DELETE");
+    expect(removal?.path).toBe("/api/banking/enable-banking/config");
+  });
+
+  it("renders banks as cards, never as the 48px icon tile", async () => {
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [LINK],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+      "/api/banking/enable-banking/aspsps": () =>
+        json({
+          items: [
+            {
+              name: "UniCredit",
+              country: "IT",
+              beta: false,
+              bic: "UNCRITMM",
+              psuTypes: ["personal"],
+              sandboxUsers: [],
+              methods: [],
+            },
+          ],
+        }),
+    });
+    const { container } = render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        vaultStatus={unlockedStatus}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Conto corrente")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Load available banks/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^Connect$/ })).toBeTruthy());
+
+    // `.tile` is the dashboard's 48x48 icon square: reusing it squeezed the
+    // bank rows into overlapping 48px cells.
+    expect(container.querySelectorAll(".tile")).toHaveLength(0);
+    expect(container.querySelectorAll(".rule-tile").length).toBeGreaterThanOrEqual(2);
+  });
 });
 
 describe("Enable Banking on the dashboard", () => {

@@ -43,7 +43,7 @@ export function BankAccountMapping({
   const mapped = new Map(link.accounts.map((account) => [account.providerAccountUid, account]));
   if (discovered.length === 0) return <Empty>No accounts were shared by this bank.</Empty>;
   return (
-    <ul className="stack" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+    <ul className="stack rule-list" style={{ listStyle: "none", padding: 0, margin: 0 }}>
       {discovered.map((account) => (
         <li key={account.providerAccountUid}>
           <MappingRow
@@ -90,7 +90,7 @@ function MappingRow({
   const isIgnored = current?.status === "ignored";
   const showForm = !isMapped && (!isIgnored || editing);
   return (
-    <section className="tile" style={{ marginTop: 8 }}>
+    <section className="rule-tile">
       <header className="rule-tile-head">
         <div className="stack">
           <strong>{account.providerName ?? account.maskedIban ?? "Bank account"}</strong>

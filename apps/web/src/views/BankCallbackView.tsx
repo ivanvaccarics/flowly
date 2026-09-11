@@ -8,6 +8,7 @@ import {
 import { BankAccountMapping, type DiscoveredAccount } from "../components/BankAccountMapping.js";
 import { Icon } from "../components/icons.js";
 import { Banner, Chip, PageHeader } from "../components/ui.js";
+import { describeBankAuthorizationError } from "../lib/banking-errors.js";
 import { describeError } from "../hooks/use-workspace.js";
 
 /**
@@ -32,7 +33,9 @@ export function BankCallbackView({ csrf, onFinished }: { csrf: string; onFinishe
     const state = params.get("state");
     const error_ = params.get("error");
     if (error_) {
-      setError(`The bank refused the connection: ${params.get("error_description") ?? error_}`);
+      setError(
+        describeBankAuthorizationError(error_, params.get("error_description") ?? undefined),
+      );
       return;
     }
     if (!code || !state) {

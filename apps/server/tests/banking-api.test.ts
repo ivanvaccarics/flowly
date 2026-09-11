@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { appState } from "../src/api/app.js";
 import {
   FakeBank,
   TEST_APP_ID,
@@ -297,6 +298,45 @@ describe("Enable Banking API", () => {
     const { app } = await harness();
     const response = await app.inject({ method: "GET", url: "/api/banking/status" });
     expect(response.statusCode).toBe(401);
+  });
+
+  it("disconnects Enable Banking entirely while keeping imported transactions", async () => {
+    const bank = new FakeBank();
+    const { app, client } = await harness(bank);
+    const session = { app, client } as BankingHarness;
+    const { linkId } = await connectBank(session);
+    const status = await get(session, "/api/banking/status");
+    const uid = status.json<ConnectionStatus>().links[0]?.accounts[0]?.providerAccountUid as string;
+    await post(session, `/api/banking/enable-banking/links/${linkId}/accounts`, {
+      providerAccountUid: uid,
+      mode: "create",
+    });
+    await post(session, "/api/banking/sync", {});
+    expect(
+      (await get(session, "/api/transactions")).json<{ items: unknown[] }>().items,
+    ).toHaveLength(1);
+
+    const removed = await app.inject({
+      method: "DELETE",
+      url: "/api/banking/enable-banking/config",
+      headers: { cookie: client.cookie, "x-flowly-csrf": client.csrf },
+    });
+    expect(removed.statusCode).toBe(200);
+    expect(removed.json<{ deletedLinks: number }>().deletedLinks).toBe(1);
+
+    const after = await get(session, "/api/banking/status");
+    expect(after.json<ConnectionStatus>().configured).toBe(false);
+    expect(after.json<ConnectionStatus>().links).toHaveLength(0);
+    expect(
+      (await get(session, "/api/transactions")).json<{ items: unknown[] }>().items,
+    ).toHaveLength(1);
+
+    const vault = appState(app).vault();
+    expect(await vault!.bankConnections.list()).toHaveLength(0);
+    expect(await vault!.bankLinks.list()).toHaveLength(0);
+    expect(await vault!.bankAccounts.list()).toHaveLength(0);
+    expect(await vault!.bankPayloads.list()).toHaveLength(0);
+    expect(bank.deletedSessions).toHaveLength(1);
   });
 
   it("updates settings without re-uploading the private key", async () => {
