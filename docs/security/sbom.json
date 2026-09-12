@@ -21,6 +21,12 @@
         "name": "release-report",
         "version": "1"
       }
+    ],
+    "properties": [
+      {
+        "name": "flowly:excludedComponents",
+        "value": "platform-specific optional bindings (darwin/linux/win32/arm64/..., fsevents); the container build publishes the image SBOM"
+      }
     ]
   },
   "components": [
@@ -218,19 +224,6 @@
         }
       ],
       "purl": "pkg:npm/%40csstools/css-tokenizer@4.0.0"
-    },
-    {
-      "type": "library",
-      "name": "@esbuild/darwin-arm64",
-      "version": "0.28.2",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "purl": "pkg:npm/%40esbuild/darwin-arm64@0.28.2"
     },
     {
       "type": "library",
@@ -663,19 +656,6 @@
     },
     {
       "type": "library",
-      "name": "@node-rs/argon2-darwin-arm64",
-      "version": "2.2.1",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "purl": "pkg:npm/%40node-rs/argon2-darwin-arm64@2.2.1"
-    },
-    {
-      "type": "library",
       "name": "@npmcli/agent",
       "version": "3.0.0",
       "licenses": [
@@ -738,19 +718,6 @@
         }
       ],
       "purl": "pkg:npm/%40pkgjs/parseargs@0.11.0"
-    },
-    {
-      "type": "library",
-      "name": "@rolldown/binding-darwin-arm64",
-      "version": "1.2.8",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "purl": "pkg:npm/%40rolldown/binding-darwin-arm64@1.2.8"
     },
     {
       "type": "library",
@@ -2275,19 +2242,6 @@
     },
     {
       "type": "library",
-      "name": "fsevents",
-      "version": "2.3.3",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "purl": "pkg:npm/fsevents@2.3.3"
-    },
-    {
-      "type": "library",
       "name": "glob",
       "version": "10.5.0",
       "licenses": [
@@ -2805,19 +2759,6 @@
         }
       ],
       "purl": "pkg:npm/lightningcss@1.33.0"
-    },
-    {
-      "type": "library",
-      "name": "lightningcss-darwin-arm64",
-      "version": "1.33.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "MPL-2.0"
-          }
-        }
-      ],
-      "purl": "pkg:npm/lightningcss-darwin-arm64@1.33.0"
     },
     {
       "type": "library",

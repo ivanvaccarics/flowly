@@ -21,6 +21,31 @@ const checkOnly = process.argv.includes("--check");
 /** Licenses we refuse to ship in the runtime image. */
 const DENIED = [/\bAGPL\b/i, /\bGPL-[23]\.0\b/i, /\bSSPL\b/i, /\bBUSL\b/i];
 
+/**
+ * `pnpm licenses list` reflects what the installing operating system resolved,
+ * so optional bindings such as `@esbuild/darwin-arm64` (macOS) and
+ * `@esbuild/linux-x64` (the CI runner) would make the same lockfile produce
+ * different inventories. Drop those bindings: this inventory describes the
+ * dependency graph, and the container build publishes its own image SBOM.
+ */
+const PLATFORM_BINDING =
+  /(?:^|[-/])(darwin|linux|win32|win64|freebsd|android|openharmony|sunos|aix)[-/]|(?:^|[-/])(x64|arm64|ia32|arm|ppc64|ppc64le|s390x|riscv64|loong64|mips64el|wasm32)(?:[-/]|$)/i;
+const PLATFORM_ONLY = new Set(["fsevents"]);
+
+function isPlatformBinding(name) {
+  return PLATFORM_ONLY.has(name) || PLATFORM_BINDING.test(name);
+}
+
+/** Removes platform-specific bindings from a `pnpm licenses list` result. */
+function withoutPlatformBindings(groups) {
+  const kept = {};
+  for (const [license, entries] of Object.entries(groups)) {
+    const filtered = entries.filter((entry) => !isPlatformBinding(entry.name));
+    if (filtered.length > 0) kept[license] = filtered;
+  }
+  return kept;
+}
+
 function pnpmJson(args) {
   try {
     const output = execFileSync("pnpm", args, {
@@ -35,7 +60,7 @@ function pnpmJson(args) {
   }
 }
 
-const all = pnpmJson(["licenses", "list", "--json"]);
+const all = withoutPlatformBindings(pnpmJson(["licenses", "list", "--json"]));
 const project = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
 const serverPackage = JSON.parse(
   readFileSync(join(repoRoot, "apps", "server", "package.json"), "utf8"),
@@ -43,7 +68,7 @@ const serverPackage = JSON.parse(
 
 let production = {};
 try {
-  production = pnpmJson(["licenses", "list", "--prod", "--json"]);
+  production = withoutPlatformBindings(pnpmJson(["licenses", "list", "--prod", "--json"]));
 } catch {
   console.warn("warning: could not restrict the license list to production dependencies");
 }
@@ -81,6 +106,13 @@ const sbom = {
     // No wall-clock timestamp: the artefact must be byte-stable so CI can check
     // that the committed SBOM matches a fresh generation.
     tools: [{ vendor: "flowly", name: "release-report", version: "1" }],
+    properties: [
+      {
+        name: "flowly:excludedComponents",
+        value:
+          "platform-specific optional bindings (darwin/linux/win32/arm64/..., fsevents); the container build publishes the image SBOM",
+      },
+    ],
   },
   components,
 };
@@ -99,6 +131,10 @@ const lines = [
   `Components: ${components.length}. Runtime dependencies of \`@flowly/server\`: ${
     Object.values(production).flat().length
   } packages.`,
+  "",
+  "Platform-specific optional bindings (`-darwin-*`, `-linux-*`, `fsevents`, and similar)",
+  "are excluded so the same lockfile produces the same report on every operating system;",
+  "the container build publishes the SBOM of the shipped image.",
   "",
   "## Runtime dependencies",
   "",

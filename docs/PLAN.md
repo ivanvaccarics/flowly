@@ -1230,7 +1230,11 @@ Delivered:
   `linux/arm64` with SBOM and provenance attestations in CI.
 - `pnpm release:report` generates `docs/security/sbom.json` (CycloneDX 1.5) and
   the third-party license inventory; `pnpm release:check` fails on denied
-  licenses, and CI keeps the artefacts fresh.
+  licenses, and CI keeps the artefacts fresh. The generated files are
+  platform-independent: optional bindings resolved per operating system
+  (`@esbuild/darwin-arm64`, `fsevents`, …) are excluded, so a macOS checkout and
+  the Linux runner produce the same bytes and `git diff --exit-code` is a real
+  check rather than a platform comparison.
 - Documentation: `docs/DEPLOYMENT.md` (install, certificates, upgrade,
   rollback, backup, hardening), `docs/security/threat-model.md`,
   `privacy.md`, `data-loss.md`, `support-matrix.md` and `verification.md`.

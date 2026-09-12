@@ -174,4 +174,6 @@ an explicit, user-driven action.
 - Review `docs/security/threat-model.md` before exposing the server to a shared
   network.
 - Regenerate `docs/security/sbom.json` with `pnpm release:report` on every
-  dependency change; CI fails on denied licenses.
+  dependency change; CI fails on denied licenses. The report ignores
+  platform-specific optional bindings, so it is byte-identical on macOS, Linux
+  and Windows and CI's `git diff --exit-code -- docs/security` stays meaningful.

@@ -26,6 +26,28 @@ open before a public release.
 
 Run everything with `pnpm verify`, then `pnpm build`.
 
+`pnpm release:report` writes `sbom.json` and `third-party-licenses.md` without a
+timestamp and without platform-specific optional bindings (`@esbuild/darwin-arm64`,
+`@node-rs/argon2-linux-x64-gnu`, `fsevents`, …), so the same lockfile produces
+the same bytes on every operating system. CI regenerates both files on Ubuntu
+and fails when they differ from the committed ones
+(`git diff --exit-code -- docs/security`). The container build publishes the
+SBOM of the shipped image separately, through buildx.
+
+To reproduce the CI result on a machine where Docker is available (useful when
+the report changes unexpectedly), run the generation inside a Linux container
+and diff the result against the committed files:
+
+```bash
+docker run --rm -v "$PWD":/src:ro node:22-bookworm bash -lc '
+  mkdir -p /work && cd /src &&
+  tar -cf - --exclude=node_modules --exclude=.git --exclude=data . | tar -xf - -C /work &&
+  cd /work && corepack enable && pnpm install --frozen-lockfile &&
+  pnpm release:report &&
+  diff docs/security/sbom.json /src/docs/security/sbom.json &&
+  diff docs/security/third-party-licenses.md /src/docs/security/third-party-licenses.md'
+```
+
 ## Manual
 
 1. Deploy with `deployment/self-hosted/compose.yaml` and confirm the browser
