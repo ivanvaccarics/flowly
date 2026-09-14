@@ -244,6 +244,8 @@ export interface BankAccountLink {
   lastSyncedAt?: string;
   lastBalanceMinor?: number;
   lastBalanceCurrency?: string;
+  /** ISO 20022 balance type the figure came from (CLBD, CLAV, …). */
+  lastBalanceType?: string;
   lastBalanceAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -309,6 +311,12 @@ export function validateBankAccountLink(link: BankAccountLink): void {
   }
   if (link.lastBalanceCurrency !== undefined && !isCurrencyCode(link.lastBalanceCurrency)) {
     throw new DomainError("invalid-value", "bankAccountLink.lastBalanceCurrency must be ISO 4217");
+  }
+  if (link.lastBalanceType !== undefined) {
+    assertText(link.lastBalanceType, "bankAccountLink.lastBalanceType", {
+      max: 40,
+      optional: true,
+    });
   }
   if (link.lastBalanceAt !== undefined) {
     assertIsoDateTime(link.lastBalanceAt, "bankAccountLink.lastBalanceAt");

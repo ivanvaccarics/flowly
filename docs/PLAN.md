@@ -1360,6 +1360,11 @@ Status: **complete** (2026-09-14), decisions in `docs/adr/0017` and
 - Settings compares the saved callback URL with the address the browser is
   using, and lets it be corrected and re-verified without re-uploading the
   private key.
+- `GET /enablebanking/auth_callback` is served by the server rather than the
+  shell: the single-use state completes the handshake on whatever address the
+  bank redirects to, the panel polls for the result, and a refused consent or a
+  failed exchange is recorded on the link instead of leaving it pending
+  (`docs/adr/0020`).
 
 **Exit criteria:** connecting and reconnecting a bank needs no manual copy of a
 URL, and the numbers the product shows agree with the bank once the user asks

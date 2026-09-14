@@ -89,15 +89,18 @@ to Enable Banking**; no command line and no configuration file are involved.
    **Finish the authorization** panel: **Continue to the bank** takes you to
    Enable Banking in the same tab, you log in at the bank, and the bank sends
    you back to `/enablebanking/auth_callback`.
-5. Flowly exchanges the code on its own and lists the accounts the bank shared.
-   Nothing has to be copied: while the authorization is pending the panel keeps
-   watching the link, so finishing it in another tab is picked up too. Only when
-   the registered callback URL is a hostname, port or VPN address this browser
-   cannot reach does the page fail to come back — then reopen Flowly and use
-   **Open in another tab** or **Bank did not come back automatically?** to paste
-   the **whole address** from the browser bar (including `?code=…&state=…`, or
-   the `error=…` Enable Banking appended) and press **Complete connection**. That
-   is also how an Enable Banking error is surfaced in plain language.
+5. Flowly runs in two places at once: `GET /enablebanking/auth_callback` is a
+   **server** route, so the bank's redirect finishes the handshake wherever it
+   lands, and the Settings panel keeps polling the link until it turns
+   authorized. The bank window is separate and usually closes itself; nothing
+   has to be copied. The piece that still matters is reachability: the registered
+   address has to open Flowly from the browser that approves the consent. When it
+   does not — or the vault was locked when the bank redirected — reopen Flowly
+   and use **Open it in this tab instead** or **Bank did not come back
+   automatically?** to paste the **whole address** from the browser bar
+   (including `?code=…&state=…`, or the `error=…` Enable Banking appended) and
+   press **Complete connection**. A refusal at the bank is recorded on the link,
+   so the panel says what happened instead of waiting forever.
 6. For each shared account, tell Flowly whether to
    **create** a Flowly account or **pair** an existing one. Accounts you ignore
    are never imported.

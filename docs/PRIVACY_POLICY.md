@@ -88,7 +88,9 @@ Sent from your server to Enable Banking:
   business) and the callback URL you registered;
 - the period of the access consent you request (balances and transactions);
 - the IP address of the device that triggered the request and its browser
-  User-Agent, which banks require for the strong customer authentication flow;
+  User-Agent, which banks require for the strong customer authentication flow.
+  Flowly forwards these only when the address is public: a loopback, LAN or
+  Tailscale address is dropped instead of being sent;
 - a pseudonymous identifier derived from your random vault id. Flowly sends no
   name, no email address, no account number and no IBAN of its own.
 

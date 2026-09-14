@@ -23,6 +23,27 @@ const STATUS_LABEL: Record<BankLinkSummary["status"], string> = {
   closed: "closed",
 };
 
+/** ISO 20022 balance types, in the words a person reads on a statement. */
+const BALANCE_TYPE_LABEL: Record<string, string> = {
+  CLBD: "booked balance",
+  ITBD: "interim booked balance",
+  CLAV: "available balance",
+  ITAV: "interim available balance",
+  OPBD: "opening booked balance",
+  OPAV: "opening available balance",
+  PRCD: "previous close",
+  XPCD: "expected balance",
+};
+
+/**
+ * Opens the bank in its own window. The panel keeps polling while the consent
+ * is being approved, so the app never has to be the page the bank returns to.
+ */
+function openBankWindow(url: string): void {
+  if (typeof window === "undefined") return;
+  window.open(url, "flowly-bank-authorization", "width=600,height=760,popup=yes");
+}
+
 /** The address this browser is using right now, for callback-URL checks. */
 function currentCallbackUrl(): string {
   return typeof window === "undefined"
@@ -45,7 +66,7 @@ function callbackMismatch(redirectUrl: string): string | undefined {
     return "This is not a full URL. Register a complete https address in Enable Banking.";
   }
   if (origin === window.location.origin) return undefined;
-  return `The bank will send your browser to ${origin}, but you are using ${window.location.origin} right now. Register one of the two addresses in the Enable Banking control panel, open Flowly at the address you registered while you connect a bank, or publish Flowly on the port your callback URL uses.`;
+  return `The bank will send your browser to ${origin}, but you are using ${window.location.origin} right now. That works when ${origin} opens Flowly too, because the server finishes the handshake there; if it does not, register ${window.location.origin} in the Enable Banking control panel instead.`;
 }
 
 export function BankingPanel({ csrf }: { csrf: string }) {
@@ -987,6 +1008,12 @@ function LinkCard({
                     {account.lastBalanceMinor !== undefined && account.lastBalanceCurrency
                       ? formatMoney(account.lastBalanceMinor, account.lastBalanceCurrency)
                       : "—"}
+                    {account.lastBalanceType ? (
+                      <span className="sub">
+                        {" "}
+                        · {BALANCE_TYPE_LABEL[account.lastBalanceType] ?? "reported balance"}
+                      </span>
+                    ) : null}
                   </td>
                   <td>{account.transactionCount}</td>
                 </tr>
@@ -1118,14 +1145,14 @@ function PendingAuthorization({
 
       <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
         {bankUrl ? (
-          <a className="btn primary" href={bankUrl} rel="noreferrer">
+          <button type="button" className="btn primary" onClick={() => openBankWindow(bankUrl)}>
             <Icon name="bank" size={16} />
             Continue to the bank
-          </a>
+          </button>
         ) : null}
         {bankUrl ? (
-          <a className="btn" href={bankUrl} target="_blank" rel="noreferrer noopener">
-            Open in another tab
+          <a className="btn" href={bankUrl} rel="noreferrer">
+            Open it in this tab instead
           </a>
         ) : null}
         {pending ? (
@@ -1136,9 +1163,9 @@ function PendingAuthorization({
       </div>
 
       <p className="muted">
-        Approve the consent at {bankName} and the bank sends you straight back here: Flowly
-        exchanges the code on its own. This panel keeps checking while you are away, so the
-        connection appears even if you finish in another tab.
+        Approve the consent at {bankName} in the window that opens. When the bank sends the browser
+        back, Flowly completes the connection on the server and this panel picks it up on its own —
+        the window usually closes itself.
       </p>
 
       <details>

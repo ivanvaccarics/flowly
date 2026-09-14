@@ -55,6 +55,7 @@ export interface BankingAccountSummary {
   lastSyncedAt?: string;
   lastBalanceMinor?: number;
   lastBalanceCurrency?: string;
+  lastBalanceType?: string;
   lastBalanceAt?: string;
   transactionCount: number;
 }

@@ -409,15 +409,14 @@ describe("Enable Banking in Settings", () => {
     fireEvent.click(screen.getByRole("option", { name: /UniCredit/ }));
     fireEvent.click(screen.getByRole("button", { name: /^Connect$/ }));
 
-    // No navigation: the page stays, and the bank page is one link away.
+    // The bank opens in its own window while this panel polls; opening it in
+    // the app tab stays available as a fallback.
     await waitFor(() =>
       expect(screen.getByText(/Finish the authorization at UniCredit/)).toBeTruthy(),
     );
+    expect(screen.getByRole("button", { name: /Continue to the bank/ })).toBeTruthy();
     expect(
-      screen.getByRole("link", { name: /Continue to the bank/ }).getAttribute("href"),
-    ).toContain("auth.enablebanking.com");
-    expect(
-      screen.getByRole("link", { name: /Open in another tab/ }).getAttribute("href"),
+      screen.getByRole("link", { name: /Open it in this tab instead/ }).getAttribute("href"),
     ).toContain("auth.enablebanking.com");
 
     // The paste fallback is there, but only for the browser that could not
@@ -470,7 +469,7 @@ describe("Enable Banking in Settings", () => {
       expect(screen.getByText(/Finish the authorization at UniCredit/)).toBeTruthy(),
     );
     expect(
-      screen.getByRole("link", { name: /Continue to the bank/ }).getAttribute("href"),
+      screen.getByRole("link", { name: /Open it in this tab instead/ }).getAttribute("href"),
     ).toContain("sessionid=resume-me");
   });
 

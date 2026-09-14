@@ -122,11 +122,15 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       "geolocation=(), camera=(), microphone=(), payment=(), usb=()",
     );
     if (String(reply.getHeader("content-type") ?? "").includes("text/html")) {
-      reply.header(
-        "content-security-policy",
-        "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; " +
-          "img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'",
-      );
+      // A route may bring its own policy (the bank callback allows one hashed
+      // inline script and nothing else); the shell keeps the strict default.
+      if (!reply.hasHeader("content-security-policy")) {
+        reply.header(
+          "content-security-policy",
+          "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; " +
+            "img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'",
+        );
+      }
     }
     if (config.trustProxy && request.protocol === "https") {
       reply.header("strict-transport-security", "max-age=31536000; includeSubDomains");
@@ -345,6 +349,8 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       const context = requireContext(request, reply);
       return context ? { service: bankingFor(context.vault) } : undefined;
     },
+    // The bank's redirect carries no session; it only needs an open vault.
+    serviceIfUnlocked: () => (vault?.isUnlocked ? bankingFor(vault) : undefined),
     errorBody,
   });
   // --- dashboard and search -------------------------------------------------

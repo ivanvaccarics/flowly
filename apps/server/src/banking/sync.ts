@@ -238,7 +238,7 @@ export class BankSyncService {
       ...(account.iban ? { providerAccountId: account.iban } : {}),
     });
 
-    let balance: { minor: number; currency: string } | undefined;
+    let balance: { minor: number; currency: string; type?: string } | undefined;
     try {
       const balances = await client.getBalances(account.providerAccountUid, psu ?? {});
       await this.storePayload(link, {
@@ -402,6 +402,7 @@ export class BankSyncService {
         ? {
             lastBalanceMinor: balance.minor,
             lastBalanceCurrency: balance.currency,
+            ...(balance.type ? { lastBalanceType: balance.type } : {}),
             lastBalanceAt: now,
           }
         : {}),

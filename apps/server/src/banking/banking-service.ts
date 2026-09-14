@@ -75,6 +75,7 @@ export interface BankAccountSummary {
   lastSyncedAt?: string;
   lastBalanceMinor?: number;
   lastBalanceCurrency?: string;
+  lastBalanceType?: string;
   lastBalanceAt?: string;
   transactionCount: number;
 }
@@ -394,6 +395,24 @@ export class BankingService {
       state,
       expiresAt: created.stateExpiresAt,
     };
+  }
+
+  /**
+   * Records why a handshake failed, so the panel that is waiting for the bank
+   * stops waiting and can show the reason instead of a link stuck on pending.
+   */
+  async failAuthorization(state: string, message: string): Promise<void> {
+    const connection = await this.connection();
+    if (!connection) return;
+    const links = await this.vault.bankLinks.list({ refA: connection.id });
+    const link = links.find(
+      (candidate) => candidate.state === state && candidate.status === "pending",
+    );
+    if (!link) return;
+    await this.vault.bankLinks.update(
+      { ...link, status: "failed", lastSyncError: message.slice(0, 300) },
+      link.revision,
+    );
   }
 
   /**
@@ -734,7 +753,15 @@ export class BankingService {
     const links = await this.vault.bankLinks.list({ refA: connection.id });
     const summaries: BankLinkSummary[] = [];
     for (const link of links) {
-      if (link.status === "failed" && link.providerAccountUids.length === 0) continue;
+      // A failed attempt with no accounts is noise, unless it carries the
+      // reason: then the panel has to show it.
+      if (
+        link.status === "failed" &&
+        link.providerAccountUids.length === 0 &&
+        !link.lastSyncError
+      ) {
+        continue;
+      }
       summaries.push(await this.summarizeLink(link));
     }
     return summaries;
@@ -768,6 +795,7 @@ export class BankingService {
         ...(account.lastBalanceCurrency
           ? { lastBalanceCurrency: account.lastBalanceCurrency }
           : {}),
+        ...(account.lastBalanceType ? { lastBalanceType: account.lastBalanceType } : {}),
         ...(account.lastBalanceAt ? { lastBalanceAt: account.lastBalanceAt } : {}),
       });
     }

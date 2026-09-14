@@ -14,6 +14,7 @@ import {
   type BankingHarness,
 } from "./helpers/banking.js";
 import { makeConfig } from "./helpers/api.js";
+import { isPublicAddress } from "../src/api/banking-routes.js";
 
 const openHarnesses: BankingHarness[] = [];
 
@@ -59,6 +60,26 @@ interface ConnectionStatus {
 }
 
 describe("Enable Banking API", () => {
+  it("forwards the PSU address only when it can mean something to a bank", () => {
+    for (const address of ["203.0.113.9", "8.8.8.8", "2001:4860:4860::8888"]) {
+      expect(isPublicAddress(address), address).toBe(true);
+    }
+    for (const address of [
+      "127.0.0.1",
+      "::1",
+      "10.0.0.5",
+      "192.168.1.20",
+      "172.16.9.9",
+      "169.254.1.1",
+      "100.87.190.124", // Tailscale hands out the shared 100.64/10 range.
+      "fd7a:115c:a1e0::1",
+      "fe80::1%en0",
+      "::ffff:192.168.1.5",
+    ]) {
+      expect(isPublicAddress(address), address).toBe(false);
+    }
+  });
+
   it("starts unconfigured and never leaks the private key", async () => {
     const { app, client } = await harness();
     const before = await get({ app, client } as BankingHarness, "/api/banking/status");
@@ -287,6 +308,98 @@ describe("Enable Banking API", () => {
     expect(after.json<ConnectionStatus>().links).toHaveLength(0);
     const kept = await get({ app, client } as BankingHarness, "/api/transactions");
     expect(kept.json<{ items: unknown[] }>().items).toHaveLength(1);
+  });
+
+  it("finishes the bank redirect on the server, without a browser session", async () => {
+    const { app, client } = await harness();
+    const session = { app, client } as BankingHarness;
+    await put(session, "/api/banking/enable-banking/config", {
+      appId: TEST_APP_ID,
+      privateKeyPem: testPrivateKeyPem(),
+      redirectUrl: TEST_REDIRECT_URL,
+      environment: "SANDBOX",
+      psuType: "personal",
+      country: "IT",
+      autoSync: true,
+    });
+    const started = await post(session, "/api/banking/enable-banking/authorize", {
+      aspspName: "UniCredit",
+      aspspCountry: "IT",
+      psuType: "personal",
+    });
+    const state = started.json<{ state: string }>().state;
+
+    // The bank redirects the browser here: no cookie, no CSRF, no shell.
+    const callback = await app.inject({
+      method: "GET",
+      url: `/enablebanking/auth_callback?code=sandbox-code&state=${state}`,
+    });
+    expect(callback.statusCode).toBe(200);
+    expect(callback.headers["content-type"]).toContain("text/html");
+    expect(callback.body).toContain("is connected");
+    expect(callback.headers["content-security-policy"]).toContain("script-src 'sha256-");
+
+    const status = await get(session, "/api/banking/status");
+    expect(status.json<ConnectionStatus>().links[0]?.status).toBe("authorized");
+  });
+
+  it("records a refused consent and stops the panel waiting", async () => {
+    const bank = new FakeBank();
+    const { app, client } = await harness(bank);
+    const session = { app, client } as BankingHarness;
+    await put(session, "/api/banking/enable-banking/config", {
+      appId: TEST_APP_ID,
+      privateKeyPem: testPrivateKeyPem(),
+      redirectUrl: TEST_REDIRECT_URL,
+      environment: "SANDBOX",
+      psuType: "personal",
+      country: "IT",
+      autoSync: true,
+    });
+    const started = await post(session, "/api/banking/enable-banking/authorize", {
+      aspspName: "UniCredit",
+      aspspCountry: "IT",
+      psuType: "personal",
+    });
+    const state = started.json<{ state: string }>().state;
+
+    const callback = await app.inject({
+      method: "GET",
+      url: `/enablebanking/auth_callback?error=access_denied&state=${state}`,
+    });
+    expect(callback.statusCode).toBe(400);
+    expect(callback.body).toContain("You cancelled the consent");
+
+    const link = (await get(session, "/api/banking/status")).json<ConnectionStatus>().links[0];
+    expect(link?.status).toBe("failed");
+  });
+
+  it("tells the browser to unlock when the vault is locked", async () => {
+    const { app, client } = await harness();
+    const session = { app, client } as BankingHarness;
+    await put(session, "/api/banking/enable-banking/config", {
+      appId: TEST_APP_ID,
+      privateKeyPem: testPrivateKeyPem(),
+      redirectUrl: TEST_REDIRECT_URL,
+      environment: "SANDBOX",
+      psuType: "personal",
+      country: "IT",
+      autoSync: true,
+    });
+    const started = await post(session, "/api/banking/enable-banking/authorize", {
+      aspspName: "UniCredit",
+      aspspCountry: "IT",
+      psuType: "personal",
+    });
+    const state = started.json<{ state: string }>().state;
+    await post(session, "/api/vault/lock", { scope: "all" });
+
+    const callback = await app.inject({
+      method: "GET",
+      url: `/enablebanking/auth_callback?code=sandbox-code&state=${state}`,
+    });
+    expect(callback.statusCode).toBe(423);
+    expect(callback.body).toContain("Flowly is locked");
   });
 
   it("keeps the bank page reachable while a link waits for the bank", async () => {
