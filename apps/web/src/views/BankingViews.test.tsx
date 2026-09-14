@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsView } from "./SettingsView.js";
 import { BankCallbackView } from "./BankCallbackView.js";
@@ -59,6 +59,8 @@ const LINK = {
       transactionCount: 4,
       lastBalanceMinor: 123456,
       lastBalanceCurrency: "EUR",
+      ledgerBalanceMinor: 100000,
+      ledgerBalanceCurrency: "EUR",
     },
   ],
 };
@@ -178,9 +180,63 @@ describe("Enable Banking in Settings", () => {
 
     await waitFor(() => expect(screen.getByText("mytest-app")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: /Load available banks/ }));
-    await waitFor(() => expect(screen.getByText("UniCredit")).toBeTruthy());
+    const search = await screen.findByLabelText("Search your bank");
+    expect(screen.getByText(/1 bank available in IT/)).toBeTruthy();
+    fireEvent.change(search, { target: { value: "unicre" } });
+    fireEvent.click(screen.getByRole("option", { name: /UniCredit/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^Connect$/ })).toBeTruthy());
     expect(screen.getByText("customera")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Connect/ })).toBeTruthy();
+    expect(screen.getByText(/consent up to 90 days/)).toBeTruthy();
+  });
+
+  it("filters a long bank list instead of printing all of it", async () => {
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+      "/api/banking/enable-banking/aspsps": () =>
+        json({
+          items: Array.from({ length: 120 }, (_, index) => ({
+            name: `Bank ${index}`,
+            country: "IT",
+            beta: false,
+            psuTypes: ["personal"],
+            sandboxUsers: [],
+            methods: [],
+          })),
+        }),
+    });
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        vaultStatus={unlockedStatus}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("mytest-app")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Load available banks/ }));
+    const search = await screen.findByLabelText("Search your bank");
+
+    // It never renders the whole list at once: nothing until you type, and a
+    // short set of matches after.
+    expect(screen.queryByRole("listbox", { name: "Matching banks" })).toBeNull();
+    fireEvent.change(search, { target: { value: "Bank 11" } });
+    const options = within(screen.getByRole("listbox", { name: "Matching banks" })).getAllByRole(
+      "option",
+    );
+    expect(options.length).toBeLessThan(120);
+    expect(options[0]?.textContent).toBe("Bank 11");
+    expect(screen.getByText(/banks match/)).toBeTruthy();
   });
 
   it("shows the mapped accounts of a connected bank", async () => {
@@ -263,17 +319,25 @@ describe("Enable Banking in Settings", () => {
 
     await waitFor(() => expect(screen.getByText("mytest-app")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: /Load available banks/ }));
-    await waitFor(() => expect(screen.getByText("UniCredit")).toBeTruthy());
+    const search = await screen.findByLabelText("Search your bank");
+    fireEvent.change(search, { target: { value: "UniCredit" } });
+    fireEvent.click(screen.getByRole("option", { name: /UniCredit/ }));
     fireEvent.click(screen.getByRole("button", { name: /^Connect$/ }));
 
-    // No navigation: the page stays, and the bank opens in another tab on demand.
+    // No navigation: the page stays, and the bank page is one link away.
     await waitFor(() =>
       expect(screen.getByText(/Finish the authorization at UniCredit/)).toBeTruthy(),
     );
-    expect(screen.getByRole("link", { name: /Open the bank page/ }).getAttribute("href")).toContain(
-      "auth.enablebanking.com",
-    );
+    expect(
+      screen.getByRole("link", { name: /Continue to the bank/ }).getAttribute("href"),
+    ).toContain("auth.enablebanking.com");
+    expect(
+      screen.getByRole("link", { name: /Open in another tab/ }).getAttribute("href"),
+    ).toContain("auth.enablebanking.com");
 
+    // The paste fallback is there, but only for the browser that could not
+    // come back on its own.
+    fireEvent.click(screen.getByText("Bank did not come back automatically?"));
     const field = screen.getByLabelText("URL you were redirected to");
     fireEvent.change(field, {
       target: {
@@ -286,6 +350,93 @@ describe("Enable Banking in Settings", () => {
     );
     const callback = calls.find((call) => call.path.endsWith("/callback"));
     expect(callback?.body).toEqual({ code: "abc", state: "state-1" });
+  });
+
+  it("re-opens the bank page from a pending link after a reload", async () => {
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [
+            {
+              ...LINK,
+              status: "pending",
+              accounts: [],
+              authorizationUrl: "https://auth.enablebanking.com/ais/start?sessionid=resume-me",
+            },
+          ],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+    });
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        vaultStatus={unlockedStatus}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Finish the authorization at UniCredit/)).toBeTruthy(),
+    );
+    expect(
+      screen.getByRole("link", { name: /Continue to the bank/ }).getAttribute("href"),
+    ).toContain("sessionid=resume-me");
+  });
+
+  it("aligns the Flowly balance with the bank balance in one click", async () => {
+    const account = {
+      formatVersion: 1 as const,
+      revision: 3,
+      id: LINK.accounts[0]?.accountId ?? "",
+      name: "Conto corrente",
+      type: "checking" as const,
+      defaultCurrency: "EUR",
+      openingBalanceMinor: 0,
+      createdAt: "2026-09-01T08:00:00.000Z",
+      updatedAt: "2026-09-01T08:00:00.000Z",
+    };
+    const calls = mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [LINK],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [account] }),
+      [`/api/accounts/${account.id}`]: () => json({ entity: account }),
+    });
+    vi.stubGlobal("confirm", () => true);
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        vaultStatus={unlockedStatus}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("1234.56 EUR")).toBeTruthy());
+    expect(screen.getByText("1000.00 EUR")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Align/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/now matches the balance the bank reports/)).toBeTruthy(),
+    );
+    const update = calls.find((call) => call.method === "PUT");
+    expect(update?.body).toEqual({
+      entity: { ...account, openingBalanceMinor: 23456 },
+    });
   });
 
   it("surfaces an Enable Banking error from the pasted redirect", async () => {
@@ -406,6 +557,9 @@ describe("Enable Banking in Settings", () => {
 
     await waitFor(() => expect(screen.getByText("Conto corrente")).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: /Load available banks/ }));
+    const search = await screen.findByLabelText("Search your bank");
+    fireEvent.change(search, { target: { value: "UniCredit" } });
+    fireEvent.click(screen.getByRole("option", { name: /UniCredit/ }));
     await waitFor(() => expect(screen.getByRole("button", { name: /^Connect$/ })).toBeTruthy());
 
     // `.tile` is the dashboard's 48x48 icon square: reusing it squeezed the

@@ -180,6 +180,35 @@ describe("Flowly web client", () => {
     expect(screen.getByRole("img", { name: /Income and expenses per week/ })).toBeTruthy();
   });
 
+  it("resumes an open vault from its session cookie instead of asking again", async () => {
+    mockFetch({
+      "/api/vault/status": () => json(unlockedStatus),
+      "/api/session": () => json({ csrfToken: "csrf-token", vault: unlockedStatus }),
+      "/api/dashboard": () => json(dashboard),
+      "/api/accounts": () => json({ items: [] }),
+      "/api/transactions": () => json({ items: [], total: 0, limit: 100, offset: 0 }),
+      "/api/tags": () => json({ items: [] }),
+      "/api/tagging-rules": () => json({ items: [] }),
+    });
+    render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Financial overview" })).toBeTruthy(),
+    );
+    expect(screen.queryByLabelText("Passphrase")).toBeNull();
+  });
+
+  it("asks for the passphrase again only when the session cookie is gone", async () => {
+    mockFetch({
+      "/api/vault/status": () => json(unlockedStatus),
+      "/api/session": () => json({ error: "session_required" }, 401),
+    });
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByLabelText("Passphrase")).toBeTruthy());
+    expect(screen.getByText(/session expired/i)).toBeTruthy();
+  });
+
   it("keeps the passphrase change and portability controls inside Settings", async () => {
     mockFetch(unlockedRoutes());
     await unlock();

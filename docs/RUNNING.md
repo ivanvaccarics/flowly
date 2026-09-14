@@ -83,18 +83,20 @@ to Enable Banking**; no command line and no configuration file are involved.
    before anything is stored. The key is then kept only inside the encrypted
    vault — it is never written to a plain file and never returned to the
    browser.
-4. Press **Load available banks**, pick your country and account type, and press
-   **Connect** next to your bank. Flowly shows a **Finish the authorization**
-   panel: **Open the bank page** takes you to Enable Banking in another tab, you
-   log in at the bank, and you land back on
-   `/enablebanking/auth_callback`.
-5. If that callback page opens, Flowly takes over and lists the accounts the bank
-   shared. If it does not — the registered callback URL is a hostname, port or
-   VPN address this browser cannot reach — copy the **whole address** from the
-   browser bar (including `?code=…&state=…`, or the `error=…` Enable Banking
-   appended) and paste it into **URL you were redirected to** in Flowly, then
-   press **Complete connection**. This is also how an Enable Banking error is
-   surfaced in plain language.
+4. Press **Load available banks**, pick your country and account type, search
+   your bank by name or BIC, select it and press **Connect**. Flowly shows a
+   **Finish the authorization** panel: **Continue to the bank** takes you to
+   Enable Banking in the same tab, you log in at the bank, and the bank sends
+   you back to `/enablebanking/auth_callback`.
+5. Flowly exchanges the code on its own and lists the accounts the bank shared.
+   Nothing has to be copied: while the authorization is pending the panel keeps
+   watching the link, so finishing it in another tab is picked up too. Only when
+   the registered callback URL is a hostname, port or VPN address this browser
+   cannot reach does the page fail to come back — then reopen Flowly and use
+   **Open in another tab** or **Bank did not come back automatically?** to paste
+   the **whole address** from the browser bar (including `?code=…&state=…`, or
+   the `error=…` Enable Banking appended) and press **Complete connection**. That
+   is also how an Enable Banking error is surfaced in plain language.
 6. For each shared account, tell Flowly whether to
    **create** a Flowly account or **pair** an existing one. Accounts you ignore
    are never imported.
@@ -132,6 +134,23 @@ After that:
 every bank link and every raw provider payload; the accounts and transactions
 that were already imported stay in the vault. Unlinking a single bank keeps the
 other links and the same transactions.
+
+#### Why the two balances differ, and how to make them agree
+
+Settings shows two figures per paired account:
+
+- **Bank balance** — what your bank reported at the last sync.
+- **Flowly balance** — your account's opening balance plus the booked movements
+  stored in this vault, which is also the number the dashboard and the ledger
+  use.
+
+A first sync imports only the recent history the consent covers (90 days), so a
+vault that starts from an opening balance of zero reports less than the bank
+does. Both numbers are correct; they simply answer different questions. Press
+**Align** on the row where they differ to move the difference into the account's
+opening balance once: from then on the vault and the bank agree, and later
+movements keep them in step. The action is confirmed before it writes, changes
+no transaction, and can be undone by editing the opening balance back.
 
 If a bank shows **consent expired** (or revoked), the consent lapsed at the bank:
 connect that bank again from Settings. Imported transactions stay untouched.

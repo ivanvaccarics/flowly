@@ -142,6 +142,26 @@ describe("vault API", () => {
     expect(body.storageEngine).toBe("sqlcipher");
   });
 
+  it("resumes an open vault from the session cookie alone", async () => {
+    const app = startApp(makeConfig());
+    const client = await createVault(app);
+
+    // Exactly what a browser does after a reload: no passphrase, only the
+    // cookie the session was created with.
+    const resumed = await app.inject({
+      method: "GET",
+      url: "/api/session",
+      headers: { cookie: client.cookie },
+    });
+    expect(resumed.statusCode).toBe(200);
+    expect(resumed.json<{ csrfToken: string }>().csrfToken).toBe(client.csrf);
+    expect(resumed.json<{ vault: { state: string } }>().vault.state).toBe("unlocked");
+
+    const anonymous = await app.inject({ method: "GET", url: "/api/session" });
+    expect(anonymous.statusCode).toBe(401);
+    expect(anonymous.json<{ error: string }>().error).toBe("session_required");
+  });
+
   it("creates the vault with fast parameters in tests and refuses duplicates", async () => {
     const config = makeConfig();
     const app = startApp(config);

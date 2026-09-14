@@ -49,8 +49,18 @@ export function useWorkspace(): Workspace {
     try {
       const next = await api.status();
       setStatus(next);
-      if (next.state === "locked") setCsrf(undefined);
+      if (next.state !== "unlocked") {
+        setCsrf(undefined);
+        return;
+      }
+      // The vault is open, so the session cookie still is too: resume the CSRF
+      // token instead of asking for the passphrase again on every reload.
+      const resumed = await api.session();
+      setCsrf(resumed.csrfToken);
+      setStatus(resumed.vault);
     } catch (cause) {
+      // A missing session means the unlock screen, not a broken server.
+      if (cause instanceof ApiError && cause.code === "session_required") setCsrf(undefined);
       setError(describe(cause));
     } finally {
       setLoading(false);

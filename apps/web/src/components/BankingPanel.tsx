@@ -4,6 +4,7 @@ import {
   api,
   type AspspSummary,
   type BankingConfigInput,
+  type BankingAccountSummary,
   type BankAccountMappingInput,
   type BankLinkSummary,
 } from "../api/client.js";
@@ -116,6 +117,59 @@ export function BankingPanel({ csrf }: { csrf: string }) {
       setNotice(`Bank account ${body.mode === "ignore" ? "ignored" : "linked"}.`);
     }
   }
+
+  /**
+   * Makes the vault's balance for a paired account equal the balance the bank
+   * reports, by moving the difference into the account's opening balance. A
+   * first sync only imports recent history, so the two figures legitimately
+   * differ until this is done once.
+   */
+  async function alignBalance(account: Account, summary: BankingAccountSummary) {
+    const bankBalance = summary.lastBalanceMinor;
+    const ledgerBalance = summary.ledgerBalanceMinor;
+    if (bankBalance === undefined || ledgerBalance === undefined) return;
+    const difference = bankBalance - ledgerBalance;
+    if (difference === 0) return;
+    const confirmed = window.confirm(
+      `Set the opening balance of ${account.name} so Flowly reports ` +
+        `${formatMoney(bankBalance, summary.lastBalanceCurrency ?? account.defaultCurrency)}, ` +
+        `the figure the bank sent? This changes the ledger by the difference only.`,
+    );
+    if (!confirmed) return;
+    const result = await banking.run(() =>
+      api.update<Account>(csrf, "accounts", account.id, {
+        ...account,
+        openingBalanceMinor: (account.openingBalanceMinor ?? 0) + difference,
+      }),
+    );
+    if (!result) return;
+    await loadAccounts();
+    setNotice(`${account.name} now matches the balance the bank reports.`);
+  }
+
+  /**
+   * The bank page may finish in another tab, or the user may come back to this
+   * one: watch the pending link so the panel advances without a pasted URL.
+   */
+  useEffect(() => {
+    if (!pending) return;
+    const link = links.find((candidate) => candidate.id === pending.linkId);
+    if (!link || link.status === "pending") return;
+    setPending(undefined);
+    if (link.status === "authorized") {
+      setNotice(`${link.aspspName} is connected. Link its accounts below.`);
+      void loadAccounts();
+    } else {
+      setNotice(`${link.aspspName}: ${STATUS_LABEL[link.status]}.`);
+    }
+  }, [pending, links, loadAccounts]);
+
+  const waitingForBank = pending !== undefined || waitingLink !== undefined;
+  useEffect(() => {
+    if (!waitingForBank) return;
+    const timer = window.setInterval(() => void banking.refresh(), 4_000);
+    return () => window.clearInterval(timer);
+  }, [waitingForBank, banking.refresh]);
 
   const sandboxHint = useMemo(() => {
     const users = aspsps?.flatMap((aspsp) => aspsp.sandboxUsers).filter((user) => user.username);
@@ -251,36 +305,12 @@ export function BankingPanel({ csrf }: { csrf: string }) {
             aspsps.length === 0 ? (
               <Empty>No bank in this country offers account information.</Empty>
             ) : (
-              <ul className="stack rule-list" style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {aspsps.map((aspsp) => (
-                  <li key={`${aspsp.country}-${aspsp.name}`} className="rule-tile">
-                    <header className="rule-tile-head">
-                      <div className="stack">
-                        <strong>{aspsp.name}</strong>
-                        <span className="sub">
-                          {aspsp.country}
-                          {aspsp.bic ? ` · ${aspsp.bic}` : ""}
-                          {aspsp.maximumConsentDays
-                            ? ` · consent up to ${aspsp.maximumConsentDays} days`
-                            : ""}
-                        </span>
-                      </div>
-                      <div className="cell-actions">
-                        {aspsp.beta ? <Chip tone="neutral">beta</Chip> : null}
-                        <button
-                          type="button"
-                          className="btn small primary"
-                          disabled={banking.busy}
-                          onClick={() => void connect(aspsp)}
-                        >
-                          <Icon name="plus" size={14} />
-                          Connect
-                        </button>
-                      </div>
-                    </header>
-                  </li>
-                ))}
-              </ul>
+              <AspspPicker
+                key={`${country}-${psuType}-${aspsps.length}`}
+                banks={aspsps}
+                busy={banking.busy}
+                onConnect={(aspsp) => void connect(aspsp)}
+              />
             )
           ) : null}
           {sandboxHint ? (
@@ -326,8 +356,179 @@ export function BankingPanel({ csrf }: { csrf: string }) {
                   })
               }
               onMap={(uid, body) => mapAccount(link, uid, body).then(() => undefined)}
+              onAlign={(account, summary) => void alignBalance(account, summary)}
             />
           ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** How many matches the picker shows at once; the input filters all of them. */
+const ASPSP_MATCH_LIMIT = 8;
+
+function normalizeBankName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase();
+}
+
+/**
+ * A country can list hundreds of banks, so the picker filters as you type
+ * instead of printing every one of them. Connecting still takes a second,
+ * explicit click because it leaves the app for the bank's own pages.
+ */
+function AspspPicker({
+  banks,
+  busy,
+  onConnect,
+}: {
+  banks: AspspSummary[];
+  busy: boolean;
+  onConnect: (aspsp: AspspSummary) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<AspspSummary | undefined>(undefined);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const listId = "aspsp-options";
+
+  const matches = useMemo(() => {
+    const needle = normalizeBankName(query.trim());
+    const filtered = banks.filter((bank) => {
+      if (needle === "") return true;
+      if (normalizeBankName(bank.name).includes(needle)) return true;
+      return bank.bic ? bank.bic.toLowerCase().includes(needle) : false;
+    });
+    return { total: filtered.length, items: filtered.slice(0, ASPSP_MATCH_LIMIT) };
+  }, [banks, query]);
+
+  function choose(bank: AspspSummary | undefined) {
+    if (!bank) return;
+    setSelected(bank);
+    setQuery(bank.name);
+    setOpen(false);
+  }
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setOpen(true);
+      setActive((current) => {
+        const next = event.key === "ArrowDown" ? current + 1 : current - 1;
+        return Math.min(Math.max(next, 0), Math.max(matches.items.length - 1, 0));
+      });
+      return;
+    }
+    if (event.key === "Enter" && open) {
+      event.preventDefault();
+      choose(matches.items[active]);
+      return;
+    }
+    if (event.key === "Escape") setOpen(false);
+  }
+
+  const showList = open && matches.items.length > 0;
+
+  return (
+    <div className="stack">
+      <label>
+        Search your bank
+        <input
+          value={query}
+          role="combobox"
+          aria-expanded={showList}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="Type a name or a BIC"
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setSelected(undefined);
+            setActive(0);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onKeyDown={onKeyDown}
+        />
+      </label>
+
+      {showList ? (
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label="Matching banks"
+          className="stack"
+          style={{ listStyle: "none", padding: 0, margin: 0 }}
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          {matches.items.map((bank, index) => (
+            <li key={`${bank.country}-${bank.name}`}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={index === active}
+                className={index === active ? "btn small primary" : "btn small"}
+                style={{ justifyContent: "flex-start", width: "100%" }}
+                onMouseEnter={() => setActive(index)}
+                onClick={() => choose(bank)}
+              >
+                {bank.name}
+                {bank.bic ? ` · ${bank.bic}` : ""}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <p className="muted">
+        {query.trim() === ""
+          ? `${banks.length} ${banks.length === 1 ? "bank" : "banks"} available in ${
+              banks[0]?.country ?? "this country"
+            }.`
+          : matches.total === 0
+            ? "No bank matches that name."
+            : `${matches.total} ${matches.total === 1 ? "bank matches" : "banks match"}${
+                matches.total > matches.items.length
+                  ? `, showing the first ${matches.items.length}`
+                  : ""
+              }.`}
+      </p>
+
+      {selected ? (
+        <div className="rule-tile">
+          <header className="rule-tile-head">
+            <div className="stack">
+              <strong>{selected.name}</strong>
+              <span className="sub">
+                {selected.country}
+                {selected.bic ? ` · ${selected.bic}` : ""}
+                {selected.maximumConsentDays
+                  ? ` · consent up to ${selected.maximumConsentDays} days`
+                  : ""}
+              </span>
+            </div>
+            <div className="cell-actions">
+              {selected.beta ? <Chip tone="neutral">beta</Chip> : null}
+              <button
+                type="button"
+                className="btn small primary"
+                disabled={busy}
+                onClick={() => onConnect(selected)}
+              >
+                <Icon name="plus" size={14} />
+                Connect
+              </button>
+            </div>
+          </header>
+          <p className="muted">
+            Flowly starts the consent, then hands you over to {selected.name} to approve it. You
+            come back here automatically.
+          </p>
         </div>
       ) : null}
     </div>
@@ -519,6 +720,7 @@ function LinkCard({
   onSync,
   onUnlink,
   onMap,
+  onAlign,
 }: {
   link: BankLinkSummary;
   accounts: Account[];
@@ -526,6 +728,7 @@ function LinkCard({
   onSync: () => void;
   onUnlink: () => void;
   onMap: (uid: string, body: BankAccountMappingInput) => Promise<void>;
+  onAlign: (account: Account, summary: BankingAccountSummary) => void;
 }) {
   const pending = link.accounts.filter(
     (account) => account.status === "unmapped" || account.status === "ignored",
@@ -578,27 +781,72 @@ function LinkCard({
               <tr>
                 <th scope="col">Bank account</th>
                 <th scope="col">Flowly account</th>
-                <th scope="col">Balance</th>
+                <th scope="col">Bank balance</th>
+                <th scope="col">Flowly balance</th>
                 <th scope="col">Transactions</th>
               </tr>
             </thead>
             <tbody>
-              {link.accounts.map((account) => (
-                <tr key={account.id}>
-                  <td>
-                    {account.providerName ?? account.maskedIban ?? account.providerAccountUid}
-                  </td>
-                  <td>{account.accountName ?? "not paired"}</td>
-                  <td>
-                    {account.lastBalanceMinor !== undefined && account.lastBalanceCurrency
-                      ? formatMoney(account.lastBalanceMinor, account.lastBalanceCurrency)
-                      : "—"}
-                  </td>
-                  <td>{account.transactionCount}</td>
-                </tr>
-              ))}
+              {link.accounts.map((account) => {
+                const flowlyAccount = accounts.find(
+                  (candidate) => candidate.id === account.accountId,
+                );
+                const bankBalance =
+                  account.lastBalanceMinor !== undefined && account.lastBalanceCurrency
+                    ? formatMoney(account.lastBalanceMinor, account.lastBalanceCurrency)
+                    : "—";
+                const ledgerBalance =
+                  account.ledgerBalanceMinor !== undefined && account.ledgerBalanceCurrency
+                    ? formatMoney(account.ledgerBalanceMinor, account.ledgerBalanceCurrency)
+                    : "—";
+                const difference =
+                  account.lastBalanceMinor !== undefined && account.ledgerBalanceMinor !== undefined
+                    ? account.lastBalanceMinor - account.ledgerBalanceMinor
+                    : undefined;
+                return (
+                  <tr key={account.id}>
+                    <td>
+                      {account.providerName ?? account.maskedIban ?? account.providerAccountUid}
+                    </td>
+                    <td>{account.accountName ?? "not paired"}</td>
+                    <td>{bankBalance}</td>
+                    <td>
+                      {ledgerBalance}
+                      {difference !== undefined && difference !== 0 && flowlyAccount ? (
+                        <>
+                          <span className="sub">
+                            {" "}
+                            {difference > 0 ? "+" : "−"}
+                            {formatMoney(
+                              Math.abs(difference),
+                              account.lastBalanceCurrency ?? flowlyAccount.defaultCurrency,
+                            )}{" "}
+                            vs the bank
+                          </span>
+                          <button
+                            type="button"
+                            className="btn small"
+                            disabled={busy}
+                            onClick={() => onAlign(flowlyAccount, account)}
+                          >
+                            <Icon name="check" size={14} />
+                            Align
+                          </button>
+                        </>
+                      ) : null}
+                    </td>
+                    <td>{account.transactionCount}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          <p className="muted">
+            The bank balance is what your bank reports. The Flowly balance is the account's opening
+            balance plus the booked movements in this vault, so a first sync that imports recent
+            history only starts lower: <strong>Align</strong> folds the difference into the opening
+            balance once, and the two figures stay in step from there.
+          </p>
         </div>
       ) : link.status === "pending" ? (
         <Empty>
@@ -694,6 +942,7 @@ function PendingAuthorization({
   const [redirect, setRedirect] = useState("");
   const [working, setWorking] = useState(false);
   const bankName = pending?.aspspName ?? link?.aspspName ?? "your bank";
+  const bankUrl = pending?.url ?? link?.authorizationUrl;
 
   async function complete() {
     setWorking(true);
@@ -717,10 +966,15 @@ function PendingAuthorization({
       </header>
 
       <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
-        {pending ? (
-          <a className="btn primary" href={pending.url} target="_blank" rel="noreferrer noopener">
+        {bankUrl ? (
+          <a className="btn primary" href={bankUrl} rel="noreferrer">
             <Icon name="bank" size={16} />
-            Open the bank page
+            Continue to the bank
+          </a>
+        ) : null}
+        {bankUrl ? (
+          <a className="btn" href={bankUrl} target="_blank" rel="noreferrer noopener">
+            Open in another tab
           </a>
         ) : null}
         {pending ? (
@@ -730,32 +984,41 @@ function PendingAuthorization({
         ) : null}
       </div>
 
-      <label>
-        URL you were redirected to
-        <input
-          value={redirect}
-          onChange={(event) => setRedirect(event.target.value)}
-          placeholder="https://…/enablebanking/auth_callback?code=…&state=…"
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </label>
-      <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
-        <button
-          type="button"
-          className="btn primary"
-          disabled={busy || working || redirect.trim() === ""}
-          onClick={() => void complete()}
-        >
-          <Icon name="check" size={16} />
-          {working ? "Completing…" : "Complete connection"}
-        </button>
-      </div>
       <p className="muted">
-        If the callback page does not open, copy the full address from the browser bar and paste it
-        here: Flowly reads the code from it. Enable Banking may also append an <code>error</code>{" "}
-        parameter, which is shown right after you complete.
+        Approve the consent at {bankName} and the bank sends you straight back here: Flowly
+        exchanges the code on its own. This panel keeps checking while you are away, so the
+        connection appears even if you finish in another tab.
       </p>
+
+      <details>
+        <summary>Bank did not come back automatically?</summary>
+        <label>
+          URL you were redirected to
+          <input
+            value={redirect}
+            onChange={(event) => setRedirect(event.target.value)}
+            placeholder="https://…/enablebanking/auth_callback?code=…&state=…"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={busy || working || redirect.trim() === ""}
+            onClick={() => void complete()}
+          >
+            <Icon name="check" size={16} />
+            {working ? "Completing…" : "Complete connection"}
+          </button>
+        </div>
+        <p className="muted">
+          Copy the full address from the browser bar and paste it here: Flowly reads the code from
+          it. Enable Banking may also append an <code>error</code> parameter, which is shown right
+          after you complete.
+        </p>
+      </details>
     </section>
   );
 }

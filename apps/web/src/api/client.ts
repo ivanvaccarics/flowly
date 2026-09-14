@@ -56,6 +56,9 @@ export interface BankingAccountSummary {
   lastBalanceMinor?: number;
   lastBalanceCurrency?: string;
   lastBalanceAt?: string;
+  /** What this vault reports for the same account and currency. */
+  ledgerBalanceMinor?: number;
+  ledgerBalanceCurrency?: string;
   transactionCount: number;
 }
 
@@ -69,6 +72,8 @@ export interface BankLinkSummary {
   accessValidUntil?: string;
   lastSyncedAt?: string;
   lastSyncError?: string;
+  /** Set while the bank authorization is pending, so it can be resumed. */
+  authorizationUrl?: string;
   createdAt: string;
   accounts: BankingAccountSummary[];
 }
@@ -195,6 +200,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
 export const api = {
   status: () => request<VaultStatus>("/api/vault/status"),
+  /**
+   * Resumes the browser session from its cookie: the server returns a fresh
+   * CSRF token and the vault status, so a reload never asks for the passphrase
+   * again while the session lives.
+   */
+  session: () => request<{ csrfToken: string; vault: VaultStatus }>("/api/session"),
   createVault: (passphrase: string) =>
     request<{ csrfToken: string; vault: VaultStatus }>("/api/vault/create", {
       method: "POST",

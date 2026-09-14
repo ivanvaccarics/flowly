@@ -41,6 +41,7 @@ interface ConnectionStatus {
     id: string;
     aspspName: string;
     status: string;
+    authorizationUrl?: string;
     accounts: Array<{
       id: string;
       providerAccountUid: string;
@@ -48,6 +49,10 @@ interface ConnectionStatus {
       accountId?: string;
       accountName?: string;
       currency?: string;
+      lastBalanceMinor?: number;
+      lastBalanceCurrency?: string;
+      ledgerBalanceMinor?: number;
+      ledgerBalanceCurrency?: string;
     }>;
   }>;
   sync: { running: boolean; lastSyncAt?: string };
@@ -282,6 +287,66 @@ describe("Enable Banking API", () => {
     expect(after.json<ConnectionStatus>().links).toHaveLength(0);
     const kept = await get({ app, client } as BankingHarness, "/api/transactions");
     expect(kept.json<{ items: unknown[] }>().items).toHaveLength(1);
+  });
+
+  it("keeps the bank page reachable while a link waits for the bank", async () => {
+    const { app, client } = await harness();
+    const session = { app, client } as BankingHarness;
+    await put(session, "/api/banking/enable-banking/config", {
+      appId: TEST_APP_ID,
+      privateKeyPem: testPrivateKeyPem(),
+      redirectUrl: TEST_REDIRECT_URL,
+      environment: "SANDBOX",
+      psuType: "personal",
+      country: "IT",
+      autoSync: true,
+    });
+    const started = await post(session, "/api/banking/enable-banking/authorize", {
+      aspspName: "UniCredit",
+      aspspCountry: "IT",
+      psuType: "personal",
+    });
+    const url = started.json<{ url: string }>().url;
+
+    const status = await get(session, "/api/banking/status");
+    const link = status.json<ConnectionStatus>().links[0];
+    expect(link?.status).toBe("pending");
+    expect(link?.authorizationUrl).toBe(url);
+  });
+
+  it("reports the vault balance next to the balance the bank sent", async () => {
+    const bank = new FakeBank();
+    const { app, client } = await harness(bank);
+    const session = { app, client } as BankingHarness;
+    const { linkId } = await connectBank(session);
+    const uid = (await get(session, "/api/banking/status")).json<ConnectionStatus>().links[0]
+      ?.accounts[0]?.providerAccountUid as string;
+    const mapped = await post(session, `/api/banking/enable-banking/links/${linkId}/accounts`, {
+      providerAccountUid: uid,
+      mode: "create",
+      name: "Conto UniCredit",
+      type: "checking",
+    });
+    const accountId = mapped.json<ConnectionStatus["links"][number]>().accounts[0]?.accountId;
+    await post(session, "/api/banking/sync", {});
+
+    const synced = (await get(session, "/api/banking/status")).json<ConnectionStatus>();
+    const account = synced.links[0]?.accounts[0];
+    // The bank reports 1234.56 and its only imported movement is a 3.75 debit.
+    expect(account?.lastBalanceMinor).toBe(123456);
+    expect(account?.lastBalanceCurrency).toBe("EUR");
+    expect(account?.ledgerBalanceMinor).toBe(-375);
+    expect(account?.ledgerBalanceCurrency).toBe("EUR");
+
+    // Aligning the opening balance is what makes the ledger match the bank.
+    const accounts = await get(session, "/api/accounts");
+    const flowlyAccount = accounts.json<{ items: Array<Record<string, unknown>> }>().items[0];
+    const updated = await put(session, `/api/accounts/${accountId}`, {
+      entity: { ...flowlyAccount, openingBalanceMinor: 123831 },
+    });
+    expect(updated.statusCode).toBe(200);
+    const aligned = (await get(session, "/api/banking/status")).json<ConnectionStatus>();
+    expect(aligned.links[0]?.accounts[0]?.ledgerBalanceMinor).toBe(123456);
   });
 
   it("auto-syncs nothing when no bank is linked and reports a clear sync state", async () => {

@@ -451,11 +451,15 @@ covered by the portable exports:
 - `bank_links`: one row per authorized bank. Holds the ASPSP name and country,
   PSU type, the single-use OAuth state and its expiry, the session id, the
   consent validity, the status (`pending`, `authorized`, `expired`, `revoked`,
-  `failed`, `closed`) and the last sync result.
+  `failed`, `closed`) and the last sync result. While the link is pending it
+  also keeps the provider authorization URL, so the browser can be sent back to
+  the bank after a reload (`docs/adr/0017`).
 - `bank_accounts`: one row per provider account discovered in a link, with the
   identification hash, IBAN, currency and cash-account type, the mapping status
   (`unmapped`, `mapped`, `ignored`), the Flowly account it feeds, the sync
-  cursor and the last booked balance.
+  cursor and the last booked balance. The balance the bank sent and the balance
+  the vault computes are reported side by side, and aligning them is an
+  explicit opening-balance adjustment (`docs/adr/0018`).
 - `bank_payloads`: the raw JSON store. One row per response per account —
   session, account details, balances and each page of transactions — with the
   request window, the fetch timestamp and the provider JSON untouched.
@@ -1331,6 +1335,30 @@ turning the connector into a synchronization service.
 
 Met: the private key never leaves the server, credentials are only readable while
 the vault is unlocked, and the vault stays the canonical ledger.
+
+#### Task `harden-banking-usage`
+
+Status: **complete** (2026-09-14), decisions in `docs/adr/0017` and
+`docs/adr/0018`.
+
+- The shell resumes an open vault from its session cookie through
+  `GET /api/session`, so reloading a page no longer costs a passphrase and the
+  bank callback can complete on its own.
+- The bank list became a searchable picker: a country with hundreds of ASPSPs
+  never prints them all, and connecting stays an explicit second click.
+- The pending authorization survives a reload (the link keeps the provider URL)
+  and the panel polls the link status, so an authorization finished in another
+  tab is picked up automatically.
+- Settings shows the balance the bank reports next to the balance the vault
+  computes, with the difference and a confirmed **Align** action that folds it
+  into the account's opening balance.
+
+**Exit criteria:** connecting and reconnecting a bank needs no manual copy of a
+URL, and the numbers the product shows agree with the bank once the user asks
+them to.
+
+Met: an expired session is the only path back to the passphrase, the bank page
+opens in place, and the ledger matches the bank after one alignment.
 
 ### Phase 8 - Flutter foundation
 

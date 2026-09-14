@@ -149,6 +149,11 @@ export interface BankLink {
   state: string;
   stateExpiresAt: string;
   authorizationId?: string;
+  /**
+   * Provider page the PSU was sent to. Kept so the pending link can be resumed
+   * — and the bank page re-opened — after the browser reloads or comes back.
+   */
+  authorizationUrl?: string;
   sessionId?: string;
   status: BankLinkStatus;
   accessValidUntil?: string;
@@ -183,6 +188,9 @@ export function validateBankLink(link: BankLink): void {
   assertIsoDateTime(link.stateExpiresAt, "bankLink.stateExpiresAt");
   if (link.authorizationId !== undefined) {
     assertText(link.authorizationId, "bankLink.authorizationId", { max: 200, optional: true });
+  }
+  if (link.authorizationUrl !== undefined) {
+    assertText(link.authorizationUrl, "bankLink.authorizationUrl", { max: 2000, optional: true });
   }
   if (link.sessionId !== undefined) {
     assertText(link.sessionId, "bankLink.sessionId", { max: 200, optional: true });

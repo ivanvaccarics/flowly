@@ -88,12 +88,15 @@ server, so a large vault stays quick.
 ### 🏦 Connect your bank (Enable Banking)
 Connect a bank from Settings with your Enable Banking application id, private key
 and callback URL — the key is verified once and then kept only inside the
-encrypted vault. Pick your bank, authorize the consent at the bank, and tell
-Flowly for each shared account whether to create a new account or pair an
-existing one. Banks refresh when you unlock the vault, and the dashboard has a
-**Sync now** button for a manual pull. Pending rows reconcile into booked ones in
-place, your notes and tags are never overwritten, every raw provider response is
-kept per account, and the vault stays the canonical ledger.
+encrypted vault. Search your bank by name or BIC, authorize the consent at the
+bank — Flowly comes back on its own — and tell Flowly for each shared account
+whether to create a new account or pair an existing one. Settings shows the
+balance your bank reports next to the balance Flowly computes from your own
+records, with one confirmed click to align the two. Banks refresh when you
+unlock the vault, and the dashboard has a **Sync now** button for a manual pull.
+Pending rows reconcile into booked ones in place, your notes and tags are never
+overwritten, every raw provider response is kept per account, and the vault
+stays the canonical ledger.
 
 ### 🔐 Security you can explain to a friend
 - A **mandatory passphrase** protects a randomly generated encryption key,
