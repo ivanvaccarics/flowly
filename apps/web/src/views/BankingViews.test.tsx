@@ -105,6 +105,38 @@ afterEach(() => {
 });
 
 describe("Enable Banking in Settings", () => {
+  it("guides the steps and hides advanced or destructive settings behind disclosures", async () => {
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [LINK],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+    });
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    // The panel says what to do next, and splits work into named steps.
+    await waitFor(() => expect(screen.getByText(/Next:/)).toBeTruthy());
+    expect(screen.getByRole("heading", { name: "Connect to Enable Banking" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Connect a bank" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Your banks" })).toBeTruthy();
+    expect(screen.getByText("Connection settings")).toBeTruthy();
+    expect(screen.getByText("Disconnect or remove the connection")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Sync now/ })).toBeTruthy();
+  });
+
   it("opens Settings with the bank connection above the passphrase", async () => {
     mockFetch({
       "/api/banking/status": () =>
@@ -186,6 +218,9 @@ describe("Enable Banking in Settings", () => {
       expect(screen.getByRole("heading", { name: "Connect to Enable Banking" })).toBeTruthy(),
     );
     expect(screen.getByLabelText("Enable Banking application ID")).toBeTruthy();
+    // The first setup is split into two labelled steps on one screen.
+    expect(screen.getByText("1 · The application")).toBeTruthy();
+    expect(screen.getByText("2 · Where the bank sends you back")).toBeTruthy();
     expect(screen.getByLabelText("Private key (.pem)")).toBeTruthy();
     expect(screen.getByLabelText("Callback URL")).toBeTruthy();
     expect(screen.getByLabelText(/Refresh my banks/)).toBeTruthy();

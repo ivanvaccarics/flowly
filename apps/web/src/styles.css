@@ -816,6 +816,46 @@ input[type="checkbox"] {
   color: var(--income);
 }
 
+/* --------------------------------------------------------- disclosures */
+
+/* Advanced or destructive settings stay behind a summary so a card opens on
+   what matters; the content keeps whatever surface it already had. */
+details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-low);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+}
+
+details[open] > summary {
+  margin-bottom: 0.75rem;
+}
+
+details[open] > summary::before {
+  transform: rotate(45deg);
+}
+
 /* ----------------------------------------------------------------- chips */
 
 .chip {

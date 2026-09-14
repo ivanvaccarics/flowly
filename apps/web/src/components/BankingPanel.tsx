@@ -45,7 +45,7 @@ function callbackMismatch(redirectUrl: string): string | undefined {
     return "This is not a full URL. Register a complete https address in Enable Banking.";
   }
   if (origin === window.location.origin) return undefined;
-  return `The bank will send your browser to ${origin}, but you are using ${window.location.origin} right now. If that host and port are not reachable from this browser, the connection cannot come back on its own.`;
+  return `The bank will send your browser to ${origin}, but you are using ${window.location.origin} right now. Register one of the two addresses in the Enable Banking control panel, open Flowly at the address you registered while you connect a bank, or publish Flowly on the port your callback URL uses.`;
 }
 
 export function BankingPanel({ csrf }: { csrf: string }) {
@@ -171,113 +171,128 @@ export function BankingPanel({ csrf }: { csrf: string }) {
     return users && users.length > 0 ? users[0] : undefined;
   }, [aspsps]);
 
+  const waiting = pending !== undefined || waitingLink !== undefined;
+  const unmappedCount = links
+    .flatMap((link) => link.accounts)
+    .filter((account) => account.status === "unmapped").length;
+  const guidance = !configured
+    ? "Register an Enable Banking application, then add its application id, its .pem key and the callback URL here."
+    : waiting
+      ? "Finish the authorization at your bank: the panel in the next card has the link and the fallback."
+      : links.length === 0
+        ? "Pick your bank in the next card and press Connect."
+        : unmappedCount > 0
+          ? `${unmappedCount} shared account${unmappedCount === 1 ? "" : "s"} still need a decision: create, pair or ignore.`
+          : `${links.length} bank${links.length === 1 ? "" : "s"} connected. Sync runs when the vault unlocks, and Sync now pulls the latest movements.`;
+
   return (
-    <div className="card">
-      <header>
-        <div>
-          <h2>Connect to Enable Banking</h2>
-          <span className="sub">
-            Pull your bank's accounts and transactions into this vault. The private key stays on
-            this server, encrypted inside the vault.
-          </span>
-        </div>
-        <Chip tone={configured ? "income" : "neutral"} icon="bank">
-          {configured ? (banking.status?.connection?.appName ?? "configured") : "not connected"}
-        </Chip>
-      </header>
+    <div className="stack">
+      <div className="card">
+        <header>
+          <div>
+            <h2>Connect to Enable Banking</h2>
+            <span className="sub">
+              Read the accounts and movements your bank shares into this vault. The private key
+              stays on this server, encrypted inside the vault.
+            </span>
+          </div>
+          <Chip tone={configured ? "income" : "neutral"} icon="bank">
+            {configured ? (banking.status?.connection?.appName ?? "configured") : "not connected"}
+          </Chip>
+        </header>
 
-      {banking.error ? <Banner tone="error">{banking.error}</Banner> : null}
-      {notice ? <Banner tone="ok">{notice}</Banner> : null}
+        {banking.error ? <Banner tone="error">{banking.error}</Banner> : null}
+        {notice ? <Banner tone="ok">{notice}</Banner> : null}
+        <Banner>
+          <strong>Next:</strong> {guidance}
+        </Banner>
 
-      {configured ? (
-        <ConfiguredSummary
-          fingerprint={banking.status?.connection?.keyFingerprint ?? ""}
-          appId={banking.status?.connection?.appId ?? ""}
-          environment={banking.status?.connection?.environment ?? "SANDBOX"}
-          redirectUrl={banking.status?.connection?.redirectUrl ?? ""}
-          autoSync={banking.status?.connection?.autoSync ?? true}
-          busy={banking.busy}
-          country={country}
-          psuType={psuType}
-          onCountry={setCountry}
-          onPsuType={setPsuType}
-          onSaveRedirectUrl={(url) => {
-            void banking
-              .run(() =>
+        {configured ? (
+          <ConnectionSettings
+            fingerprint={banking.status?.connection?.keyFingerprint ?? ""}
+            appId={banking.status?.connection?.appId ?? ""}
+            environment={banking.status?.connection?.environment ?? "SANDBOX"}
+            redirectUrl={banking.status?.connection?.redirectUrl ?? ""}
+            autoSync={banking.status?.connection?.autoSync ?? true}
+            busy={banking.busy}
+            country={country}
+            psuType={psuType}
+            onCountry={setCountry}
+            onPsuType={setPsuType}
+            onSaveRedirectUrl={(url) => {
+              void banking
+                .run(() =>
+                  api.saveBankingConfig(csrf, {
+                    appId: banking.status?.connection?.appId ?? "",
+                    redirectUrl: url,
+                    environment: banking.status?.connection?.environment ?? "SANDBOX",
+                    psuType,
+                    country,
+                    autoSync: banking.status?.connection?.autoSync ?? true,
+                  }),
+                )
+                .then((saved) => {
+                  if (saved) setNotice("Callback URL saved and verified against Enable Banking.");
+                });
+            }}
+            onDisconnect={() => {
+              const confirmed = window.confirm(
+                "Disconnect Enable Banking? The stored application key and every bank link are removed. Imported transactions stay in your vault.",
+              );
+              if (!confirmed) return;
+              void banking
+                .run(() => api.deleteBankingConfig(csrf))
+                .then((result) => {
+                  if (!result) return;
+                  setPending(undefined);
+                  setAspsps(undefined);
+                  setNotice(
+                    `Enable Banking disconnected${
+                      result.deletedLinks > 0 ? `, ${result.deletedLinks} bank link(s) removed` : ""
+                    }. Imported transactions were kept.`,
+                  );
+                });
+            }}
+            onToggleAutoSync={(autoSync) =>
+              void banking.run(() =>
                 api.saveBankingConfig(csrf, {
                   appId: banking.status?.connection?.appId ?? "",
-                  redirectUrl: url,
+                  redirectUrl: banking.status?.connection?.redirectUrl ?? "",
                   environment: banking.status?.connection?.environment ?? "SANDBOX",
                   psuType,
                   country,
-                  autoSync: banking.status?.connection?.autoSync ?? true,
+                  autoSync,
                 }),
               )
-              .then((saved) => {
-                if (saved) setNotice("Callback URL saved and verified against Enable Banking.");
-              });
-          }}
-          onDisconnect={() => {
-            const confirmed = window.confirm(
-              "Disconnect Enable Banking? The stored application key and every bank link are removed. Imported transactions stay in your vault.",
-            );
-            if (!confirmed) return;
-            void banking
-              .run(() => api.deleteBankingConfig(csrf))
-              .then((result) => {
-                if (!result) return;
-                setPending(undefined);
-                setAspsps(undefined);
-                setNotice(
-                  `Enable Banking disconnected${
-                    result.deletedLinks > 0 ? `, ${result.deletedLinks} bank link(s) removed` : ""
-                  }. Imported transactions were kept.`,
-                );
-              });
-          }}
-          onToggleAutoSync={(autoSync) =>
-            void banking.run(() =>
-              api.saveBankingConfig(csrf, {
-                appId: banking.status?.connection?.appId ?? "",
-                redirectUrl: banking.status?.connection?.redirectUrl ?? "",
-                environment: banking.status?.connection?.environment ?? "SANDBOX",
-                psuType,
-                country,
-                autoSync,
-              }),
-            )
-          }
-        />
-      ) : (
-        <ConnectionForm
-          busy={banking.busy}
-          onSave={(input) =>
-            void banking
-              .run(() => api.saveBankingConfig(csrf, input))
-              .then((saved) => {
-                if (saved)
-                  setNotice(`Connected to ${saved.connection.appName ?? saved.connection.appId}.`);
-              })
-          }
-        />
-      )}
-
-      {configured && (pending || waitingLink) ? (
-        <PendingAuthorization
-          pending={pending}
-          link={waitingLink}
-          busy={banking.busy}
-          onComplete={completeFromRedirect}
-          onCancel={() => setPending(undefined)}
-        />
-      ) : null}
+            }
+          />
+        ) : (
+          <ConnectionForm
+            busy={banking.busy}
+            onSave={(input) =>
+              void banking
+                .run(() => api.saveBankingConfig(csrf, input))
+                .then((saved) => {
+                  if (saved)
+                    setNotice(
+                      `Connected to ${saved.connection.appName ?? saved.connection.appId}.`,
+                    );
+                })
+            }
+          />
+        )}
+      </div>
 
       {configured ? (
         <div className="card">
           <header>
             <div>
-              <h3>Your banks</h3>
-              <span className="sub">Every connected bank refreshes on login, and on demand.</span>
+              <h3>Connect a bank</h3>
+              <span className="sub">
+                {waiting
+                  ? "Finish the authorization, then decide how the shared accounts map."
+                  : "Choose the country and the account type, then find your bank by name or BIC."}
+              </span>
             </div>
             <button
               type="button"
@@ -290,9 +305,19 @@ export function BankingPanel({ csrf }: { csrf: string }) {
             </button>
           </header>
 
+          {waiting ? (
+            <PendingAuthorization
+              pending={pending}
+              link={waitingLink}
+              busy={banking.busy}
+              onComplete={completeFromRedirect}
+              onCancel={() => setPending(undefined)}
+            />
+          ) : null}
+
           <div className="fieldset framed">
             <label>
-              Country
+              Bank country
               <input
                 value={country}
                 maxLength={2}
@@ -323,7 +348,12 @@ export function BankingPanel({ csrf }: { csrf: string }) {
                 onConnect={(aspsp) => void connect(aspsp)}
               />
             )
-          ) : null}
+          ) : (
+            <Empty>
+              Press <strong>Load available banks</strong> to see the banks Enable Banking supports
+              in this country.
+            </Empty>
+          )}
           {sandboxHint ? (
             <p className="muted">
               Sandbox login: <span className="mono">{sandboxHint.username}</span> /{" "}
@@ -340,35 +370,50 @@ export function BankingPanel({ csrf }: { csrf: string }) {
       ) : null}
 
       {links.length > 0 ? (
-        <div className="stack">
-          {links.map((link) => (
-            <LinkCard
-              key={link.id}
-              link={link}
-              accounts={accounts}
-              busy={banking.busy}
-              onSync={() =>
-                void banking
-                  .run(() => api.syncBanking(csrf, link.id))
-                  .then((result) => {
-                    if (result) {
-                      setNotice(
-                        `Sync finished: ${result.report.created} new, ${result.report.updated} updated.`,
-                      );
-                      void loadAccounts();
-                    }
-                  })
-              }
-              onUnlink={() =>
-                void banking
-                  .run(() => api.unlinkBank(csrf, link.id))
-                  .then((result) => {
-                    if (result) setNotice("Bank unlinked. Imported transactions were kept.");
-                  })
-              }
-              onMap={(uid, body) => mapAccount(link, uid, body).then(() => undefined)}
-            />
-          ))}
+        <div className="card">
+          <header>
+            <div>
+              <h3>Your banks</h3>
+              <span className="sub">
+                Linked banks refresh when the vault unlocks, and on demand with Sync now.
+              </span>
+            </div>
+            <Chip tone="neutral">{links.length} linked</Chip>
+          </header>
+          <div className="stack">
+            {links.map((link) => (
+              <LinkCard
+                key={link.id}
+                link={link}
+                accounts={accounts}
+                busy={banking.busy}
+                onSync={() =>
+                  void banking
+                    .run(() => api.syncBanking(csrf, link.id))
+                    .then((result) => {
+                      if (result) {
+                        setNotice(
+                          `Sync finished: ${result.report.created} new, ${result.report.updated} updated.`,
+                        );
+                        void loadAccounts();
+                      }
+                    })
+                }
+                onUnlink={() => {
+                  const confirmed = window.confirm(
+                    `Unlink ${link.aspspName}? Flowly stops refreshing it, the shared accounts and raw responses are removed from the vault, and every imported transaction stays.`,
+                  );
+                  if (!confirmed) return;
+                  void banking
+                    .run(() => api.unlinkBank(csrf, link.id))
+                    .then((result) => {
+                      if (result) setNotice("Bank unlinked. Imported transactions were kept.");
+                    });
+                }}
+                onMap={(uid, body) => mapAccount(link, uid, body).then(() => undefined)}
+              />
+            ))}
+          </div>
         </div>
       ) : null}
     </div>
@@ -545,7 +590,13 @@ function AspspPicker({
   );
 }
 
-function ConfiguredSummary({
+/**
+ * The application half of the panel once it exists: what is stored, and the one
+ * setting that breaks the flow when it is wrong — the callback URL. The rest of
+ * the settings and the destructive action stay behind disclosures so the card
+ * opens on what matters.
+ */
+function ConnectionSettings({
   fingerprint,
   appId,
   environment,
@@ -576,73 +627,121 @@ function ConfiguredSummary({
 }) {
   const [draft, setDraft] = useState(redirectUrl);
   const mismatch = callbackMismatch(draft);
+  const addressInUse = currentCallbackUrl();
 
   return (
-    <div className="fieldset framed">
-      <p className="muted">
-        Application <span className="mono">{appId}</span> · {environment} · key{" "}
-        <span className="mono">{fingerprint.slice(0, 12)}…</span>
-      </p>
-      <label>
-        Callback URL
-        <input value={draft} onChange={(event) => setDraft(event.target.value)} />
-      </label>
-      {mismatch ? <Banner tone="error">{mismatch}</Banner> : null}
-      <p className="muted">
-        This exact address has to be one of the application's redirect URLs in the Enable Banking
-        control panel. Changing it here re-verifies it with Enable Banking and keeps the private
-        key.
-      </p>
-      <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
-        <button
-          type="button"
-          className="btn small"
-          disabled={busy || draft.trim() === "" || draft === redirectUrl}
-          onClick={() => onSaveRedirectUrl(draft.trim())}
-        >
-          <Icon name="check" size={14} />
-          Save callback URL
-        </button>
-        <button
-          type="button"
-          className="btn small"
-          disabled={busy || draft === currentCallbackUrl()}
-          onClick={() => setDraft(currentCallbackUrl())}
-        >
-          Use the address I am using now
-        </button>
+    <div className="stack">
+      <dl className="facts" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        <div>
+          <dt>Application</dt>
+          <dd className="mono" title={appId}>
+            {appId.slice(0, 18)}…
+          </dd>
+        </div>
+        <div>
+          <dt>Environment</dt>
+          <dd>{environment}</dd>
+        </div>
+        <div>
+          <dt>Key fingerprint</dt>
+          <dd className="mono">{fingerprint.slice(0, 12)}…</dd>
+        </div>
+        <div>
+          <dt>Callback URL</dt>
+          <dd className="mono" title={redirectUrl}>
+            {redirectUrl.replace(/^https?:\/\//, "")}
+          </dd>
+        </div>
+      </dl>
+
+      {mismatch ? (
+        <Banner tone="error">
+          {mismatch} Register one of the two addresses in the Enable Banking control panel, or
+          publish Flowly on the port your callback URL uses.
+        </Banner>
+      ) : (
+        <Banner tone="ok">
+          The callback URL matches the address you are using, so the bank can send you back here.
+        </Banner>
+      )}
+
+      <div className="fieldset framed">
+        <label>
+          Callback URL
+          <input value={draft} onChange={(event) => setDraft(event.target.value)} />
+        </label>
+        <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
+          <button
+            type="button"
+            className="btn small"
+            disabled={busy || draft.trim() === "" || draft === redirectUrl}
+            onClick={() => onSaveRedirectUrl(draft.trim())}
+          >
+            <Icon name="check" size={14} />
+            Save callback URL
+          </button>
+          <button
+            type="button"
+            className="btn small"
+            disabled={busy || draft === addressInUse}
+            onClick={() => setDraft(addressInUse)}
+          >
+            Use the address I am using now
+          </button>
+        </div>
+        <p className="muted">
+          The bank sends your browser here after you approve the consent, so this must be one of the
+          application's redirect URLs <em>and</em> an address this browser can open — including the
+          port. Saving re-verifies it with Enable Banking and keeps the private key.
+        </p>
       </div>
-      <label>
-        Default country
-        <input
-          value={country}
-          maxLength={2}
-          onChange={(event) => onCountry(event.target.value.toUpperCase())}
-        />
-      </label>
-      <label>
-        PSU type
-        <select
-          value={psuType}
-          onChange={(event) => onPsuType(event.target.value as "personal" | "business")}
-        >
-          <option value="personal">personal</option>
-          <option value="business">business</option>
-        </select>
-      </label>
-      <label className="checkline">
-        <input
-          type="checkbox"
-          checked={autoSync}
-          disabled={busy}
-          onChange={(event) => onToggleAutoSync(event.target.checked)}
-        />
-        Refresh my banks every time I unlock the vault
-      </label>
-      <button type="button" className="btn danger" disabled={busy} onClick={onDisconnect}>
-        <Icon name="trash" size={16} />
-        Disconnect Enable Banking
-      </button>
+
+      <details>
+        <summary>Connection settings</summary>
+        <div className="fieldset framed">
+          <label>
+            Default country
+            <input
+              value={country}
+              maxLength={2}
+              onChange={(event) => onCountry(event.target.value.toUpperCase())}
+            />
+          </label>
+          <label>
+            PSU type
+            <select
+              value={psuType}
+              onChange={(event) => onPsuType(event.target.value as "personal" | "business")}
+            >
+              <option value="personal">personal</option>
+              <option value="business">business</option>
+            </select>
+          </label>
+          <label className="checkline">
+            <input
+              type="checkbox"
+              checked={autoSync}
+              disabled={busy}
+              onChange={(event) => onToggleAutoSync(event.target.checked)}
+            />
+            Refresh my banks every time I unlock the vault
+          </label>
+        </div>
+      </details>
+
+      <details>
+        <summary>Disconnect or remove the connection</summary>
+        <div className="fieldset framed">
+          <p className="muted">
+            Disconnecting removes the stored application key and every bank link, and asks the bank
+            to revoke the consent. Transactions already imported stay in your vault.
+          </p>
+          <button type="button" className="btn danger" disabled={busy} onClick={onDisconnect}>
+            <Icon name="trash" size={16} />
+            Disconnect Enable Banking
+          </button>
+        </div>
+      </details>
     </div>
   );
 }
@@ -666,105 +765,138 @@ function ConnectionForm({
   const [autoSync, setAutoSync] = useState(true);
 
   return (
-    <div className="fieldset framed">
-      <label>
-        Enable Banking application ID
-        <input
-          value={appId}
-          onChange={(event) => setAppId(event.target.value)}
-          placeholder="11111111-1111-4111-8111-111111111111"
-          autoComplete="off"
-        />
-      </label>
-      <div className="dropzone">
-        <Icon name="lock" size={22} />
-        <span className="sub">
-          {keyName === "" ? "Choose the .pem private key you downloaded" : keyName}
-        </span>
+    <div className="stack">
+      <p className="muted">
+        Flowly needs an application registered in the Enable Banking control panel: its application
+        id, the <span className="mono">.pem</span> key you download once, and a callback URL
+        registered among that application's redirect URLs. Everything below stays in this browser
+        until you press <strong>Verify and save</strong>.
+      </p>
+
+      <div className="option-grid">
+        <section className="option-card">
+          <h3>
+            <Icon name="bank" size={18} />1 · The application
+          </h3>
+          <label>
+            Enable Banking application ID
+            <input
+              value={appId}
+              onChange={(event) => setAppId(event.target.value)}
+              placeholder="11111111-1111-4111-8111-111111111111"
+              autoComplete="off"
+            />
+          </label>
+          <div className="dropzone">
+            <Icon name="lock" size={22} />
+            <span className="sub">
+              {keyName === "" ? "Choose the .pem private key you downloaded" : keyName}
+            </span>
+            <label>
+              Private key (.pem)
+              <input
+                type="file"
+                accept=".pem,application/x-pem-file,text/plain"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  setKeyName(file.name);
+                  void file.text().then(setPrivateKeyPem);
+                }}
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="option-card">
+          <h3>
+            <Icon name="link" size={18} />2 · Where the bank sends you back
+          </h3>
+          <label>
+            Callback URL
+            <input value={redirectUrl} onChange={(event) => setRedirectUrl(event.target.value)} />
+          </label>
+          {callbackMismatch(redirectUrl) ? (
+            <>
+              <Banner tone="error">{callbackMismatch(redirectUrl)}</Banner>
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => setRedirectUrl(currentCallbackUrl())}
+              >
+                Use the address I am using now
+              </button>
+            </>
+          ) : (
+            <Banner tone="ok">
+              This matches the address you are using, so the bank can send you back here.
+            </Banner>
+          )}
+          <p className="muted">
+            Register this exact URL among the application's redirect URLs in the Enable Banking
+            control panel, port included. If Flowly is published on 8443, the URL ends in
+            <span className="mono"> :8443</span>.
+          </p>
+        </section>
+      </div>
+
+      <fieldset className="fieldset framed">
+        <legend>Environment and defaults</legend>
         <label>
-          Private key (.pem)
+          Environment
+          <select
+            value={environment}
+            onChange={(event) => setEnvironment(event.target.value as "SANDBOX" | "PRODUCTION")}
+          >
+            <option value="SANDBOX">SANDBOX</option>
+            <option value="PRODUCTION">PRODUCTION</option>
+          </select>
+        </label>
+        <label>
+          Account type
+          <select
+            value={psuType}
+            onChange={(event) => setPsuType(event.target.value as "personal" | "business")}
+          >
+            <option value="personal">personal</option>
+            <option value="business">business</option>
+          </select>
+        </label>
+        <label>
+          Default country
           <input
-            type="file"
-            accept=".pem,application/x-pem-file,text/plain"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              setKeyName(file.name);
-              void file.text().then(setPrivateKeyPem);
-            }}
+            value={country}
+            maxLength={2}
+            onChange={(event) => setCountry(event.target.value.toUpperCase())}
           />
         </label>
+        <label className="checkline">
+          <input
+            type="checkbox"
+            checked={autoSync}
+            onChange={(event) => setAutoSync(event.target.checked)}
+          />
+          Refresh my banks every time I unlock the vault
+        </label>
+      </fieldset>
+
+      <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
+        <button
+          type="button"
+          className="btn primary"
+          disabled={busy || appId.trim() === "" || privateKeyPem === "" || redirectUrl === ""}
+          onClick={() =>
+            onSave({ appId, privateKeyPem, redirectUrl, environment, psuType, country, autoSync })
+          }
+        >
+          <Icon name="check" size={16} />
+          Verify and save
+        </button>
       </div>
-      <label>
-        Callback URL
-        <input value={redirectUrl} onChange={(event) => setRedirectUrl(event.target.value)} />
-      </label>
-      {callbackMismatch(redirectUrl) ? (
-        <Banner tone="error">
-          {callbackMismatch(redirectUrl)}{" "}
-          <button
-            type="button"
-            className="btn small"
-            onClick={() => setRedirectUrl(currentCallbackUrl())}
-          >
-            Use the address I am using now
-          </button>
-        </Banner>
-      ) : null}
       <p className="muted">
-        Register this exact URL among the application's redirect URLs in the Enable Banking control
-        panel: the bank only redirects to a registered address.
-      </p>
-      <label>
-        Environment
-        <select
-          value={environment}
-          onChange={(event) => setEnvironment(event.target.value as "SANDBOX" | "PRODUCTION")}
-        >
-          <option value="SANDBOX">SANDBOX</option>
-          <option value="PRODUCTION">PRODUCTION</option>
-        </select>
-      </label>
-      <label>
-        Account type
-        <select
-          value={psuType}
-          onChange={(event) => setPsuType(event.target.value as "personal" | "business")}
-        >
-          <option value="personal">personal</option>
-          <option value="business">business</option>
-        </select>
-      </label>
-      <label>
-        Default country
-        <input
-          value={country}
-          maxLength={2}
-          onChange={(event) => setCountry(event.target.value.toUpperCase())}
-        />
-      </label>
-      <label className="checkline">
-        <input
-          type="checkbox"
-          checked={autoSync}
-          onChange={(event) => setAutoSync(event.target.checked)}
-        />
-        Refresh my banks every time I unlock the vault
-      </label>
-      <button
-        type="button"
-        className="btn primary"
-        disabled={busy || appId.trim() === "" || privateKeyPem === "" || redirectUrl === ""}
-        onClick={() =>
-          onSave({ appId, privateKeyPem, redirectUrl, environment, psuType, country, autoSync })
-        }
-      >
-        <Icon name="check" size={16} />
-        Verify and save
-      </button>
-      <p className="muted">
-        The key is verified against Enable Banking and then stored only inside this encrypted vault.
-        It is never written to a plain file and never returned to the browser.
+        Flowly checks the key against Enable Banking and refuses a callback URL the application has
+        not registered. The key then lives only inside this encrypted vault: never on a plain file,
+        never in the browser.
       </p>
     </div>
   );
@@ -807,8 +939,12 @@ function LinkCard({
         <div className="stack">
           <strong>{link.aspspName}</strong>
           <span className="sub">
-            {link.aspspCountry} · {STATUS_LABEL[link.status]}
+            {link.aspspCountry} · {link.accounts.length}{" "}
+            {link.accounts.length === 1 ? "shared account" : "shared accounts"}
             {link.lastSyncedAt ? ` · last sync ${formatStamp(link.lastSyncedAt)}` : ""}
+            {link.accessValidUntil
+              ? ` · consent until ${new Date(link.accessValidUntil).toLocaleDateString()}`
+              : ""}
           </span>
         </div>
         <div className="cell-actions">

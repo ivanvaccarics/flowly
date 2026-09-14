@@ -165,7 +165,15 @@ has to be one the browser can actually open. Two rules make this work:
 Settings compares the saved callback URL with the address in your browser and
 warns when they differ. **Use the address I am using now** fills in the right
 one, and **Save callback URL** re-verifies it with Enable Banking without
-re-uploading the private key. You can check the route from a shell with:
+re-uploading the private key. Use one address for the whole flow: open Flowly at
+the address you registered before you press **Connect**, otherwise the bank
+returns the browser to an origin where you are not signed in and you have to
+unlock there to finish.
+
+The section itself is laid out as steps — the application, the bank, the linked
+banks — with a **Next** line on the first card naming what is left to do. The
+settings you rarely touch and the disconnect action sit behind disclosures.
+You can check the route from a shell with:
 
 ```bash
 curl -sI "https://<the address you use>/enablebanking/auth_callback" | head -1
