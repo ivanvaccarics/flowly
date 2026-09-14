@@ -17,6 +17,11 @@
   - Confirm that temporary files, credentials, secrets, and unrelated changes are not included.
 - Include related code, tests, and documentation in the same commit.
 - Do not amend, squash, reorder, or remove existing commits unless explicitly requested.
+- Never paste an identifier copied from a real provider response or control panel
+  (Enable Banking application, authorization and session ids, account uids,
+  IBANs from a live account) into fixtures, tests, placeholders or documentation.
+  Use obviously synthetic values, like the `TEST_*` constants in
+  `apps/server/tests/helpers/banking.ts`.
 
 ## Documentation Maintenance
 

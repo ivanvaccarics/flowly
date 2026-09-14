@@ -18,7 +18,13 @@ import type {
   EbTransaction,
 } from "../../src/banking/enable-banking-types.js";
 
+/**
+ * Synthetic provider identifiers. Never paste values copied from a real Enable
+ * Banking response or control panel: an id is not a credential, but it points
+ * at a real consent attempt and has no business travelling in a public repo.
+ */
 export const TEST_APP_ID = "11111111-1111-4111-8111-111111111111";
+export const TEST_AUTHORIZATION_ID = "22222222-2222-4222-8222-222222222222";
 export const TEST_REDIRECT_URL = "https://flowly.test/enablebanking/auth_callback";
 
 let cachedKey: string | undefined;
@@ -190,7 +196,7 @@ export class FakeBank {
     this.startAuthorizationBody = body as unknown as Record<string, unknown>;
     return {
       url: `https://auth.enablebanking.com/ais/start?sessionid=${body.state.slice(0, 8)}`,
-      authorization_id: "22222222-2222-4222-8222-222222222222",
+      authorization_id: TEST_AUTHORIZATION_ID,
       psu_id_hash: "psu-hash",
     };
   }
