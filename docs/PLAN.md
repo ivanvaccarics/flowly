@@ -1238,6 +1238,9 @@ Delivered:
 - Documentation: `docs/DEPLOYMENT.md` (install, certificates, upgrade,
   rollback, backup, hardening), `docs/security/threat-model.md`,
   `privacy.md`, `data-loss.md`, `support-matrix.md` and `verification.md`.
+  The user-facing legal documents sit at the repository root:
+  `TERMS_OF_SERVICE.md` and `PRIVACY_POLICY.md`, linked from the README and from
+  the technical privacy notice.
 - `tooling/scripts/acceptance.mjs` runs the MVP end to end against a live server
   (16 checks), and `docs/TESTING.md` turns it into a manual test plan a person
   can follow screen by screen.
