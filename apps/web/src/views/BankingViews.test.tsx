@@ -473,6 +473,110 @@ describe("Enable Banking in Settings", () => {
     ).toContain("sessionid=resume-me");
   });
 
+  it("hides the bank search while a consent waits and brings it back afterwards", async () => {
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [
+            {
+              ...LINK,
+              status: "pending",
+              accounts: [],
+              authorizationUrl: "https://auth.enablebanking.com/ais/start?sessionid=one",
+            },
+          ],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+    });
+    const pending = render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Finish the authorization at UniCredit/)).toBeTruthy(),
+    );
+    // One thing at a time: only the authorization panel, no search underneath.
+    expect(screen.queryByLabelText("Bank country")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Load available banks/ })).toBeNull();
+    pending.unmount();
+
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [LINK],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+    });
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    // Connected: the search is back, ready for the next bank.
+    await waitFor(() => expect(screen.getByLabelText("Bank country")).toBeTruthy());
+    expect(screen.getByRole("button", { name: /Load available banks/ })).toBeTruthy();
+  });
+
+  it("deletes a pending authorization instead of leaving it waiting", async () => {
+    const calls = mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [
+            {
+              ...LINK,
+              status: "pending",
+              accounts: [],
+              authorizationUrl: "https://auth.enablebanking.com/ais/start?sessionid=two",
+            },
+          ],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+      [`/api/banking/enable-banking/links/${LINK.id}`]: () =>
+        json({ deleted: true, deletedAccounts: 0, deletedPayloads: 1 }),
+    });
+    vi.stubGlobal("confirm", () => true);
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Finish the authorization at UniCredit/)).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Delete$/ }));
+    await waitFor(() => expect(screen.getByText(/Authorization request deleted/)).toBeTruthy());
+    const removal = calls.find((call) => call.method === "DELETE");
+    expect(removal?.path).toBe(`/api/banking/enable-banking/links/${LINK.id}`);
+  });
+
   it("warns when the callback URL is not the address this browser uses", async () => {
     const calls = mockFetch({
       "/api/banking/status": () =>

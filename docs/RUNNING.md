@@ -58,9 +58,11 @@ node tooling/scripts/vault-smoke.mjs verify   # asserts it starts locked
 Ready to try the whole product? [TESTING.md](./TESTING.md) has the acceptance
 command and a screen-by-screen manual test plan.
 
-Configuration is environment based; see [`.env.example`](../.env.example) for
-the full list (`FLOWLY_HOST`, `FLOWLY_PORT`, `FLOWLY_VAULT_DIR`,
-`FLOWLY_STORAGE_ENGINE`, session and auto-lock lifetimes, `FLOWLY_TRUST_PROXY`).
+Configuration is environment based, and the repository keeps exactly one file
+for it: [`.env.example`](../.env.example) at the root, which you copy to `.env`.
+That file drives both the Compose stack and a local server run; every value is
+optional, and the rest of the settings keep their defaults in
+`apps/server/src/config.ts`.
 
 ### Connecting a bank (Enable Banking)
 
@@ -100,7 +102,8 @@ to Enable Banking**; no command line and no configuration file are involved.
    automatically?** to paste the **whole address** from the browser bar
    (including `?code=…&state=…`, or the `error=…` Enable Banking appended) and
    press **Complete connection**. A refusal at the bank is recorded on the link,
-   so the panel says what happened instead of waiting forever.
+   so the panel says what happened instead of waiting forever, and **Delete**
+   removes a request that goes nowhere — nothing is imported either way.
 6. For each shared account, tell Flowly whether to
    **create** a Flowly account or **pair** an existing one. Accounts you ignore
    are never imported.
@@ -116,9 +119,7 @@ one of the application's registered redirect URLs:
 - **Over Tailscale/VPN** — register
   `https://<machine>.<tailnet>.ts.net/enablebanking/auth_callback` and make the
   stack answer on that host: publish Caddy on the tailnet interface
-  (`FLOWLY_BIND_IP=<tailscale ip>` in `deployment/self-hosted/compose.yaml`) and
-  set `FLOWLY_SITE_ADDRESS=<machine>.<tailnet>.ts.net`. Certificates come from
-  Caddy's local CA, so trust it on every device you use.
+  set `FLOWLY_BIND_IP` to the Tailscale address of the machine (Linux; on Docker Desktop the proxy cannot bind it, so use `0.0.0.0` or put Tailscale in front — see [DEPLOYMENT.md](DEPLOYMENT.md#install)) and `FLOWLY_SITE_ADDRESS=<machine>.<tailnet>.ts.net` in `.env`. Certificates come from Caddy's local CA, so trust it on every device you use.
 
 When neither is reachable from the browser, the paste box above completes the
 flow anyway: it only needs the redirect URL, not a working callback host.
@@ -163,7 +164,7 @@ has to be one the browser can actually open. Two rules make this work:
 2. It must be the address you reach Flowly on, including the port. The Compose
    stack publishes `FLOWLY_SITE_PORT` (`8443` by default), so a URL written
    without a port only works if you publish on `443` on purpose
-   (`FLOWLY_SITE_PORT=443` in `deployment/self-hosted/.env`, then `up -d` — see
+   (`FLOWLY_SITE_PORT=443` in `.env`, then `up -d` — see
    [DEPLOYMENT.md](DEPLOYMENT.md#install) for how the interface has to be set on
    Docker Desktop, and for reaching Flowly through Tailscale without publishing
    on every interface).
@@ -198,7 +199,7 @@ only the password-encrypted archive carries it.
 ## 3. Self-hosted on your own network (Docker Compose)
 
 ```bash
-docker compose -f deployment/self-hosted/compose.yaml up --build
+docker compose up --build
 ```
 
 Two containers start: the server, whose vault lives in `./data/vault` in the

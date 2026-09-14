@@ -181,7 +181,7 @@ pnpm dev                # server on 127.0.0.1:8787 + UI on 127.0.0.1:5173
 pnpm verify             # format, lint, secret scan, types and tests
 pnpm build              # compile the server and bundle the UI
 
-docker compose -f deployment/self-hosted/compose.yaml up --build
+docker compose up --build
 ```
 
 The vault is real now. `POST /api/vault/create` builds an encrypted vault,

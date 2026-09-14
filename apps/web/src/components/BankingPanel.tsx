@@ -164,6 +164,25 @@ export function BankingPanel({ csrf }: { csrf: string }) {
   }
 
   /**
+   * Drops a pending authorization. Without this the request stays pending in the
+   * vault — and the panel keeps waiting for a bank that will never come back.
+   */
+  async function deleteAuthorization(linkId: string | undefined) {
+    const confirmed = window.confirm(
+      "Delete this authorization request? Nothing was imported, and you can connect the bank again right away.",
+    );
+    if (!confirmed) return;
+    if (!linkId) {
+      setPending(undefined);
+      return;
+    }
+    const result = await banking.run(() => api.unlinkBank(csrf, linkId));
+    if (!result) return;
+    setPending(undefined);
+    setNotice("Authorization request deleted. Nothing was imported.");
+  }
+
+  /**
    * The bank page may finish in another tab, or the user may come back to this
    * one: watch the pending link so the panel advances without a pasted URL.
    */
@@ -315,15 +334,6 @@ export function BankingPanel({ csrf }: { csrf: string }) {
                   : "Choose the country and the account type, then find your bank by name or BIC."}
               </span>
             </div>
-            <button
-              type="button"
-              className="btn small"
-              disabled={banking.busy}
-              onClick={() => void loadBanks()}
-            >
-              <Icon name="bank" size={14} />
-              Load available banks
-            </button>
           </header>
 
           {waiting ? (
@@ -332,61 +342,72 @@ export function BankingPanel({ csrf }: { csrf: string }) {
               link={waitingLink}
               busy={banking.busy}
               onComplete={completeFromRedirect}
-              onCancel={() => setPending(undefined)}
+              onDelete={() => void deleteAuthorization(pending?.linkId ?? waitingLink?.id)}
             />
-          ) : null}
-
-          <div className="fieldset framed">
-            <label>
-              Bank country
-              <input
-                value={country}
-                maxLength={2}
-                onChange={(event) => setCountry(event.target.value.toUpperCase())}
-                placeholder="IT"
-              />
-            </label>
-            <label>
-              Account type
-              <select
-                value={psuType}
-                onChange={(event) => setPsuType(event.target.value as "personal" | "business")}
-              >
-                <option value="personal">personal</option>
-                <option value="business">business</option>
-              </select>
-            </label>
-          </div>
-
-          {aspsps ? (
-            aspsps.length === 0 ? (
-              <Empty>No bank in this country offers account information.</Empty>
-            ) : (
-              <AspspPicker
-                key={`${country}-${psuType}-${aspsps.length}`}
-                banks={aspsps}
-                busy={banking.busy}
-                onConnect={(aspsp) => void connect(aspsp)}
-              />
-            )
           ) : (
-            <Empty>
-              Press <strong>Load available banks</strong> to see the banks Enable Banking supports
-              in this country.
-            </Empty>
-          )}
-          {sandboxHint ? (
-            <p className="muted">
-              Sandbox login: <span className="mono">{sandboxHint.username}</span> /{" "}
-              <span className="mono">{sandboxHint.password}</span>
-              {sandboxHint.otp ? (
-                <>
-                  {" "}
-                  · OTP <span className="mono">{sandboxHint.otp}</span>
-                </>
+            <>
+              <div className="fieldset framed">
+                <label>
+                  Bank country
+                  <input
+                    value={country}
+                    maxLength={2}
+                    onChange={(event) => setCountry(event.target.value.toUpperCase())}
+                    placeholder="IT"
+                  />
+                </label>
+                <label>
+                  Account type
+                  <select
+                    value={psuType}
+                    onChange={(event) => setPsuType(event.target.value as "personal" | "business")}
+                  >
+                    <option value="personal">personal</option>
+                    <option value="business">business</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="btn small"
+                  disabled={banking.busy}
+                  onClick={() => void loadBanks()}
+                >
+                  <Icon name="bank" size={14} />
+                  Load available banks
+                </button>
+              </div>
+
+              {aspsps ? (
+                aspsps.length === 0 ? (
+                  <Empty>No bank in this country offers account information.</Empty>
+                ) : (
+                  <AspspPicker
+                    key={`${country}-${psuType}-${aspsps.length}`}
+                    banks={aspsps}
+                    busy={banking.busy}
+                    onConnect={(aspsp) => void connect(aspsp)}
+                  />
+                )
+              ) : (
+                <Empty>
+                  Press <strong>Load available banks</strong> to see the banks Enable Banking
+                  supports in this country.
+                </Empty>
+              )}
+              {sandboxHint ? (
+                <p className="muted">
+                  Sandbox login: <span className="mono">{sandboxHint.username}</span> /{" "}
+                  <span className="mono">{sandboxHint.password}</span>
+                  {sandboxHint.otp ? (
+                    <>
+                      {" "}
+                      · OTP <span className="mono">{sandboxHint.otp}</span>
+                    </>
+                  ) : null}
+                </p>
               ) : null}
-            </p>
-          ) : null}
+            </>
+          )}
         </div>
       ) : null}
 
@@ -1109,13 +1130,13 @@ function PendingAuthorization({
   link,
   busy,
   onComplete,
-  onCancel,
+  onDelete,
 }: {
   pending: StartedAuthorization | undefined;
   link: BankLinkSummary | undefined;
   busy: boolean;
   onComplete: (raw: string) => Promise<boolean>;
-  onCancel: () => void;
+  onDelete: () => void;
 }) {
   const [redirect, setRedirect] = useState("");
   const [working, setWorking] = useState(false);
@@ -1137,7 +1158,7 @@ function PendingAuthorization({
         <div className="stack">
           <strong>Finish the authorization at {bankName}</strong>
           <span className="sub">
-            Authorize the consent at your bank, then come back to this page.
+            Approve the consent in the bank window: Flowly finishes on its own.
           </span>
         </div>
         <Chip tone="vault">waiting</Chip>
@@ -1155,11 +1176,10 @@ function PendingAuthorization({
             Open it in this tab instead
           </a>
         ) : null}
-        {pending ? (
-          <button type="button" className="btn" disabled={busy} onClick={onCancel}>
-            Cancel
-          </button>
-        ) : null}
+        <button type="button" className="btn danger" disabled={busy} onClick={onDelete}>
+          <Icon name="trash" size={14} />
+          Delete
+        </button>
       </div>
 
       <p className="muted">

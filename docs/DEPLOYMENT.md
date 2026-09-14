@@ -22,17 +22,15 @@ a multi-architecture image with SBOM and provenance attestations.
 ```bash
 git clone <your fork or checkout>
 cd flowly
-cp .env.example .env                              # local server defaults, optional
-cp deployment/self-hosted/.env.example deployment/self-hosted/.env
-docker compose -f deployment/self-hosted/compose.yaml up --build -d
+cp .env.example .env        # optional: where Flowly answers, and how it is tuned
+docker compose up --build -d
 ```
 
-Compose substitutes its variables from the `.env` **next to the compose file**.
-The repository root `.env` lists the variables the server itself reads from its
-environment and is not consulted by this stack, so editing it and restarting
-changes nothing — `docker compose config` showing the defaults is the symptom.
-The alternative to the folder file is an explicit
-`docker compose --env-file .env -f deployment/self-hosted/compose.yaml up -d`.
+One `.env`, in the repository root, configures the stack. `compose.yaml` at the
+root only includes the stack definition in `deployment/self-hosted/`, which keeps
+the Compose project directory here — and the project directory is where Compose
+looks for `.env`. Run `docker compose config | grep -E "host_ip|published"` after
+editing it to see what Compose resolved.
 
 Two containers start:
 
@@ -44,7 +42,7 @@ Two containers start:
 
 Only the proxy publishes ports, and only on the loopback interface. To reach the
 server from another device on your private LAN or VPN, set the interface and the
-port in `deployment/self-hosted/.env` — for example:
+port in `.env` — for example:
 
 ```bash
 FLOWLY_BIND_IP=192.168.1.20        # Linux: the address of this machine
@@ -86,9 +84,9 @@ Changing the port takes one command — the published mapping belongs to the
 `proxy` service, so Compose recreates that container when the value changes:
 
 ```bash
-# after editing FLOWLY_SITE_PORT in deployment/self-hosted/.env
-docker compose -f deployment/self-hosted/compose.yaml up -d
-docker compose -f deployment/self-hosted/compose.yaml ps   # check the mapping
+# after editing FLOWLY_SITE_PORT in .env
+docker compose up -d
+docker compose ps   # check the mapping
 ```
 
 There is no extra flag to add: `up -d` replaces a container whose configuration
@@ -96,8 +94,8 @@ changed. If the mapping still shows the old port, recreate the containers
 explicitly — the vault is a bind mount in `data/`, so this keeps it:
 
 ```bash
-docker compose -f deployment/self-hosted/compose.yaml down
-docker compose -f deployment/self-hosted/compose.yaml up -d
+docker compose down
+docker compose up -d
 ```
 
 Never add `-v` to `down` unless you want the named volumes gone as well.
@@ -107,7 +105,7 @@ Check it:
 ```bash
 curl -k https://127.0.0.1:8443/api/health
 curl -k https://127.0.0.1:8443/            # the web client
-docker compose -f deployment/self-hosted/compose.yaml ps
+docker compose ps
 ```
 
 ## Certificates
@@ -116,8 +114,7 @@ Caddy issues certificates from its own local CA. Browsers will warn until you
 trust that CA — this is the "guided local certificate enrollment" step:
 
 ```bash
-docker compose -f deployment/self-hosted/compose.yaml \
-  exec proxy cat /data/caddy/pki/authorities/local/root.crt > flowly-local-ca.crt
+docker compose exec proxy cat /data/caddy/pki/authorities/local/root.crt > flowly-local-ca.crt
 
 # macOS
 sudo security add-trusted-cert -d -r trustRoot \
@@ -182,9 +179,9 @@ which is the supported path.
 ## Upgrade
 
 ```bash
-docker compose -f deployment/self-hosted/compose.yaml down
+docker compose down
 git pull                     # or check out the new tag
-docker compose -f deployment/self-hosted/compose.yaml up --build -d
+docker compose up --build -d
 ```
 
 On startup the server applies pending migrations. Every migration runs in a

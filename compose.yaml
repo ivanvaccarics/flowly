@@ -1,0 +1,9 @@
+# Run the self-hosted stack from here:
+#
+#   docker compose up -d
+#
+# The real definitions live in deployment/self-hosted/compose.yaml. Including
+# them keeps this directory the Compose project, and that is what makes the
+# single `.env` next to this file the one Compose substitutes into the stack.
+include:
+  - path: deployment/self-hosted/compose.yaml
