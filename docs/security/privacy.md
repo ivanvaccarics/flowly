@@ -1,8 +1,8 @@
 # Privacy notice (Server MVP)
 
 This notice is the technical description for whoever runs a server. The
-user-facing policy is [PRIVACY_POLICY.md](../../PRIVACY_POLICY.md), and the terms
-that go with it are [TERMS_OF_SERVICE.md](../../TERMS_OF_SERVICE.md).
+user-facing policy is [PRIVACY_POLICY.md](../PRIVACY_POLICY.md), and the terms
+that go with it are [TERMS_OF_SERVICE.md](../TERMS_OF_SERVICE.md).
 
 Flowly is a self-hosted application. The server runs on hardware you control,
 and there is no Flowly-operated service in the loop.
@@ -28,7 +28,7 @@ account number or IBAN is added by Flowly. Account, balance and transaction data
 for the accounts you approve comes back and stays in the encrypted vault.
 Unlinking a bank removes the consent session and the raw payloads; disconnecting
 removes the application credentials too. The full picture is in
-[PRIVACY_POLICY.md](../../PRIVACY_POLICY.md).
+[PRIVACY_POLICY.md](../PRIVACY_POLICY.md).
 
 ## What is stored
 

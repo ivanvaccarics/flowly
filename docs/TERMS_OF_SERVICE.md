@@ -11,7 +11,7 @@ software you host yourself, with no Flowly account, no Flowly cloud and no fee.
 Flowly is free, open-source, self-hosted personal finance software created and
 distributed by **Ivan Vaccari** ("the maintainer", "we"). The source code lives
 at <https://github.com/ivanvaccarics/flowly> and is released under the Apache
-License 2.0 — see [LICENSE](LICENSE).
+License 2.0 — see [LICENSE](../LICENSE).
 
 There is no Flowly-operated service behind the app: no registration, no
 subscription, no server that we run for you or on your behalf, and no place
@@ -44,7 +44,7 @@ is not responsible for, and which third parties are involved.
   only you know. There is no recovery path, no key escrow and no reset: losing
   the passphrase means losing the data. Complete portable archives are the
   supported backup, and only you can make them. See
-  [docs/security/data-loss.md](docs/security/data-loss.md).
+  [security/data-loss.md](security/data-loss.md).
 - **The accounts you connect.** You may connect only bank accounts that you own
   or that you are lawfully entitled to access, and only where your bank and the
   applicable law allow it.

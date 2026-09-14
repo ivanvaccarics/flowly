@@ -7,8 +7,8 @@ decides almost everything below: your financial data stays on hardware you
 control, and the maintainer never receives it. This policy explains what Flowly
 stores, what leaves your server when you connect a bank, and who is responsible
 for what. The technical detail behind it lives in
-[docs/security/privacy.md](docs/security/privacy.md) and
-[docs/security/threat-model.md](docs/security/threat-model.md).
+[security/privacy.md](security/privacy.md) and
+[security/threat-model.md](security/threat-model.md).
 
 ## 1. Who is responsible for your data
 

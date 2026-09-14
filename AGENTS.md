@@ -29,6 +29,7 @@ no completed change is allowed to leave the documentation behind.
 | `docs/PLAN.md` | Architecture, security requirements, data model and the phased delivery plan | Work completes, decisions change, scope or priorities shift, or tasks, risks and next steps change |
 | `docs/RUNNING.md` | How to run, self-host and work on the app | Commands, prerequisites, configuration, deployment steps, mobile/desktop instructions or troubleshooting change |
 | `docs/adr/` | One decision record per binding technical choice | A decision is made or reversed; add a new numbered ADR instead of rewriting an accepted one |
+| `docs/TERMS_OF_SERVICE.md`, `docs/PRIVACY_POLICY.md` | The legal documents referenced by the Enable Banking application registration | What the software stores, who can reach it, or which third parties are involved changes |
 | `README.md` | Product overview and entry point, linking into `docs/` | Features, setup, usage, architecture, dependencies or milestones change |
 
 Rules:

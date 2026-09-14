@@ -231,10 +231,10 @@ interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
   warning, support matrix, verification status, SBOM and license inventory.
 - [contracts/README.md](contracts/README.md) — the canonical schemas, fixtures
   and golden vectors that both clients must satisfy.
-- [TERMS_OF_SERVICE.md](TERMS_OF_SERVICE.md) — the terms for running a Flowly
-  instance and for connecting it to a bank.
-- [PRIVACY_POLICY.md](PRIVACY_POLICY.md) — what Flowly stores, what leaves your
-  server, and who is responsible for what.
+- [docs/TERMS_OF_SERVICE.md](docs/TERMS_OF_SERVICE.md) — the terms for running a
+  Flowly instance and for connecting it to a bank.
+- [docs/PRIVACY_POLICY.md](docs/PRIVACY_POLICY.md) — what Flowly stores, what
+  leaves your server, and who is responsible for what.
 
 ---
 
