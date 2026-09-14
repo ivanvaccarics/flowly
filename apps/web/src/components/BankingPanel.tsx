@@ -4,7 +4,6 @@ import {
   api,
   type AspspSummary,
   type BankingConfigInput,
-  type BankingAccountSummary,
   type BankAccountMappingInput,
   type BankLinkSummary,
 } from "../api/client.js";
@@ -23,6 +22,31 @@ const STATUS_LABEL: Record<BankLinkSummary["status"], string> = {
   failed: "authorization failed",
   closed: "closed",
 };
+
+/** The address this browser is using right now, for callback-URL checks. */
+function currentCallbackUrl(): string {
+  return typeof window === "undefined"
+    ? ""
+    : `${window.location.origin}/enablebanking/auth_callback`;
+}
+
+/**
+ * The bank sends the browser to the registered callback URL, so a hostname or
+ * port that this browser cannot open never comes back. Comparing it with the
+ * address in use catches the usual mistake — a port-less URL registered for a
+ * stack that publishes 8443 — before the bank does.
+ */
+function callbackMismatch(redirectUrl: string): string | undefined {
+  if (typeof window === "undefined" || redirectUrl.trim() === "") return undefined;
+  let origin: string;
+  try {
+    origin = new URL(redirectUrl).origin;
+  } catch {
+    return "This is not a full URL. Register a complete https address in Enable Banking.";
+  }
+  if (origin === window.location.origin) return undefined;
+  return `The bank will send your browser to ${origin}, but you are using ${window.location.origin} right now. If that host and port are not reachable from this browser, the connection cannot come back on its own.`;
+}
 
 export function BankingPanel({ csrf }: { csrf: string }) {
   const banking = useBanking(csrf, true);
@@ -119,35 +143,6 @@ export function BankingPanel({ csrf }: { csrf: string }) {
   }
 
   /**
-   * Makes the vault's balance for a paired account equal the balance the bank
-   * reports, by moving the difference into the account's opening balance. A
-   * first sync only imports recent history, so the two figures legitimately
-   * differ until this is done once.
-   */
-  async function alignBalance(account: Account, summary: BankingAccountSummary) {
-    const bankBalance = summary.lastBalanceMinor;
-    const ledgerBalance = summary.ledgerBalanceMinor;
-    if (bankBalance === undefined || ledgerBalance === undefined) return;
-    const difference = bankBalance - ledgerBalance;
-    if (difference === 0) return;
-    const confirmed = window.confirm(
-      `Set the opening balance of ${account.name} so Flowly reports ` +
-        `${formatMoney(bankBalance, summary.lastBalanceCurrency ?? account.defaultCurrency)}, ` +
-        `the figure the bank sent? This changes the ledger by the difference only.`,
-    );
-    if (!confirmed) return;
-    const result = await banking.run(() =>
-      api.update<Account>(csrf, "accounts", account.id, {
-        ...account,
-        openingBalanceMinor: (account.openingBalanceMinor ?? 0) + difference,
-      }),
-    );
-    if (!result) return;
-    await loadAccounts();
-    setNotice(`${account.name} now matches the balance the bank reports.`);
-  }
-
-  /**
    * The bank page may finish in another tab, or the user may come back to this
    * one: watch the pending link so the panel advances without a pasted URL.
    */
@@ -206,6 +201,22 @@ export function BankingPanel({ csrf }: { csrf: string }) {
           psuType={psuType}
           onCountry={setCountry}
           onPsuType={setPsuType}
+          onSaveRedirectUrl={(url) => {
+            void banking
+              .run(() =>
+                api.saveBankingConfig(csrf, {
+                  appId: banking.status?.connection?.appId ?? "",
+                  redirectUrl: url,
+                  environment: banking.status?.connection?.environment ?? "SANDBOX",
+                  psuType,
+                  country,
+                  autoSync: banking.status?.connection?.autoSync ?? true,
+                }),
+              )
+              .then((saved) => {
+                if (saved) setNotice("Callback URL saved and verified against Enable Banking.");
+              });
+          }}
           onDisconnect={() => {
             const confirmed = window.confirm(
               "Disconnect Enable Banking? The stored application key and every bank link are removed. Imported transactions stay in your vault.",
@@ -356,7 +367,6 @@ export function BankingPanel({ csrf }: { csrf: string }) {
                   })
               }
               onMap={(uid, body) => mapAccount(link, uid, body).then(() => undefined)}
-              onAlign={(account, summary) => void alignBalance(account, summary)}
             />
           ))}
         </div>
@@ -548,6 +558,7 @@ function ConfiguredSummary({
   onPsuType,
   onDisconnect,
   onToggleAutoSync,
+  onSaveRedirectUrl,
 }: {
   fingerprint: string;
   appId: string;
@@ -561,16 +572,46 @@ function ConfiguredSummary({
   onPsuType: (value: "personal" | "business") => void;
   onDisconnect: () => void;
   onToggleAutoSync: (value: boolean) => void;
+  onSaveRedirectUrl: (url: string) => void;
 }) {
+  const [draft, setDraft] = useState(redirectUrl);
+  const mismatch = callbackMismatch(draft);
+
   return (
     <div className="fieldset framed">
       <p className="muted">
         Application <span className="mono">{appId}</span> · {environment} · key{" "}
         <span className="mono">{fingerprint.slice(0, 12)}…</span>
       </p>
+      <label>
+        Callback URL
+        <input value={draft} onChange={(event) => setDraft(event.target.value)} />
+      </label>
+      {mismatch ? <Banner tone="error">{mismatch}</Banner> : null}
       <p className="muted">
-        Callback URL <span className="mono">{redirectUrl}</span>
+        This exact address has to be one of the application's redirect URLs in the Enable Banking
+        control panel. Changing it here re-verifies it with Enable Banking and keeps the private
+        key.
       </p>
+      <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
+        <button
+          type="button"
+          className="btn small"
+          disabled={busy || draft.trim() === "" || draft === redirectUrl}
+          onClick={() => onSaveRedirectUrl(draft.trim())}
+        >
+          <Icon name="check" size={14} />
+          Save callback URL
+        </button>
+        <button
+          type="button"
+          className="btn small"
+          disabled={busy || draft === currentCallbackUrl()}
+          onClick={() => setDraft(currentCallbackUrl())}
+        >
+          Use the address I am using now
+        </button>
+      </div>
       <label>
         Default country
         <input
@@ -658,6 +699,22 @@ function ConnectionForm({
         Callback URL
         <input value={redirectUrl} onChange={(event) => setRedirectUrl(event.target.value)} />
       </label>
+      {callbackMismatch(redirectUrl) ? (
+        <Banner tone="error">
+          {callbackMismatch(redirectUrl)}{" "}
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => setRedirectUrl(currentCallbackUrl())}
+          >
+            Use the address I am using now
+          </button>
+        </Banner>
+      ) : null}
+      <p className="muted">
+        Register this exact URL among the application's redirect URLs in the Enable Banking control
+        panel: the bank only redirects to a registered address.
+      </p>
       <label>
         Environment
         <select
@@ -720,7 +777,6 @@ function LinkCard({
   onSync,
   onUnlink,
   onMap,
-  onAlign,
 }: {
   link: BankLinkSummary;
   accounts: Account[];
@@ -728,7 +784,6 @@ function LinkCard({
   onSync: () => void;
   onUnlink: () => void;
   onMap: (uid: string, body: BankAccountMappingInput) => Promise<void>;
-  onAlign: (account: Account, summary: BankingAccountSummary) => void;
 }) {
   const pending = link.accounts.filter(
     (account) => account.status === "unmapped" || account.status === "ignored",
@@ -781,71 +836,31 @@ function LinkCard({
               <tr>
                 <th scope="col">Bank account</th>
                 <th scope="col">Flowly account</th>
-                <th scope="col">Bank balance</th>
-                <th scope="col">Flowly balance</th>
+                <th scope="col">Balance</th>
                 <th scope="col">Transactions</th>
               </tr>
             </thead>
             <tbody>
-              {link.accounts.map((account) => {
-                const flowlyAccount = accounts.find(
-                  (candidate) => candidate.id === account.accountId,
-                );
-                const bankBalance =
-                  account.lastBalanceMinor !== undefined && account.lastBalanceCurrency
-                    ? formatMoney(account.lastBalanceMinor, account.lastBalanceCurrency)
-                    : "—";
-                const ledgerBalance =
-                  account.ledgerBalanceMinor !== undefined && account.ledgerBalanceCurrency
-                    ? formatMoney(account.ledgerBalanceMinor, account.ledgerBalanceCurrency)
-                    : "—";
-                const difference =
-                  account.lastBalanceMinor !== undefined && account.ledgerBalanceMinor !== undefined
-                    ? account.lastBalanceMinor - account.ledgerBalanceMinor
-                    : undefined;
-                return (
-                  <tr key={account.id}>
-                    <td>
-                      {account.providerName ?? account.maskedIban ?? account.providerAccountUid}
-                    </td>
-                    <td>{account.accountName ?? "not paired"}</td>
-                    <td>{bankBalance}</td>
-                    <td>
-                      {ledgerBalance}
-                      {difference !== undefined && difference !== 0 && flowlyAccount ? (
-                        <>
-                          <span className="sub">
-                            {" "}
-                            {difference > 0 ? "+" : "−"}
-                            {formatMoney(
-                              Math.abs(difference),
-                              account.lastBalanceCurrency ?? flowlyAccount.defaultCurrency,
-                            )}{" "}
-                            vs the bank
-                          </span>
-                          <button
-                            type="button"
-                            className="btn small"
-                            disabled={busy}
-                            onClick={() => onAlign(flowlyAccount, account)}
-                          >
-                            <Icon name="check" size={14} />
-                            Align
-                          </button>
-                        </>
-                      ) : null}
-                    </td>
-                    <td>{account.transactionCount}</td>
-                  </tr>
-                );
-              })}
+              {link.accounts.map((account) => (
+                <tr key={account.id}>
+                  <td>
+                    {account.providerName ?? account.maskedIban ?? account.providerAccountUid}
+                  </td>
+                  <td>{account.accountName ?? "not paired"}</td>
+                  <td>
+                    {account.lastBalanceMinor !== undefined && account.lastBalanceCurrency
+                      ? formatMoney(account.lastBalanceMinor, account.lastBalanceCurrency)
+                      : "—"}
+                  </td>
+                  <td>{account.transactionCount}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
           <p className="muted">
-            The bank balance is what your bank reports. The Flowly balance is the account's opening
-            balance plus the booked movements in this vault, so a first sync that imports recent
-            history only starts lower: <strong>Align</strong> folds the difference into the opening
-            balance once, and the two figures stay in step from there.
+            This is the balance your bank reports, and it is the figure Flowly shows for the account
+            everywhere: dashboard, Accounts and here. It refreshes when the vault unlocks, with{" "}
+            <strong>Sync now</strong>, and on every later sync.
           </p>
         </div>
       ) : link.status === "pending" ? (

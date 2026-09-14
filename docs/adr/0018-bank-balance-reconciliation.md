@@ -1,6 +1,6 @@
 # ADR 0018 — Show the bank balance beside the vault balance and align it once
 
-Status: Accepted (2026-09-14)
+Status: Superseded by [ADR 0019](0019-bank-balance-is-the-account-balance.md) (2026-09-15)
 
 ## Context
 

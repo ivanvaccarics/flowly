@@ -188,7 +188,8 @@ credentials Enable Banking returns.
 - **No automatic backups.** Export archives manually; Phase 12 adds scheduling.
 - **No multi-user or sharing.** One owner, one vault.
 - **No mobile app.** The phone client is the browser (Phases 8-11 add Flutter).
-- **Pending transactions** do not move balances or cash flow.
+- **Pending transactions** do not move cash flow. A bank-linked account shows
+  the balance the bank reports; the others show their booked movements.
 - **No implicit currency conversion**, anywhere.
 
 ## 5. Reporting something broken

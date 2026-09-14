@@ -314,7 +314,7 @@ describe("Enable Banking API", () => {
     expect(link?.authorizationUrl).toBe(url);
   });
 
-  it("reports the vault balance next to the balance the bank sent", async () => {
+  it("reports the balance the bank sent as the balance of the paired account", async () => {
     const bank = new FakeBank();
     const { app, client } = await harness(bank);
     const session = { app, client } as BankingHarness;
@@ -332,21 +332,22 @@ describe("Enable Banking API", () => {
 
     const synced = (await get(session, "/api/banking/status")).json<ConnectionStatus>();
     const account = synced.links[0]?.accounts[0];
-    // The bank reports 1234.56 and its only imported movement is a 3.75 debit.
+    // The bank reports 1234.56 even though the only imported movement is a
+    // 3.75 debit: the bank's figure is the account's balance.
     expect(account?.lastBalanceMinor).toBe(123456);
     expect(account?.lastBalanceCurrency).toBe("EUR");
-    expect(account?.ledgerBalanceMinor).toBe(-375);
-    expect(account?.ledgerBalanceCurrency).toBe("EUR");
+    expect(account && "ledgerBalanceMinor" in account).toBe(false);
 
-    // Aligning the opening balance is what makes the ledger match the bank.
-    const accounts = await get(session, "/api/accounts");
-    const flowlyAccount = accounts.json<{ items: Array<Record<string, unknown>> }>().items[0];
-    const updated = await put(session, `/api/accounts/${accountId}`, {
-      entity: { ...flowlyAccount, openingBalanceMinor: 123831 },
+    // ...and the rest of the platform reads that same figure.
+    const dashboard = await get(session, "/api/dashboard?from=2026-09-01&to=2026-09-30");
+    expect(
+      dashboard.json<{ balances: Array<Record<string, unknown>> }>().balances[0],
+    ).toMatchObject({
+      accountId,
+      currency: "EUR",
+      balanceMinor: 123456,
+      transactionCount: 1,
     });
-    expect(updated.statusCode).toBe(200);
-    const aligned = (await get(session, "/api/banking/status")).json<ConnectionStatus>();
-    expect(aligned.links[0]?.accounts[0]?.ledgerBalanceMinor).toBe(123456);
   });
 
   it("auto-syncs nothing when no bank is linked and reports a clear sync state", async () => {

@@ -90,22 +90,39 @@ export class AnalyticsService {
 
   /**
    * One line per account and currency; never converts between currencies.
-   * Only booked transactions move a balance: pending rows are not money yet.
+   *
+   * A bank-linked account takes the balance Enable Banking reported at the last
+   * sync, because that is what the bank says is really there. Every other
+   * account keeps the figure this vault can compute: its opening balance plus
+   * its booked movements, since pending rows are not money yet.
    */
   async balances(): Promise<AccountBalance[]> {
-    const [accounts, transactions] = await Promise.all([
+    const [accounts, transactions, bankAccounts] = await Promise.all([
       this.vault.accounts.list(),
       this.vault.transactions.list(),
+      this.vault.bankAccounts.list(),
     ]);
+
+    const reported = new Map<string, { minor: number; currency: string }>();
+    for (const link of bankAccounts) {
+      if (link.status !== "mapped" || !link.accountId) continue;
+      if (link.lastBalanceMinor === undefined || !link.lastBalanceCurrency) continue;
+      reported.set(link.accountId, {
+        minor: link.lastBalanceMinor,
+        currency: link.lastBalanceCurrency,
+      });
+    }
 
     const lines = new Map<string, AccountBalance>();
     for (const account of accounts) {
-      lines.set(`${account.id}|${account.defaultCurrency}`, {
+      const bank = reported.get(account.id);
+      const currency = bank?.currency ?? account.defaultCurrency;
+      lines.set(`${account.id}|${currency}`, {
         accountId: account.id,
         accountName: account.name,
-        currency: account.defaultCurrency,
-        balanceMinor: account.openingBalanceMinor ?? 0,
-        isDefaultCurrency: true,
+        currency,
+        balanceMinor: bank ? bank.minor : (account.openingBalanceMinor ?? 0),
+        isDefaultCurrency: currency === account.defaultCurrency,
         transactionCount: 0,
       });
     }
@@ -115,9 +132,14 @@ export class AnalyticsService {
       const account = accounts.find((candidate) => candidate.id === transaction.accountId);
       const key = `${transaction.accountId}|${transaction.currency}`;
       const existing = lines.get(key);
+      const bank = reported.get(transaction.accountId);
       if (existing) {
-        existing.balanceMinor += transaction.amountMinor;
         existing.transactionCount += 1;
+        // A reported balance is a snapshot that already includes these
+        // movements, so it is never summed again on top of them.
+        if (bank?.currency !== transaction.currency) {
+          existing.balanceMinor += transaction.amountMinor;
+        }
         continue;
       }
       lines.set(key, {

@@ -122,6 +122,20 @@ describe("Enable Banking normalization", () => {
     expect(pickBalance([])).toBeUndefined();
   });
 
+  it("clamps a remittance-only payee to the 120 characters a payee holds", () => {
+    const normalized = normalizeTransaction({
+      transaction_amount: { currency: "EUR", amount: "10.00" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK",
+      booking_date: "2026-09-05",
+      remittance_information: ["PAGAMENTO MAV ".repeat(30)],
+    });
+    if (!normalized.ok) throw new Error("the transaction should normalize");
+    expect(normalized.payee).toBeDefined();
+    expect([...(normalized.payee ?? "")].length).toBeLessThanOrEqual(120);
+    expect(normalized.description?.length).toBeGreaterThan(120);
+  });
+
   it("truncates provider text on code points", () => {
     expect(trimTo("  hello   ", 40)).toBe("hello");
     expect(trimTo("😀😀😀", 2)).toBe("😀😀");

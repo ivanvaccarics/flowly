@@ -77,7 +77,8 @@ to Enable Banking**; no command line and no configuration file are involved.
    - the **private key** (`.pem` file your browser downloaded when you registered
      the application),
    - the **callback URL**, which must be
-     `<your Flowly URL>/enablebanking/auth_callback`.
+     `<your Flowly URL>/enablebanking/auth_callback`, including the port you
+     actually use (see *The callback URL has to be the address you use* below).
 3. Press **Verify and save**. Flowly calls `GET /application` once: a wrong key,
    a key from the other environment, or an unregistered callback URL is rejected
    before anything is stored. The key is then kept only inside the encrypted
@@ -135,22 +136,44 @@ every bank link and every raw provider payload; the accounts and transactions
 that were already imported stay in the vault. Unlinking a single bank keeps the
 other links and the same transactions.
 
-#### Why the two balances differ, and how to make them agree
+#### Where a balance comes from
 
-Settings shows two figures per paired account:
+For an account paired with a bank, the balance Flowly shows **everywhere** — the
+dashboard, the Accounts cards and the totals — is the figure Enable Banking
+reported at the last sync, in the currency the bank sent. It refreshes when the
+vault unlocks, when you press **Sync now**, and on every later sync. A movement
+you add by hand to a linked account therefore does not move the balance until the
+bank reports it too.
 
-- **Bank balance** — what your bank reported at the last sync.
-- **Flowly balance** — your account's opening balance plus the booked movements
-  stored in this vault, which is also the number the dashboard and the ledger
-  use.
+Accounts with no bank link use the figure the vault can compute for itself: the
+account's opening balance plus its booked movements. The bank card in Settings
+shows the reported balance per shared account, and the account falls back to the
+computed figure when a bank reports none or the link is removed.
 
-A first sync imports only the recent history the consent covers (90 days), so a
-vault that starts from an opening balance of zero reports less than the bank
-does. Both numbers are correct; they simply answer different questions. Press
-**Align** on the row where they differ to move the difference into the account's
-opening balance once: from then on the vault and the bank agree, and later
-movements keep them in step. The action is confirmed before it writes, changes
-no transaction, and can be undone by editing the opening balance back.
+#### The callback URL has to be the address you use
+
+The bank sends your browser to the callback URL you registered, so that address
+has to be one the browser can actually open. Two rules make this work:
+
+1. It must be registered, exactly, among the application's redirect URLs in the
+   Enable Banking control panel.
+2. It must be the address you reach Flowly on, including the port. The Compose
+   stack publishes `FLOWLY_SITE_PORT` (`8443` by default), so a URL written
+   without a port only works if you publish on `443` on purpose
+   (`FLOWLY_SITE_PORT=443` in `.env`).
+
+Settings compares the saved callback URL with the address in your browser and
+warns when they differ. **Use the address I am using now** fills in the right
+one, and **Save callback URL** re-verifies it with Enable Banking without
+re-uploading the private key. You can check the route from a shell with:
+
+```bash
+curl -sI "https://<the address you use>/enablebanking/auth_callback" | head -1
+```
+
+An `HTTP/1.1 200` answer means the shell is served there; a connection error
+means the host or port is wrong, and the connection would never come back on its
+own — use the paste fallback until the address is right.
 
 If a bank shows **consent expired** (or revoked), the consent lapsed at the bank:
 connect that bank again from Settings. Imported transactions stay untouched.

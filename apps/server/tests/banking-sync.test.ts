@@ -131,6 +131,34 @@ describe("Enable Banking sync", () => {
     });
   });
 
+  it("imports a row whose payee only exists in a long remittance", async () => {
+    const bank = new FakeBank({
+      transactions: [
+        sampleTransaction({
+          creditor: null,
+          debtor: null,
+          remittance_information: ["PAGAMENTO MAV ".repeat(30)],
+        }) as never,
+      ],
+    });
+    const { harness: session } = await mappedHarness(bank);
+
+    const response = await post(session, "/api/banking/sync", {});
+    expect(response.statusCode).toBe(200);
+    expect(response.json<{ report: SyncReport }>().report).toMatchObject({
+      fetched: 1,
+      created: 1,
+      failed: 0,
+    });
+
+    const items = (await get(session, "/api/transactions")).json<{ items: TransactionRow[] }>()
+      .items;
+    expect(items).toHaveLength(1);
+    const payee = items[0]?.payee ?? "";
+    expect(payee.startsWith("PAGAMENTO MAV")).toBe(true);
+    expect([...payee].length).toBeLessThanOrEqual(120);
+  });
+
   it("is idempotent: a second sync changes nothing", async () => {
     const { harness: session } = await mappedHarness();
     await post(session, "/api/banking/sync", {});

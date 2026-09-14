@@ -47,6 +47,11 @@ FLOWLY_SITE_ADDRESS=flowly.local   # or <machine>.<tailnet>.ts.net
 and start the stack again. `0.0.0.0` publishes on every interface: only do that
 inside a private network you control.
 
+The port becomes part of every URL, including the Enable Banking callback URL:
+with the defaults above the address is `https://<host>:8443/…`. Publish on the
+default HTTPS port instead (`FLOWLY_SITE_PORT=443`) if you want an address
+without a port, and register and save exactly the address you end up using.
+
 Check it:
 
 ```bash

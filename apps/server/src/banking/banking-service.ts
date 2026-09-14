@@ -1,6 +1,5 @@
 import { randomBytes } from "node:crypto";
 import { createAccount, type Account, type AccountType } from "../domain/account.js";
-import type { Transaction } from "../domain/transaction.js";
 import {
   BANK_CONSENT_TARGET_DAYS,
   BANK_PROVIDER,
@@ -77,13 +76,6 @@ export interface BankAccountSummary {
   lastBalanceMinor?: number;
   lastBalanceCurrency?: string;
   lastBalanceAt?: string;
-  /**
-   * What this vault reports for the same account and currency: opening balance
-   * plus booked movements. Absent when the bank's currency is not the account's
-   * default currency, because then the two figures are not comparable.
-   */
-  ledgerBalanceMinor?: number;
-  ledgerBalanceCurrency?: string;
   transactionCount: number;
 }
 
@@ -758,10 +750,6 @@ export class BankingService {
       const transactions = account.accountId
         ? await this.vault.transactions.list({ refA: account.accountId })
         : [];
-      const ledger =
-        flowlyAccount && account.lastBalanceCurrency
-          ? ledgerBalance(flowlyAccount, transactions, account.lastBalanceCurrency)
-          : undefined;
       summaries.push({
         id: account.id,
         providerAccountUid: account.providerAccountUid,
@@ -781,9 +769,6 @@ export class BankingService {
           ? { lastBalanceCurrency: account.lastBalanceCurrency }
           : {}),
         ...(account.lastBalanceAt ? { lastBalanceAt: account.lastBalanceAt } : {}),
-        ...(ledger !== undefined && account.lastBalanceCurrency
-          ? { ledgerBalanceMinor: ledger, ledgerBalanceCurrency: account.lastBalanceCurrency }
-          : {}),
       });
     }
     return {
@@ -803,26 +788,6 @@ export class BankingService {
         : {}),
     };
   }
-}
-
-/**
- * The figure this vault reports for the currency the bank sent: the account's
- * opening balance plus its booked movements. A first sync imports only the
- * bank's recent history, so it is expected to differ from the bank balance
- * until the opening balance is aligned once.
- */
-function ledgerBalance(
-  account: Account,
-  transactions: readonly Transaction[],
-  currency: string,
-): number | undefined {
-  if (account.defaultCurrency !== currency) return undefined;
-  return transactions
-    .filter((transaction) => transaction.status === "booked" && transaction.currency === currency)
-    .reduce(
-      (total, transaction) => total + transaction.amountMinor,
-      account.openingBalanceMinor ?? 0,
-    );
 }
 
 function publicConnection(connection: BankConnection): BankConnectionPublic {

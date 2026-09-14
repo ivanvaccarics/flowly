@@ -187,7 +187,9 @@ export function normalizeTransaction(transaction: EbTransaction): NormalizedTran
     (outgoing ? transaction.creditor?.name : transaction.debtor?.name) ?? undefined,
     PAYEE_MAX,
   );
-  const payee = counterparty ?? remittance;
+  // The remittance fallback is description-length; the payee field only holds
+  // 120 characters, so it is clamped to that before it leaves normalization.
+  const payee = counterparty ?? trimTo(remittance, PAYEE_MAX);
   const description =
     trimTo(transaction.bank_transaction_code?.description ?? undefined, DESCRIPTION_MAX) ??
     remittance;

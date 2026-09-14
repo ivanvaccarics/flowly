@@ -56,9 +56,6 @@ export interface BankingAccountSummary {
   lastBalanceMinor?: number;
   lastBalanceCurrency?: string;
   lastBalanceAt?: string;
-  /** What this vault reports for the same account and currency. */
-  ledgerBalanceMinor?: number;
-  ledgerBalanceCurrency?: string;
   transactionCount: number;
 }
 

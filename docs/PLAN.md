@@ -458,9 +458,10 @@ covered by the portable exports:
 - `bank_accounts`: one row per provider account discovered in a link, with the
   identification hash, IBAN, currency and cash-account type, the mapping status
   (`unmapped`, `mapped`, `ignored`), the Flowly account it feeds, the sync
-  cursor and the last booked balance. The balance the bank sent and the balance
-  the vault computes are reported side by side, and aligning them is an
-  explicit opening-balance adjustment (`docs/adr/0018`).
+  cursor and the last reported balance. For a paired account that reported
+  balance **is** the account balance everywhere in the product, and the vault
+  falls back to its own opening-balance arithmetic only when no bank reports one
+  (`docs/adr/0019`).
 - `bank_payloads`: the raw JSON store. One row per response per account —
   session, account details, balances and each page of transactions — with the
   request window, the fetch timestamp and the provider JSON untouched.
@@ -1351,9 +1352,14 @@ Status: **complete** (2026-09-14), decisions in `docs/adr/0017` and
 - The pending authorization survives a reload (the link keeps the provider URL)
   and the panel polls the link status, so an authorization finished in another
   tab is picked up automatically.
-- Settings shows the balance the bank reports next to the balance the vault
-  computes, with the difference and a confirmed **Align** action that folds it
-  into the account's opening balance.
+- Every balance a person sees for a bank-linked account — dashboard, Accounts,
+  totals and the Settings bank card — is the figure Enable Banking reported at
+  the last sync (`docs/adr/0019`). A row whose payee only existed in a long
+  remittance used to abort the whole sync; the payee is clamped to the field
+  limit and a row the vault refuses is reported without losing the rest.
+- Settings compares the saved callback URL with the address the browser is
+  using, and lets it be corrected and re-verified without re-uploading the
+  private key.
 
 **Exit criteria:** connecting and reconnecting a bank needs no manual copy of a
 URL, and the numbers the product shows agree with the bank once the user asks

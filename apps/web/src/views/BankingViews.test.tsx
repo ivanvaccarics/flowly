@@ -59,8 +59,6 @@ const LINK = {
       transactionCount: 4,
       lastBalanceMinor: 123456,
       lastBalanceCurrency: "EUR",
-      ledgerBalanceMinor: 100000,
-      ledgerBalanceCurrency: "EUR",
     },
   ],
 };
@@ -441,18 +439,7 @@ describe("Enable Banking in Settings", () => {
     ).toContain("sessionid=resume-me");
   });
 
-  it("aligns the Flowly balance with the bank balance in one click", async () => {
-    const account = {
-      formatVersion: 1 as const,
-      revision: 3,
-      id: LINK.accounts[0]?.accountId ?? "",
-      name: "Conto corrente",
-      type: "checking" as const,
-      defaultCurrency: "EUR",
-      openingBalanceMinor: 0,
-      createdAt: "2026-09-01T08:00:00.000Z",
-      updatedAt: "2026-09-01T08:00:00.000Z",
-    };
+  it("warns when the callback URL is not the address this browser uses", async () => {
     const calls = mockFetch({
       "/api/banking/status": () =>
         json({
@@ -463,10 +450,48 @@ describe("Enable Banking in Settings", () => {
           sync: { running: false },
           autoSync: true,
         }),
-      "/api/accounts": () => json({ items: [account] }),
-      [`/api/accounts/${account.id}`]: () => json({ entity: account }),
+      "/api/accounts": () => json({ items: [] }),
+      "/api/banking/enable-banking/config": () => json({ connection: CONNECTION, status: {} }),
     });
-    vi.stubGlobal("confirm", () => true);
+    render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Conto corrente")).toBeTruthy());
+    // The stored callback URL is on another host than the one in the address
+    // bar, so the bank would send the browser somewhere it cannot come back to.
+    expect(screen.getByText(/but you are using/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Use the address I am using now/ }));
+    const input = screen.getByLabelText("Callback URL") as HTMLInputElement;
+    expect(input.value).toContain("/enablebanking/auth_callback");
+    fireEvent.click(screen.getByRole("button", { name: /Save callback URL/ }));
+
+    await waitFor(() => expect(screen.getByText(/saved and verified/)).toBeTruthy());
+    const saved = calls.find((call) => call.method === "PUT");
+    expect(saved?.body).toMatchObject({
+      redirectUrl: `${window.location.origin}/enablebanking/auth_callback`,
+    });
+  });
+
+  it("shows one balance per paired account: the one the bank reports", async () => {
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [LINK],
+          sync: { running: false },
+          autoSync: true,
+        }),
+      "/api/accounts": () => json({ items: [] }),
+    });
     render(
       <SettingsView
         csrf="csrf"
@@ -477,16 +502,9 @@ describe("Enable Banking in Settings", () => {
     );
 
     await waitFor(() => expect(screen.getByText("1234.56 EUR")).toBeTruthy());
-    expect(screen.getByText("1000.00 EUR")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Align/ }));
-
-    await waitFor(() =>
-      expect(screen.getByText(/now matches the balance the bank reports/)).toBeTruthy(),
-    );
-    const update = calls.find((call) => call.method === "PUT");
-    expect(update?.body).toEqual({
-      entity: { ...account, openingBalanceMinor: 23456 },
-    });
+    expect(screen.queryByRole("button", { name: /Align/ })).toBeNull();
+    expect(screen.queryByText("Flowly balance")).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "Balance" })).toBeTruthy();
   });
 
   it("surfaces an Enable Banking error from the pasted redirect", async () => {

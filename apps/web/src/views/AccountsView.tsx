@@ -96,7 +96,7 @@ export function AccountsView({ csrf }: { csrf: string }) {
         eyebrow="Accounts · balances per currency"
         title="Accounts & resources"
         titleId="accounts-title"
-        lead="Every account is a local endpoint: booked movements move its balance, and no currency is ever converted."
+        lead="Every account is a local endpoint: a bank-linked account shows the balance your bank sends, every other account books its own movements, and no currency is ever converted."
         facts={
           <>
             <Chip tone="neutral">{accounts.items.length} accounts</Chip>
@@ -154,7 +154,9 @@ export function AccountsView({ csrf }: { csrf: string }) {
       <section className="view" aria-label="Your accounts">
         <div className="view-header-inline">
           <h2>Active endpoints</h2>
-          <span className="sub">Balances include booked movements only</span>
+          <span className="sub">
+            Linked accounts use the bank balance; the rest use booked movements
+          </span>
         </div>
         {accounts.items.length > 0 ? (
           <div className="account-grid">

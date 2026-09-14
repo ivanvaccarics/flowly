@@ -44,6 +44,16 @@ describe("deployment surface", () => {
       expect(deepLink.statusCode).toBe(200);
       expect(deepLink.body).toContain('<div id="root"></div>');
 
+      // The bank redirects the browser to this path with ?code&state, so the
+      // shell has to be served there too, on whatever origin the operator runs.
+      const callback = await call(harness.app, undefined, {
+        method: "GET",
+        url: "/enablebanking/auth_callback?code=abc&state=xyz",
+      });
+      expect(callback.statusCode).toBe(200);
+      expect(callback.headers["content-type"]).toContain("text/html");
+      expect(callback.body).toContain('<div id="root"></div>');
+
       const api404 = await call(harness.app, harness.client, { method: "GET", url: "/api/nope" });
       expect(api404.statusCode).toBe(404);
       expect(api404.json<{ error: string }>().error).toBe("not_found");

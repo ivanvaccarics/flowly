@@ -307,76 +307,88 @@ export class BankSyncService {
         if (normalized.bookingDate < windowFrom) continue;
         if (!earliest || normalized.bookingDate < earliest) earliest = normalized.bookingDate;
 
-        const fingerprint = importFingerprint({
-          accountId,
-          bookingDate: normalized.bookingDate,
-          amountMinor: normalized.amountMinor,
-          currency: normalized.currency,
-          ...(normalized.description ? { description: normalized.description } : {}),
-          ...(normalized.payee ? { payee: normalized.payee } : {}),
-        });
-        const match =
-          (normalized.providerTransactionId
-            ? byProviderId.get(normalized.providerTransactionId)
-            : undefined) ?? byFingerprint.get(fingerprint);
-
-        if (match) {
-          const next: Transaction = {
-            ...match,
-            bookingDate: normalized.bookingDate,
-            amountMinor: normalized.amountMinor,
-            currency: normalized.currency,
-            status: normalized.status,
-            source: "enable-banking",
-            provider: "enable-banking",
-            providerAccountId: account.providerAccountUid,
-            importFingerprint: match.importFingerprint ?? fingerprint,
-            ...(normalized.providerTransactionId
-              ? { providerTransactionId: normalized.providerTransactionId }
-              : {}),
-            ...(normalized.valueDate ? { valueDate: normalized.valueDate } : {}),
-            ...(normalized.payee ? { payee: normalized.payee } : {}),
-            ...(normalized.description ? { description: normalized.description } : {}),
-          };
-          if (sameProviderFields(match, next)) {
-            report.unchanged += 1;
-            continue;
-          }
-          const updated = await this.vault.transactions.update(next, match.revision);
-          if (normalized.providerTransactionId) {
-            byProviderId.set(normalized.providerTransactionId, updated);
-          }
-          byFingerprint.set(fingerprint, updated);
-          report.updated += 1;
-          continue;
-        }
-
-        const created = createTransaction(
-          {
+        try {
+          const fingerprint = importFingerprint({
             accountId,
             bookingDate: normalized.bookingDate,
             amountMinor: normalized.amountMinor,
             currency: normalized.currency,
-            status: normalized.status,
-            source: "enable-banking",
-            provider: "enable-banking",
-            importFingerprint: fingerprint,
-            ...(normalized.providerTransactionId
-              ? { providerTransactionId: normalized.providerTransactionId }
-              : {}),
-            ...(normalized.valueDate ? { valueDate: normalized.valueDate } : {}),
-            ...(normalized.payee ? { payee: normalized.payee } : {}),
             ...(normalized.description ? { description: normalized.description } : {}),
-          },
-          { id: this.newId(), now },
-        );
-        const { transaction: tagged } = this.taggingRules.withRuleTags(created, rules);
-        const stored = await this.vault.transactions.create(tagged);
-        if (normalized.providerTransactionId) {
-          byProviderId.set(normalized.providerTransactionId, stored);
+            ...(normalized.payee ? { payee: normalized.payee } : {}),
+          });
+          const match =
+            (normalized.providerTransactionId
+              ? byProviderId.get(normalized.providerTransactionId)
+              : undefined) ?? byFingerprint.get(fingerprint);
+
+          if (match) {
+            const next: Transaction = {
+              ...match,
+              bookingDate: normalized.bookingDate,
+              amountMinor: normalized.amountMinor,
+              currency: normalized.currency,
+              status: normalized.status,
+              source: "enable-banking",
+              provider: "enable-banking",
+              providerAccountId: account.providerAccountUid,
+              importFingerprint: match.importFingerprint ?? fingerprint,
+              ...(normalized.providerTransactionId
+                ? { providerTransactionId: normalized.providerTransactionId }
+                : {}),
+              ...(normalized.valueDate ? { valueDate: normalized.valueDate } : {}),
+              ...(normalized.payee ? { payee: normalized.payee } : {}),
+              ...(normalized.description ? { description: normalized.description } : {}),
+            };
+            if (sameProviderFields(match, next)) {
+              report.unchanged += 1;
+              continue;
+            }
+            const updated = await this.vault.transactions.update(next, match.revision);
+            if (normalized.providerTransactionId) {
+              byProviderId.set(normalized.providerTransactionId, updated);
+            }
+            byFingerprint.set(fingerprint, updated);
+            report.updated += 1;
+            continue;
+          }
+
+          const created = createTransaction(
+            {
+              accountId,
+              bookingDate: normalized.bookingDate,
+              amountMinor: normalized.amountMinor,
+              currency: normalized.currency,
+              status: normalized.status,
+              source: "enable-banking",
+              provider: "enable-banking",
+              importFingerprint: fingerprint,
+              ...(normalized.providerTransactionId
+                ? { providerTransactionId: normalized.providerTransactionId }
+                : {}),
+              ...(normalized.valueDate ? { valueDate: normalized.valueDate } : {}),
+              ...(normalized.payee ? { payee: normalized.payee } : {}),
+              ...(normalized.description ? { description: normalized.description } : {}),
+            },
+            { id: this.newId(), now },
+          );
+          const { transaction: tagged } = this.taggingRules.withRuleTags(created, rules);
+          const stored = await this.vault.transactions.create(tagged);
+          if (normalized.providerTransactionId) {
+            byProviderId.set(normalized.providerTransactionId, stored);
+          }
+          byFingerprint.set(fingerprint, stored);
+          report.created += 1;
+        } catch (error) {
+          // One row the vault refuses must not cost the whole sync: report it
+          // and keep importing the rest of the account.
+          report.failed += 1;
+          report.errors.push({
+            linkId: link.id,
+            providerAccountUid: account.providerAccountUid,
+            message: describe(error),
+            ...(accountId ? { accountId } : {}),
+          });
         }
-        byFingerprint.set(fingerprint, stored);
-        report.created += 1;
       }
     });
 

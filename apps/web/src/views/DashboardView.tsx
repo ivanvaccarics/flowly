@@ -536,8 +536,8 @@ export function DashboardView({
       </div>
 
       <p className="page-footer">
-        Flowly · no account, no cloud, no tracking. Aggregates use booked transactions only and
-        never convert between currencies.
+        Flowly · no account, no cloud, no tracking. Cash-flow aggregates use booked transactions
+        only and never convert between currencies.
       </p>
     </section>
   );
