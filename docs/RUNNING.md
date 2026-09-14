@@ -287,6 +287,8 @@ Phase boundaries and dependencies are listed in `docs/PLAN.md` sections 17-18.
 | Forgot the passphrase | There is no recovery. Restore a portable archive whose password you know. |
 | `bank_redirect_not_registered` | The callback URL in Settings is not one of the redirect URLs registered for the Enable Banking application. Copy one exactly. |
 | `bank_environment_mismatch` | The `.pem` belongs to a PRODUCTION application while the configuration says SANDBOX (or the other way round). Change the environment field. |
-| `bank_state_invalid` | The bank redirect was replayed, expired (15 minutes) or started in another browser session. Start the connection again. |
+| `bank_state_invalid` | The bank redirect was replayed, expired (15 minutes), deleted from Settings, or started in another browser session. The callback page says which: start the connection again, and press **Delete** on a request you no longer want. |
+| The bank window says **Flowly has no pending request for this code** | The authorization was already completed, deleted, or started in another Flowly instance. Delete the pending request in Settings and connect once more. |
+| Flowly still shows an old interface after a rebuild | The shell itself is served `no-cache` now, so a normal reload is enough; before that fix, empty the browser cache or hard-reload. |
 | A linked bank shows **consent expired** | The bank consent lapsed or was revoked. Connect that bank again from Settings. |
 | An account is missing from a sync | Only **mapped** accounts are imported. Map it in Settings; accounts whose currency Flowly cannot store yet are skipped and reported. |

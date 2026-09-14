@@ -25,6 +25,8 @@ describe("deployment surface", () => {
       expect(index.statusCode).toBe(200);
       expect(index.headers["content-type"]).toContain("text/html");
       expect(index.body).toContain("<title>Flowly</title>");
+      // The shell is never cached, or a rebuilt image keeps serving the old one.
+      expect(index.headers["cache-control"]).toBe("no-cache");
       expect(index.headers["content-security-policy"]).toContain("default-src 'self'");
       expect(index.headers["x-content-type-options"]).toBe("nosniff");
       expect(index.headers["x-frame-options"]).toBe("DENY");
@@ -35,6 +37,7 @@ describe("deployment surface", () => {
       });
       expect(asset.statusCode).toBe(200);
       expect(asset.body).toContain("flowly");
+      expect(asset.headers["cache-control"]).toContain("max-age=3600");
 
       // Client-side routes fall back to the shell, the API keeps returning JSON.
       const deepLink = await call(harness.app, undefined, {

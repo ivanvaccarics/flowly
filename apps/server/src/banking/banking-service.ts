@@ -398,6 +398,19 @@ export class BankingService {
   }
 
   /**
+   * What the vault knows about a state that arrived on the callback. The state
+   * is rotated when a link is authorized, so a replay after completion cannot be
+   * matched — the answer is then "unknown", and the message says so.
+   */
+  async describeAuthorizationState(state: string): Promise<BankLinkStatus | "unknown"> {
+    const connection = await this.connection();
+    if (!connection) return "unknown";
+    const links = await this.vault.bankLinks.list({ refA: connection.id });
+    const link = links.find((candidate) => candidate.state === state);
+    return link ? link.status : "unknown";
+  }
+
+  /**
    * Records why a handshake failed, so the panel that is waiting for the bank
    * stops waiting and can show the reason instead of a link stuck on pending.
    */

@@ -194,8 +194,20 @@ export function registerBankingRoutes(
     } catch (failure) {
       const message =
         failure instanceof Error ? failure.message : "The authorization could not be completed.";
+      const known = await service.describeAuthorizationState(state);
       await service.failAuthorization(state, message);
       reply.code(400);
+      if (known === "unknown") {
+        return callbackPage({
+          title: "Authorization failed",
+          message:
+            "Flowly has no pending request for this code. It was already completed, " +
+            "deleted, or started in another Flowly instance.",
+          hint:
+            "Start the connection again from Settings. A newer request stays pending, so " +
+            "delete it there before trying once more.",
+        });
+      }
       return callbackPage({ title: "Authorization failed", message });
     }
   });

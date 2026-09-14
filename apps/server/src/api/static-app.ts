@@ -24,6 +24,11 @@ export function registerStaticApp(app: FastifyInstance, config: ServerConfig): b
     cacheControl: true,
     maxAge: "1h",
     immutable: false,
+    // Hashed assets can be cached, but the shell must never be: otherwise a
+    // rebuilt image keeps serving yesterday's bundle from the browser cache.
+    setHeaders: (reply, path) => {
+      if (path.endsWith("index.html")) reply.header("cache-control", "no-cache");
+    },
   });
   return true;
 }

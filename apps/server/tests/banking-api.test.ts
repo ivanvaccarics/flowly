@@ -343,6 +343,38 @@ describe("Enable Banking API", () => {
     expect(status.json<ConnectionStatus>().links[0]?.status).toBe("authorized");
   });
 
+  it("explains a callback whose request is no longer pending", async () => {
+    const { app, client } = await harness();
+    const session = { app, client } as BankingHarness;
+    await put(session, "/api/banking/enable-banking/config", {
+      appId: TEST_APP_ID,
+      privateKeyPem: testPrivateKeyPem(),
+      redirectUrl: TEST_REDIRECT_URL,
+      environment: "SANDBOX",
+      psuType: "personal",
+      country: "IT",
+      autoSync: true,
+    });
+    const started = await post(session, "/api/banking/enable-banking/authorize", {
+      aspspName: "UniCredit",
+      aspspCountry: "IT",
+      psuType: "personal",
+    });
+    const { linkId, state } = started.json<{ linkId: string; state: string }>();
+    await app.inject({
+      method: "DELETE",
+      url: `/api/banking/enable-banking/links/${linkId}`,
+      headers: { cookie: client.cookie, "x-flowly-csrf": client.csrf },
+    });
+
+    const callback = await app.inject({
+      method: "GET",
+      url: `/enablebanking/auth_callback?code=sandbox-code&state=${state}`,
+    });
+    expect(callback.statusCode).toBe(400);
+    expect(callback.body).toContain("no pending request");
+  });
+
   it("records a refused consent and stops the panel waiting", async () => {
     const bank = new FakeBank();
     const { app, client } = await harness(bank);
