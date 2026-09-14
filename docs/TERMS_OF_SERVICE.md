@@ -121,13 +121,7 @@ Nothing in these terms excludes liability that cannot lawfully be excluded, or
 limits the mandatory rights you have as a consumer under the law that applies to
 you.
 
-## 8. Governing law
-
-These terms are governed by the laws of Italy, and disputes about them belong to
-the courts of the maintainer's place of residence, without prejudice to any
-mandatory consumer protection that applies where you live.
-
-## 9. Contact
+## 8. Contact
 
 Questions, corrections and legal notices: **ivan.vaccari91@gmail.com**, or open
 an issue at <https://github.com/ivanvaccarics/flowly/issues>. The privacy policy
