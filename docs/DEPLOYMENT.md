@@ -22,9 +22,17 @@ a multi-architecture image with SBOM and provenance attestations.
 ```bash
 git clone <your fork or checkout>
 cd flowly
-cp .env.example .env          # optional: adjust ports, lifetimes, log level
+cp .env.example .env                              # local server defaults, optional
+cp deployment/self-hosted/.env.example deployment/self-hosted/.env
 docker compose -f deployment/self-hosted/compose.yaml up --build -d
 ```
+
+Compose substitutes its variables from the `.env` **next to the compose file**.
+The repository root `.env` lists the variables the server itself reads from its
+environment and is not consulted by this stack, so editing it and restarting
+changes nothing — `docker compose config` showing the defaults is the symptom.
+The alternative to the folder file is an explicit
+`docker compose --env-file .env -f deployment/self-hosted/compose.yaml up -d`.
 
 Two containers start:
 
@@ -36,7 +44,7 @@ Two containers start:
 
 Only the proxy publishes ports, and only on the loopback interface. To reach the
 server from another device on your private LAN or VPN, set the interface and the
-port in `.env` — for example:
+port in `deployment/self-hosted/.env` — for example:
 
 ```bash
 FLOWLY_BIND_IP=192.168.1.20        # or the Tailscale address of this machine
@@ -56,7 +64,7 @@ Changing the port takes one command — the published mapping belongs to the
 `proxy` service, so Compose recreates that container when the value changes:
 
 ```bash
-# after editing FLOWLY_SITE_PORT in .env
+# after editing FLOWLY_SITE_PORT in deployment/self-hosted/.env
 docker compose -f deployment/self-hosted/compose.yaml up -d
 docker compose -f deployment/self-hosted/compose.yaml ps   # check the mapping
 ```

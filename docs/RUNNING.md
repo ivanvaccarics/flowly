@@ -160,7 +160,7 @@ has to be one the browser can actually open. Two rules make this work:
 2. It must be the address you reach Flowly on, including the port. The Compose
    stack publishes `FLOWLY_SITE_PORT` (`8443` by default), so a URL written
    without a port only works if you publish on `443` on purpose
-   (`FLOWLY_SITE_PORT=443` in `.env`, then `up -d` — see
+   (`FLOWLY_SITE_PORT=443` in `deployment/self-hosted/.env`, then `up -d` — see
    [DEPLOYMENT.md](DEPLOYMENT.md#install)).
 
 Settings compares the saved callback URL with the address in your browser and
