@@ -52,6 +52,26 @@ with the defaults above the address is `https://<host>:8443/…`. Publish on the
 default HTTPS port instead (`FLOWLY_SITE_PORT=443`) if you want an address
 without a port, and register and save exactly the address you end up using.
 
+Changing the port takes one command — the published mapping belongs to the
+`proxy` service, so Compose recreates that container when the value changes:
+
+```bash
+# after editing FLOWLY_SITE_PORT in .env
+docker compose -f deployment/self-hosted/compose.yaml up -d
+docker compose -f deployment/self-hosted/compose.yaml ps   # check the mapping
+```
+
+There is no extra flag to add: `up -d` replaces a container whose configuration
+changed. If the mapping still shows the old port, recreate the containers
+explicitly — the vault is a bind mount in `data/`, so this keeps it:
+
+```bash
+docker compose -f deployment/self-hosted/compose.yaml down
+docker compose -f deployment/self-hosted/compose.yaml up -d
+```
+
+Never add `-v` to `down` unless you want the named volumes gone as well.
+
 Check it:
 
 ```bash
