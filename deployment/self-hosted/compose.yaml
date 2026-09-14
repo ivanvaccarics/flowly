@@ -44,8 +44,11 @@ services:
     # Only the proxy is published, and only on the private interface. Caddy
     # issues a certificate from its local CA: import the root certificate from
     # the caddy data volume to remove the browser warning (see docs/DEPLOYMENT.md).
-    # FLOWLY_BIND_IP lets the stack answer on a private LAN or Tailscale
-    # interface (and that address becomes part of the Enable Banking callback URL).
+    # FLOWLY_BIND_IP lets the stack answer on a private LAN or Tailscale address
+    # (and that address becomes part of the Enable Banking callback URL). On
+    # Docker Desktop the value has to be an address the VM itself owns, so use
+    # 0.0.0.0 there: binding the host's 100.x Tailscale address fails with
+    # "can't assign requested address". On Linux, the specific address works.
     ports:
       - "${FLOWLY_BIND_IP:-127.0.0.1}:${FLOWLY_SITE_PORT:-8443}:443"
     volumes:

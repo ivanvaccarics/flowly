@@ -164,7 +164,9 @@ has to be one the browser can actually open. Two rules make this work:
    stack publishes `FLOWLY_SITE_PORT` (`8443` by default), so a URL written
    without a port only works if you publish on `443` on purpose
    (`FLOWLY_SITE_PORT=443` in `deployment/self-hosted/.env`, then `up -d` — see
-   [DEPLOYMENT.md](DEPLOYMENT.md#install)).
+   [DEPLOYMENT.md](DEPLOYMENT.md#install) for how the interface has to be set on
+   Docker Desktop, and for reaching Flowly through Tailscale without publishing
+   on every interface).
 
 Settings compares the saved callback URL with the address in your browser and
 warns when they differ. **Use the address I am using now** fills in the right

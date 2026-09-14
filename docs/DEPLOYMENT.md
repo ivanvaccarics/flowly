@@ -47,13 +47,35 @@ server from another device on your private LAN or VPN, set the interface and the
 port in `deployment/self-hosted/.env` — for example:
 
 ```bash
-FLOWLY_BIND_IP=192.168.1.20        # or the Tailscale address of this machine
+FLOWLY_BIND_IP=192.168.1.20        # Linux: the address of this machine
 FLOWLY_SITE_PORT=8443
 FLOWLY_SITE_ADDRESS=flowly.local   # or <machine>.<tailnet>.ts.net
 ```
 
 and start the stack again. `0.0.0.0` publishes on every interface: only do that
 inside a private network you control.
+
+On **Docker Desktop** (macOS and Windows) the published port is opened from
+Docker's own Linux VM, which does not own the host's interfaces. Naming a LAN or
+Tailscale address there fails with
+`ports are not available: … bind: can't assign requested address`, so use
+`FLOWLY_BIND_IP=0.0.0.0` and rely on the private network around the machine. On
+Linux, binding the specific interface is the tighter choice.
+
+Prefer not to publish on every interface on a Mac? Keep
+`FLOWLY_BIND_IP=127.0.0.1` and put Tailscale in front of the stack, so only the
+tailnet reaches it:
+
+```bash
+tailscale serve --bg --https=443 https+insecure://127.0.0.1:8443
+tailscale serve status          # https://<machine>.<tailnet>.ts.net → Caddy
+```
+
+Tailscale terminates TLS with a real certificate for the tailnet name and
+forwards to Caddy, whose own local-CA certificate is skipped by
+`https+insecure`. Untrusted-certificate warnings disappear for tailnet devices,
+and the Enable Banking callback URL becomes
+`https://<machine>.<tailnet>.ts.net/enablebanking/auth_callback`.
 
 The port becomes part of every URL, including the Enable Banking callback URL:
 with the defaults above the address is `https://<host>:8443/…`. Publish on the
