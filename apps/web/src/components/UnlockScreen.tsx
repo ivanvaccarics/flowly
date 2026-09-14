@@ -87,14 +87,6 @@ export function UnlockScreen({
             <dt>State</dt>
             <dd>{status?.state ?? "unknown"}</dd>
           </div>
-          <div>
-            <dt>Storage engine</dt>
-            <dd>{status?.storageEngine ?? "unknown"}</dd>
-          </div>
-          <div>
-            <dt>Vault format</dt>
-            <dd>v{status?.vaultFormatVersion ?? 1}</dd>
-          </div>
         </dl>
 
         <div className="cell-actions">

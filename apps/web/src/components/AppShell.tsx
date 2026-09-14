@@ -70,9 +70,7 @@ export function AppShell({
             </span>
             <span className="stack" style={{ flex: 1 }}>
               <strong>Local vault</strong>
-              <span className="sub mono">
-                {status?.storageEngine ?? "sqlcipher"} · v{status?.schemaVersion ?? "?"}
-              </span>
+              <span className="sub">Encrypted at rest</span>
             </span>
             <span title="No cloud connection">
               <Icon name="check" size={16} />
@@ -85,9 +83,7 @@ export function AppShell({
         <div className="topbar-status">
           <span className="status-pill" title="Encrypted vault, unlocked for this session">
             <span className="pulse" />
-            <strong>
-              {status?.storageEngine ?? "sqlcipher"} v{status?.schemaVersion ?? "?"} unlocked
-            </strong>
+            <strong>Vault unlocked</strong>
             <span className="badge">AES-256</span>
           </span>
           {vaultId ? (
@@ -150,7 +146,6 @@ export function AppShell({
             <SettingsView
               csrf={csrf}
               busy={busy}
-              vaultStatus={status}
               onChangePassphrase={onChangePassphrase}
               onClearError={onClearError}
             />

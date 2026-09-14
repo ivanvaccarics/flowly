@@ -298,8 +298,9 @@ never silently overwrites a newer edit from another browser session.
 The web client implements the repository's own design system — *Sovereign
 Ledger*, defined in `ui/sovereign_ledger/DESIGN.md` and the `ui/*` mockups — with
 one sidebar shell and six sections: Dashboard, Accounts, Transactions, Tags,
-Rules and Settings. Settings carries the passphrase change plus export and
-import. Each section opens with a header card (eyebrow, title, facts and
+Rules and Settings. Settings opens with the Enable Banking connection and then
+carries the passphrase change plus export and import. Each section opens with a
+header card (eyebrow, title, facts and
 actions), cards are white and borderless over a lavender canvas, and tinted
 panels carry nested controls. Only implemented features are rendered, fonts use
 local stacks so the app never needs a CDN, and `docs/DESIGN.md` records the
@@ -1195,8 +1196,9 @@ Delivered:
 - `dashboard.schema.json` joins the contracts, so the dashboard response is
   validated at runtime and the shape is shared with the future Dart client.
 - React dashboard section plus server-side filters in the transactions section,
-  and the Settings section that consolidates the passphrase change with export
-  and import (`docs/adr/0011-ui-design-system.md`).
+  and the Settings section that opens with the bank connection and consolidates
+  the passphrase change with export and import
+  (`docs/adr/0011-ui-design-system.md`).
 
 #### Task `implement-server-dashboard-search`
 

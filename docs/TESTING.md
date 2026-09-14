@@ -90,7 +90,7 @@ you should see.
 
 | Do this | Expect |
 | --- | --- |
-| Open the app on a fresh deployment, enter a passphrase, press **Create vault** | Vault is created; the workspace opens; the status shows `sqlcipher` and schema v5 |
+| Open the app on a fresh deployment, enter a passphrase, press **Create vault** | Vault is created and the workspace opens with the vault unlocked |
 | Restart the server (or the container) and reload | The app comes back **locked**; the same passphrase unlocks it |
 | Enter a wrong passphrase | "That passphrase did not unlock the vault." No vault contents |
 | Repeat a wrong passphrase many times | After a few attempts: "Too many unlock attempts." |

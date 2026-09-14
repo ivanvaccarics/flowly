@@ -145,7 +145,7 @@ export function DashboardView({
   return (
     <section className="view" aria-labelledby="dashboard-title">
       <PageHeader
-        eyebrow={`Sovereign vault ledger · ${status?.storageEngine ?? "sqlcipher"} v${status?.schemaVersion ?? "?"}`}
+        eyebrow="Sovereign vault ledger"
         title="Financial overview"
         titleId="dashboard-title"
         lead={`${accounts.length} accounts · period ${from} → ${to} · aggregates use booked transactions only`}
@@ -516,8 +516,8 @@ export function DashboardView({
               </Chip>
             </header>
             <p className="muted">
-              {status?.storageEngine ?? "sqlcipher"} at rest with AES-256-GCM. No cloud connection
-              is active and the data stays inside this server's vault folder.
+              Encrypted at rest with AES-256-GCM. No cloud connection is active and the data stays
+              inside this server's vault folder.
             </p>
             <dl className="facts" style={{ gridTemplateColumns: "1fr 1fr" }}>
               <div>
@@ -525,8 +525,10 @@ export function DashboardView({
                 <dd title={vaultId ?? ""}>{vaultId ? vaultId.slice(0, 13) : "—"}</dd>
               </div>
               <div>
-                <dt>Schema</dt>
-                <dd>v{status?.schemaVersion ?? "?"}</dd>
+                <dt>Last unlocked</dt>
+                <dd>
+                  {status?.lastUnlockedAt ? new Date(status.lastUnlockedAt).toLocaleString() : "—"}
+                </dd>
               </div>
             </dl>
           </div>

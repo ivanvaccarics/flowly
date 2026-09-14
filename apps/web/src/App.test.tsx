@@ -139,7 +139,9 @@ describe("Flowly web client", () => {
     expect(screen.getByRole("button", { name: "Unlock vault" }).hasAttribute("disabled")).toBe(
       true,
     );
-    expect(screen.getByText("sqlcipher")).toBeTruthy();
+    // The lock screen states the vault state, not the storage engine.
+    expect(screen.getByText("locked")).toBeTruthy();
+    expect(screen.queryByText("sqlcipher")).toBeNull();
   });
 
   it("offers to create the vault on a fresh deployment", async () => {
@@ -175,6 +177,10 @@ describe("Flowly web client", () => {
     );
     for (const section of ["Dashboard", "Accounts", "Transactions", "Tags", "Rules", "Settings"]) {
       expect(screen.getByRole("button", { name: section })).toBeTruthy();
+    }
+    // The shell states the vault state, not its storage engine or schema.
+    for (const label of ["Storage engine", "Vault format", "Export format"]) {
+      expect(screen.queryByText(label)).toBeNull();
     }
     await waitFor(() => expect(screen.getAllByText("Rent").length).toBeGreaterThan(0));
     expect(screen.getByRole("img", { name: /Income and expenses per week/ })).toBeTruthy();

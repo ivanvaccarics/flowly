@@ -200,7 +200,7 @@ carrying its status facts and actions; accounts are endpoint cards with their re
 balances, rules are tiles with an on/off switch, and the ledger's filters include
 quick tag pills. Accounts can be archived and restored, tags can be renamed and
 recoloured in place, and Settings holds the passphrase change plus export and
-import, and the Enable Banking connection. Export comes in three shapes: the single transaction CSV, a plain ZIP
+import, after the Enable Banking connection. Export comes in three shapes: the single transaction CSV, a plain ZIP
 with one CSV per table (and a manifest) for taking everything elsewhere, and the
 password-encrypted complete archive. Import is additive for a CSV merge and
 replaces the vault for a complete archive, after an explicit confirmation and an

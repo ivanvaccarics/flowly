@@ -62,8 +62,8 @@ elements are reserved for avatars, status dots, switches and swatches.
 
 - **Display (Manrope):** page titles and section headings.
 - **Body (Inter):** controls, prose, table cells.
-- **Data (JetBrains Mono):** every monetary amount, date, currency code, vault id
-  and schema version, so figures stay vertically aligned.
+- **Data (JetBrains Mono):** every monetary amount, date, currency code and vault
+  id, so figures stay vertically aligned.
 
 **No webfont CDN.** Flowly runs on a private network with no Internet access, so
 the families are declared with local fallbacks (`SF Pro`, `Segoe UI`, system
@@ -74,10 +74,10 @@ not shift.
 ## Layout
 
 - Fixed 260 px white sidebar: brand, a "Vault navigation" label, the six
-  sections, and a footer card showing the local vault identity (storage engine
-  and schema version) instead of a user account.
-- Sticky 64 px top bar: the vault state pill (pulsing dot, engine and schema, an
-  `AES-256` badge), the short vault id, and the session controls.
+  sections, and a footer card showing the local vault identity instead of a user
+  account.
+- Sticky 64 px top bar: the vault state pill (pulsing dot, an `AES-256` badge),
+  the short vault id, and the session controls.
 - Content column capped at 1600 px with 24 px gutters; cards carry 24 px internal
   padding.
 - Below 1024 px the sidebar becomes a horizontal, wrapping nav, the top bar wraps
@@ -87,7 +87,10 @@ not shift.
 
 - **Page header (hero):** every section opens with a white card holding an
   uppercase eyebrow, the `h1`, an optional lead paragraph, right-aligned status
-  chips and actions, and an optional sunken **ribbon** of key figures.
+  chips and actions, and an optional sunken **ribbon** of key figures. The
+  primitive ships and stays documented, but no section uses the ribbon today:
+  the storage engine, schema and format versions it used to carry are developer
+  detail, not something a person running Flowly needs on screen.
 - **Metric card:** eyebrow with an icon tile, a monospaced value, and a delta or
   context chip.
 - **Panel:** tinted `#f2f3ff` block used for form fieldsets, ribbons, list rows
@@ -134,7 +137,7 @@ Only shipping functionality is on screen; every figure comes from the API.
 | Transactions | Hero with the match count, record form (notes, tag picker, status), server-side filters (text, account, tag, status, date range), quick tag-filter pills, and a table with inline editing of **payee, amount, note and tags**, a status chip that switches booked ↔ pending, the source shown as an offline-AES chip, and delete |
 | Tags | Hero with the tag count, create with a palette colour (or a custom hex value), **inline rename and recolour** of an existing tag, and cascade delete |
 | Rules | Hero with the rule counts and the backfill action, condition builder (AND/OR, per-field operators, amount currency), tag selection, and a side column of rule tiles with an on/off switch, the matched expression and delete |
-| Settings | Hero with the cipher and zero-cloud chips, passphrase change, paired export and import option cards (transaction CSV, every table as a plain ZIP, complete encrypted archive, CSV preview and merge, archive replacement), and the Enable Banking card: application id + `.pem` key + callback URL, the bank picker per country, per-account create/pair/ignore mapping, and sync or unlink per linked bank |
+| Settings | Hero with the cipher and zero-cloud chips, then the Enable Banking card first: application id + `.pem` key + callback URL, the bank picker per country, per-account create/pair/ignore mapping, and sync, unlink or balance alignment per linked bank. The passphrase change and the paired export and import option cards (transaction CSV, every table as a plain ZIP, complete encrypted archive, CSV preview and merge, archive replacement) follow |
 
 The mockup's global search field is **deliberately left out of the header**:
 free-text search lives in the Transactions filters, next to the other query
@@ -148,5 +151,5 @@ filtered exports, the ledger checksum chip and the mockups' illustrative node
 identifiers.
 
 The vault lock screen uses the same language: centered card, lock badge,
-passphrase field, the no-recovery warning, and a tinted facts row with state,
-storage engine and vault format.
+passphrase field, the no-recovery warning, and a tinted facts row with the vault
+state.

@@ -107,6 +107,63 @@ afterEach(() => {
 });
 
 describe("Enable Banking in Settings", () => {
+  it("opens Settings with the bank connection above the passphrase", async () => {
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: false,
+          links: [],
+          sync: { running: false },
+        }),
+      "/api/accounts": () => json({ items: [] }),
+    });
+    const { container } = render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Connect to Enable Banking" })).toBeTruthy(),
+    );
+    const headings = Array.from(container.querySelectorAll("h2")).map((node) => node.textContent);
+    expect(headings[0]).toBe("Connect to Enable Banking");
+    expect(headings).toContain("Passphrase");
+  });
+
+  it("keeps the storage engine and format versions out of Settings", async () => {
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: false,
+          links: [],
+          sync: { running: false },
+        }),
+      "/api/accounts": () => json({ items: [] }),
+    });
+    const { container } = render(
+      <SettingsView
+        csrf="csrf"
+        busy={false}
+        onChangePassphrase={async () => true}
+        onClearError={() => undefined}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Connect to Enable Banking" })).toBeTruthy(),
+    );
+    for (const label of ["Storage engine", "Schema", "Vault format", "Export format"]) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(container.textContent).not.toContain("sqlcipher");
+  });
+
   it("asks for the key, the application id and the callback URL", async () => {
     mockFetch({
       "/api/banking/status": () =>
@@ -122,7 +179,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,
@@ -172,7 +228,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,
@@ -217,7 +272,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,
@@ -256,7 +310,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,
@@ -311,7 +364,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,
@@ -376,7 +428,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,
@@ -420,7 +471,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,
@@ -456,7 +506,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,
@@ -499,7 +548,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,
@@ -549,7 +597,6 @@ describe("Enable Banking in Settings", () => {
       <SettingsView
         csrf="csrf"
         busy={false}
-        vaultStatus={unlockedStatus}
         onChangePassphrase={async () => true}
         onClearError={() => undefined}
       />,

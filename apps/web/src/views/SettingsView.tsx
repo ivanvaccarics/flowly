@@ -1,9 +1,8 @@
 import { useState } from "react";
-import type { VaultStatus } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { BankingPanel } from "../components/BankingPanel.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, PageHeader, Stat } from "../components/ui.js";
+import { Banner, Chip, PageHeader } from "../components/ui.js";
 import { describeError } from "../hooks/use-workspace.js";
 
 interface CsvPreview {
@@ -18,18 +17,11 @@ interface CsvPreview {
 export interface SettingsViewProps {
   csrf: string;
   busy: boolean;
-  vaultStatus: VaultStatus | undefined;
   onChangePassphrase: (current: string, next: string) => Promise<boolean>;
   onClearError: () => void;
 }
 
-export function SettingsView({
-  csrf,
-  busy,
-  vaultStatus,
-  onChangePassphrase,
-  onClearError,
-}: SettingsViewProps) {
+export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: SettingsViewProps) {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [passphraseState, setPassphraseState] = useState<"idle" | "ok" | "error">("idle");
@@ -70,10 +62,10 @@ export function SettingsView({
   return (
     <section className="view" aria-labelledby="settings-title">
       <PageHeader
-        eyebrow="Settings · passphrase and portable data"
+        eyebrow="Settings · bank, passphrase and portable data"
         title="Settings & vault data"
         titleId="settings-title"
-        lead="Configure the cryptographic parameters of the local vault, export your ledger and import historical files without giving up sovereignty."
+        lead="Connect your bank, protect the local vault with its passphrase, and export or import your ledger without giving up sovereignty."
         facts={
           <>
             <Chip tone="vault" icon="shield">
@@ -84,15 +76,9 @@ export function SettingsView({
             </Chip>
           </>
         }
-        ribbon={
-          <>
-            <Stat label="Storage engine" value={vaultStatus?.storageEngine ?? "sqlcipher"} />
-            <Stat label="Schema" value={`v${vaultStatus?.schemaVersion ?? "?"}`} />
-            <Stat label="Vault format" value={`v${vaultStatus?.vaultFormatVersion ?? 1}`} />
-            <Stat label="Export format" value={`v${vaultStatus?.exportFormatVersion ?? 1}`} />
-          </>
-        }
       />
+
+      <BankingPanel csrf={csrf} />
 
       <form
         className="card"
@@ -375,8 +361,6 @@ export function SettingsView({
           </div>
         ) : null}
       </div>
-
-      <BankingPanel csrf={csrf} />
 
       {status ? <Banner tone="ok">{status}</Banner> : null}
       {error ? <Banner tone="error">{error}</Banner> : null}
