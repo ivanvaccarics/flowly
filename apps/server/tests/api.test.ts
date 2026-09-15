@@ -128,6 +128,33 @@ afterEach(async () => {
 });
 
 describe("vault API", () => {
+  it("counts unlock attempts against the real client, not a forged header", async () => {
+    const app = startApp(makeConfig({ trustProxy: true, unlockAttemptsPerMinute: 3 }));
+    await createVault(app);
+
+    const statuses: number[] = [];
+    for (let index = 0; index < 4; index += 1) {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/vault/unlock",
+        // What Caddy forwards: whatever the client wrote, then the address it
+        // really saw. Only the second entry can be trusted.
+        headers: { "x-forwarded-for": `1.2.3.${index}, 203.0.113.9` },
+        remoteAddress: "172.18.0.3",
+        payload: { passphrase: "wrong passphrase" },
+      });
+      statuses.push(response.statusCode);
+    }
+    expect(statuses).toEqual([401, 401, 401, 429]);
+  });
+
+  it("keeps financial responses out of any cache", async () => {
+    const app = startApp(makeConfig());
+    const client = await createVault(app);
+    const status = await authed(app, client, { method: "GET", url: "/api/vault/status" });
+    expect(status.headers["cache-control"]).toBe("no-store");
+  });
+
   it("creates a vault, opens a session and reports an unlocked status", async () => {
     const app = startApp(makeConfig());
     const client = await createVault(app);

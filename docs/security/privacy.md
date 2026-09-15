@@ -55,6 +55,11 @@ removes the application credentials too. The full picture is in
 - `lock` / `lock-all` end sessions immediately.
 - Complete portable archives are the supported way to move or back up data; the
   password is yours alone.
+- The transaction CSV and the "every table" ZIP are **plain text and not
+  encrypted**: the ZIP carries one CSV per table plus `banking.json` with the
+  provider link records (the Enable Banking private key is redacted there and
+  only the password-encrypted archive carries it intact). Treat both like a
+  printed statement.
 - Deleting the vault removes it from the server (with an explicit confirmation
   and the passphrase).
 - Deleting the `data/vault` folder (bind-mounted into the server container)

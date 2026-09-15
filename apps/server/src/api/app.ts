@@ -103,7 +103,14 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   const app = Fastify({
     logger: config.logLevel === "silent" ? false : { level: config.logLevel },
-    trustProxy: config.trustProxy,
+    // Behind the bundled proxy the socket peer is the proxy, so the client
+    // address comes from X-Forwarded-For. Trusting *everything* (`true`) would
+    // take the leftmost entry the client can write, which lets anyone rotate the
+    // header to get a fresh unlock-attempt bucket and to feed the bank a
+    // made-up PSU address. Trusting the private ranges only — Docker's network,
+    // loopback, the LAN and the tailnet — makes proxy-addr walk the chain from
+    // the socket and stop at the first address the client cannot forge.
+    trustProxy: config.trustProxy ? ["loopback", "linklocal", "uniquelocal"] : false,
     bodyLimit: 32 * 1024 * 1024,
   });
 
@@ -121,6 +128,8 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       "permissions-policy",
       "geolocation=(), camera=(), microphone=(), payment=(), usb=()",
     );
+    // Financial responses never belong in a cache, browser or intermediary.
+    if (request.url.startsWith("/api/")) reply.header("cache-control", "no-store");
     if (String(reply.getHeader("content-type") ?? "").includes("text/html")) {
       // A route may bring its own policy (the bank callback allows one hashed
       // inline script and nothing else); the shell keeps the strict default.
@@ -128,7 +137,8 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
         reply.header(
           "content-security-policy",
           "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; " +
-            "img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'",
+            "form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; " +
+            "connect-src 'self'",
         );
       }
     }

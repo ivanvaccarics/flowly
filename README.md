@@ -232,7 +232,8 @@ interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
 - [docs/adr/](docs/adr/) — the decisions behind the storage engine, key
   hierarchy, sessions, portability, toolchain, concurrency and cascades.
 - [docs/security/](docs/security/) — threat model, privacy notice, data-loss
-  warning, support matrix, verification status, SBOM and license inventory.
+  warning, support matrix, verification status, SBOM, license inventory and the
+  [security audit](docs/security/audit-2026-09-15.md).
 - [contracts/README.md](contracts/README.md) — the canonical schemas, fixtures
   and golden vectors that both clients must satisfy.
 - [docs/TERMS_OF_SERVICE.md](docs/TERMS_OF_SERVICE.md) — the terms for running a

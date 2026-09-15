@@ -28,6 +28,7 @@ describe("deployment surface", () => {
       // The shell is never cached, or a rebuilt image keeps serving the old one.
       expect(index.headers["cache-control"]).toBe("no-cache");
       expect(index.headers["content-security-policy"]).toContain("default-src 'self'");
+      expect(index.headers["content-security-policy"]).toContain("form-action 'self'");
       expect(index.headers["x-content-type-options"]).toBe("nosniff");
       expect(index.headers["x-frame-options"]).toBe("DENY");
 

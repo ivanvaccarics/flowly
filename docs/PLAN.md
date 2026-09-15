@@ -1360,6 +1360,11 @@ Status: **complete** (2026-09-14), decisions in `docs/adr/0017` and
 - Every imported row carries a **Raw** view in the ledger: the fields Flowly
   stored next to the ones the bank sent, flattened into tables, matched to the
   stored payload by provider id or by booking date, amount and currency.
+- Security audit of the Server MVP (`docs/security/audit-2026-09-15.md`): one
+  medium finding (a forged `X-Forwarded-For` could bypass the unlock rate limit
+  and spoof the PSU address) and two low ones (cacheable API responses, missing
+  `form-action`) fixed with tests; KDF strength, the SQLCipher binding and the
+  plain-text export recorded as recommendations and accepted risks.
 - Settings compares the saved callback URL with the address the browser is
   using, and lets it be corrected and re-verified without re-uploading the
   private key.

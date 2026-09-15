@@ -34,7 +34,8 @@ disk, and the import/export files the user moves by hand.
 | Unlocked vault left running | Auto-lock when no session is active, lock-current, lock-all, keys zeroized on lock |
 | Malicious import | Strict parsing with per-row errors, checksum manifest, "same vault" guard, orphan-reference checks, atomic replace with a pre-import snapshot |
 | Formula injection in exports | `'` prefix on spreadsheet-triggering cells, plain numbers untouched |
-| Public exposure by accident | The server refuses `0.0.0.0` without an explicit opt-in; Compose publishes loopback only |
+| Public exposure by accident | The server refuses `0.0.0.0` without an explicit opt-in; Compose publishes only the proxy port, on the interface `FLOWLY_BIND_IP` names (loopback by default), and Flowly never asks the router for a port mapping |
+| Spoofed client address | With `FLOWLY_TRUST_PROXY=true` only `loopback`, `linklocal` and `uniquelocal` are trusted, so the client address comes from the proxy's own insertion and not from a header the caller wrote; a forged `X-Forwarded-For` cannot mint rate-limit buckets or a made-up PSU address |
 | Sensitive data in logs | Request logging records method, URL and status only; payloads, passphrases and keys are never logged |
 
 ## Explicit non-goals (MVP)

@@ -53,6 +53,20 @@ FLOWLY_SITE_ADDRESS=flowly.local   # or <machine>.<tailnet>.ts.net
 and start the stack again. `0.0.0.0` publishes on every interface: only do that
 inside a private network you control.
 
+Flowly never asks your router to open a port (no UPnP, no NAT-PMP), so anything
+reachable from the internet is reachable because a forward exists somewhere
+else. Worth checking once, because routers often ship with UPnP enabled and a
+device on the LAN can then open ports without asking:
+
+```bash
+upnpc -l          # lists the router's UPnP mappings (brew install miniupnpc)
+```
+
+Any mapping pointing at the machine that runs Flowly, or a DMZ host set to it,
+means that port is exposed to the internet. Remove the forward, turn UPnP off on
+the router, and prefer `tailscale serve` when only your own devices should reach
+Flowly.
+
 On **Docker Desktop** (macOS and Windows) the published port is opened from
 Docker's own Linux VM, which does not own the host's interfaces. Naming a LAN or
 Tailscale address there fails with
