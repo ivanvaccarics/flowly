@@ -8,10 +8,9 @@
  * Output: docs/security/sbom.json and docs/security/third-party-licenses.md
  */
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readFileSync } from "node:fs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..");
@@ -60,7 +59,60 @@ function pnpmJson(args) {
   }
 }
 
-const all = withoutPlatformBindings(pnpmJson(["licenses", "list", "--json"]));
+const sbomPath = join(outputDir, "sbom.json");
+const licensesPath = join(outputDir, "third-party-licenses.md");
+
+function loadPreviousLicenses() {
+  try {
+    const previous = JSON.parse(readFileSync(sbomPath, "utf8"));
+    const byPackageVersion = new Map();
+    for (const component of previous.components ?? []) {
+      const id = component.licenses?.[0]?.license?.id;
+      if (!id) continue;
+      byPackageVersion.set(`${component.name}@${component.version}`, id);
+    }
+    return byPackageVersion;
+  } catch {
+    return new Map();
+  }
+}
+
+function normalizeLicenseGroups(groups, previousLicenses) {
+  const grouped = new Map();
+
+  for (const [license, entries] of Object.entries(groups)) {
+    for (const entry of entries) {
+      for (const version of entry.versions ?? []) {
+        const key = `${entry.name}@${version}`;
+        const resolvedLicense =
+          license === "Unknown" ? previousLicenses.get(key) ?? license : license;
+
+        if (!grouped.has(resolvedLicense)) grouped.set(resolvedLicense, new Map());
+        const packages = grouped.get(resolvedLicense);
+        if (!packages.has(entry.name)) packages.set(entry.name, new Set());
+        packages.get(entry.name).add(version);
+      }
+    }
+  }
+
+  return Object.fromEntries(
+    [...grouped.entries()].map(([license, packages]) => [
+      license,
+      [...packages.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, versions]) => ({
+          name,
+          versions: [...versions].sort(),
+        })),
+    ]),
+  );
+}
+
+const previousLicenses = loadPreviousLicenses();
+const all = normalizeLicenseGroups(
+  withoutPlatformBindings(pnpmJson(["licenses", "list", "--json"])),
+  previousLicenses,
+);
 const project = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
 const serverPackage = JSON.parse(
   readFileSync(join(repoRoot, "apps", "server", "package.json"), "utf8"),
@@ -68,7 +120,10 @@ const serverPackage = JSON.parse(
 
 let production = {};
 try {
-  production = withoutPlatformBindings(pnpmJson(["licenses", "list", "--prod", "--json"]));
+  production = normalizeLicenseGroups(
+    withoutPlatformBindings(pnpmJson(["licenses", "list", "--prod", "--json"])),
+    previousLicenses,
+  );
 } catch {
   console.warn("warning: could not restrict the license list to production dependencies");
 }
@@ -159,9 +214,6 @@ for (const [license, entries] of Object.entries(production)) {
     violations.push(`${license}: ${entries.map((entry) => entry.name).join(", ")}`);
   }
 }
-
-const sbomPath = join(outputDir, "sbom.json");
-const licensesPath = join(outputDir, "third-party-licenses.md");
 
 if (checkOnly) {
   if (violations.length > 0) {
