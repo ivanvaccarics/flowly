@@ -160,6 +160,19 @@ export interface BankAccountMappingInput {
   currency?: string;
 }
 
+/** The provider record behind one imported transaction, as the bank sent it. */
+export interface RawTransactionRecord {
+  provider: "enable-banking";
+  linkId: string;
+  aspspName: string;
+  providerAccountUid: string;
+  fetchedAt: string;
+  requestFrom?: string;
+  requestTo?: string;
+  matchedBy: "provider-transaction-id" | "booking-date-amount-currency";
+  raw: unknown;
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
@@ -371,4 +384,8 @@ export const api = {
       csrf,
       body: linkId ? { linkId } : {},
     }),
+
+  /** The raw provider record behind one transaction, for the ledger's Raw view. */
+  transactionRaw: (id: string) =>
+    request<RawTransactionRecord>(`/api/transactions/${encodeURIComponent(id)}/raw`),
 };

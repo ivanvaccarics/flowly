@@ -193,8 +193,11 @@ own — use the paste fallback until the address is right.
 If a bank shows **consent expired** (or revoked), the consent lapsed at the bank:
 connect that bank again from Settings. Imported transactions stay untouched.
 Raw provider responses are kept per account in the vault (`bank_payloads`) so a
-refresh can be audited; the plain-text tables ZIP redacts the private key, and
-only the password-encrypted archive carries it.
+refresh can be replayed or audited. The ledger makes that visible without a CLI:
+**Raw** on a transaction row opens the provider record behind it — the stored
+fields and the bank's fields, flattened into tables, plus the exact JSON. The
+plain-text tables ZIP redacts the private key, and only the password-encrypted
+archive carries it.
 
 ## 3. Self-hosted on your own network (Docker Compose)
 

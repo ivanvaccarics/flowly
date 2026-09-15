@@ -57,6 +57,102 @@ afterEach(() => {
 });
 
 describe("transactions view", () => {
+  it("shows the raw provider record behind a row as tables", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const path = new URL(raw, "http://localhost").pathname;
+        if (path === "/api/accounts") return json({ items: [account] });
+        if (path === "/api/tags") return json({ items: [tag] });
+        if (path === "/api/transactions") {
+          return json({
+            items: [
+              {
+                ...transaction,
+                source: "enable-banking",
+                provider: "enable-banking",
+                providerTransactionId: "entry-1",
+              },
+            ],
+            total: 1,
+            limit: 100,
+            offset: 0,
+          });
+        }
+        if (path.endsWith("/raw")) {
+          return json({
+            provider: "enable-banking",
+            linkId: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
+            aspspName: "UniCredit",
+            providerAccountUid: "uid-1",
+            fetchedAt: "2026-09-15T10:00:00.000Z",
+            requestFrom: "2026-06-06",
+            requestTo: "2026-09-14",
+            matchedBy: "provider-transaction-id",
+            raw: {
+              entry_reference: "entry-1",
+              transaction_amount: { amount: "-12.30", currency: "EUR" },
+              creditor: { name: "Bar Centrale" },
+              status: "BOOK",
+            },
+          });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Raw/ }));
+
+    await waitFor(() => expect(screen.getByText("What the bank sent")).toBeTruthy());
+    expect(screen.getByText("What Flowly stored")).toBeTruthy();
+    // The provider JSON arrives flattened, one field per row.
+    expect(screen.getByText("transaction_amount.amount")).toBeTruthy();
+    expect(screen.getByText("-12.30")).toBeTruthy();
+    expect(screen.getByText("creditor.name")).toBeTruthy();
+    expect(
+      within(screen.getByLabelText("Raw provider record")).getByText("UniCredit"),
+    ).toBeTruthy();
+    expect(screen.getByText(/matched by/).textContent).toContain("its provider id");
+  });
+
+  it("explains when a transaction has no provider record", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const path = new URL(raw, "http://localhost").pathname;
+        if (path === "/api/accounts") return json({ items: [account] });
+        if (path === "/api/tags") return json({ items: [tag] });
+        if (path === "/api/transactions") {
+          return json({ items: [transaction], total: 1, limit: 100, offset: 0 });
+        }
+        if (path.endsWith("/raw")) {
+          return new Response(
+            JSON.stringify({
+              error: "raw_record_not_found",
+              message: "Flowly has no provider record for this transaction.",
+            }),
+            { status: 404, headers: { "content-type": "application/json" } },
+          );
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Raw/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/has no provider record for this transaction/)).toBeTruthy(),
+    );
+  });
+
   it("renders the ledger and asks the server to filter", async () => {
     const requests: string[] = [];
     vi.stubGlobal(

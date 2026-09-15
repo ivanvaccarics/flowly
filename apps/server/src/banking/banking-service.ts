@@ -17,6 +17,7 @@ import {
 } from "../domain/banking.js";
 import { systemClock, type Clock } from "../domain/clock.js";
 import { isSupportedCurrency } from "../domain/money.js";
+import type { Transaction } from "../domain/transaction.js";
 import type { Vault } from "../vault/vault.js";
 import { TaggingRuleService } from "../application/tagging-rule-service.js";
 import { BankingError } from "./errors.js";
@@ -25,11 +26,12 @@ import {
   accountTypeFromCashAccountType,
   maskIban,
   normalizeAccount,
+  normalizeTransaction,
   normalizeTimestamp,
 } from "./normalize.js";
 import { publicKeyFingerprint } from "./jwt.js";
 import { BankSyncService, type SyncReport } from "./sync.js";
-import type { EbAccountResource, EbAspsp } from "./enable-banking-types.js";
+import type { EbAccountResource, EbAspsp, EbTransaction } from "./enable-banking-types.js";
 import type { EbApplication } from "./enable-banking-types.js";
 
 const STATE_TTL_MS = 15 * 60_000;
@@ -140,6 +142,20 @@ export interface AuthorizeStart {
   url: string;
   state: string;
   expiresAt: string;
+}
+
+/** The provider record behind one imported transaction, exactly as received. */
+export interface RawTransactionRecord {
+  provider: typeof BANK_PROVIDER;
+  linkId: string;
+  aspspName: string;
+  providerAccountUid: string;
+  fetchedAt: string;
+  requestFrom?: string;
+  requestTo?: string;
+  /** How the record was matched: its provider id, or the normalised fields. */
+  matchedBy: "provider-transaction-id" | "booking-date-amount-currency";
+  raw: unknown;
 }
 
 export interface AuthorizationResult {
@@ -408,6 +424,48 @@ export class BankingService {
     const links = await this.vault.bankLinks.list({ refA: connection.id });
     const link = links.find((candidate) => candidate.state === state);
     return link ? link.status : "unknown";
+  }
+
+  /**
+   * The provider record behind one imported transaction: the JSON Enable
+   * Banking sent, so what Flowly stored can be checked against what the bank
+   * actually said. Matched by the provider id when there is one, otherwise by
+   * the normalised booking date, amount and currency.
+   */
+  async findRawTransaction(transaction: Transaction): Promise<RawTransactionRecord | undefined> {
+    const bankAccount = (await this.vault.bankAccounts.list()).find(
+      (candidate) => candidate.accountId === transaction.accountId,
+    );
+    if (!bankAccount) return undefined;
+
+    const payloads = (await this.vault.bankPayloads.list({ refA: bankAccount.providerAccountUid }))
+      .filter((payload) => payload.kind === "transactions")
+      // Newest first: a later sync is the record the stored row came from.
+      .sort((left, right) => (left.fetchedAt < right.fetchedAt ? 1 : -1));
+
+    for (const payload of payloads) {
+      const page = payload.json as { transactions?: EbTransaction[] } | null;
+      const candidates = Array.isArray(page?.transactions) ? page.transactions : [];
+      const providerId = transaction.providerTransactionId;
+      const byId = providerId
+        ? candidates.find((candidate) => rawTransactionId(candidate) === providerId)
+        : undefined;
+      const raw = byId ?? candidates.find((candidate) => matchesNormalised(candidate, transaction));
+      if (!raw) continue;
+      const link = await this.vault.bankLinks.get(payload.linkId);
+      return {
+        provider: BANK_PROVIDER,
+        linkId: payload.linkId,
+        aspspName: link?.aspspName ?? "",
+        providerAccountUid: payload.providerAccountUid,
+        fetchedAt: payload.fetchedAt,
+        ...(payload.requestFrom ? { requestFrom: payload.requestFrom } : {}),
+        ...(payload.requestTo ? { requestTo: payload.requestTo } : {}),
+        matchedBy: byId ? "provider-transaction-id" : "booking-date-amount-currency",
+        raw,
+      };
+    }
+    return undefined;
   }
 
   /**
@@ -829,6 +887,26 @@ export class BankingService {
         : {}),
     };
   }
+}
+
+/** The provider's own id for a raw transaction, whichever field carries it. */
+function rawTransactionId(raw: EbTransaction): string | undefined {
+  const candidates = [raw.entry_reference, raw.transaction_id];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim() !== "") return candidate.trim();
+  }
+  return undefined;
+}
+
+/** Last resort match: the same normalised date, amount and currency. */
+function matchesNormalised(raw: EbTransaction, transaction: Transaction): boolean {
+  const normalized = normalizeTransaction(raw);
+  if (!normalized.ok) return false;
+  return (
+    normalized.bookingDate === transaction.bookingDate &&
+    normalized.amountMinor === transaction.amountMinor &&
+    normalized.currency === transaction.currency
+  );
 }
 
 function publicConnection(connection: BankConnection): BankConnectionPublic {

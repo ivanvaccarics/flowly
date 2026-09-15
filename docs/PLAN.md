@@ -1357,6 +1357,9 @@ Status: **complete** (2026-09-14), decisions in `docs/adr/0017` and
   the last sync (`docs/adr/0019`). A row whose payee only existed in a long
   remittance used to abort the whole sync; the payee is clamped to the field
   limit and a row the vault refuses is reported without losing the rest.
+- Every imported row carries a **Raw** view in the ledger: the fields Flowly
+  stored next to the ones the bank sent, flattened into tables, matched to the
+  stored payload by provider id or by booking date, amount and currency.
 - Settings compares the saved callback URL with the address the browser is
   using, and lets it be corrected and re-verified without re-uploading the
   private key.

@@ -95,7 +95,9 @@ the balance Flowly shows everywhere is the one your bank reports. Banks refresh
 when you unlock the vault, and the dashboard has a **Sync now** button for a
 manual pull. Pending rows reconcile into booked ones in place, your notes and
 tags are never overwritten, every raw provider response is kept per account, and
-the vault stays the canonical ledger.
+the vault stays the canonical ledger. Every row imported from a bank carries a
+**Raw** button in the ledger: it shows the fields Flowly stored next to the ones
+the bank sent, as tables rather than a JSON blob.
 
 ### 🔐 Security you can explain to a friend
 - A **mandatory passphrase** protects a randomly generated encryption key,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import type { Account, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
@@ -8,6 +8,7 @@ import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { parseAmountToMinor } from "../lib/money.js";
 import { formatMinorToAmount } from "../lib/money.js";
+import { RawTransactionPanel } from "../components/RawTransactionPanel.js";
 
 interface Filters {
   accountId: string;
@@ -42,6 +43,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
     { id: string; payee: string; amount: string; note: string; tagIds: string[] } | undefined
   >(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
+  const [rawOpen, setRawOpen] = useState<string | undefined>(undefined);
 
   const account = accounts.items.find((candidate) => candidate.id === accountId);
   const currency = account?.defaultCurrency ?? "EUR";
@@ -371,153 +373,175 @@ export function TransactionsView({ csrf }: { csrf: string }) {
             </thead>
             <tbody>
               {items.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td className="mono">{transaction.bookingDate}</td>
-                  <td>
-                    {editing?.id === transaction.id ? (
-                      <input
-                        aria-label={`Payee for ${transaction.id}`}
-                        value={editing.payee}
-                        onChange={(event) => setEditing({ ...editing, payee: event.target.value })}
-                      />
-                    ) : (
-                      <span className="tx">
-                        <span
-                          className={
-                            transaction.amountMinor < 0 ? "tx-icon expense" : "tx-icon income"
-                          }
-                        >
-                          <Icon name="transactions" size={15} />
-                        </span>
-                        <span className="stack">
-                          <strong>{transaction.payee ?? "—"}</strong>
-                          {transaction.description ? (
-                            <span className="sub">{transaction.description}</span>
-                          ) : null}
-                        </span>
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    {editing?.id === transaction.id ? (
-                      <input
-                        aria-label={`Note for ${transaction.payee ?? transaction.id}`}
-                        value={editing.note}
-                        onChange={(event) => setEditing({ ...editing, note: event.target.value })}
-                      />
-                    ) : (
-                      (transaction.userNote ?? "—")
-                    )}
-                  </td>
-                  <td>
-                    {editing?.id === transaction.id ? (
-                      <TagPicker
-                        tags={tags.items}
-                        selected={editing.tagIds}
-                        onChange={(tagIds) => setEditing({ ...editing, tagIds })}
-                        label={`Edit tags for ${transaction.payee ?? transaction.id}`}
-                      />
-                    ) : transaction.tagIds.length === 0 ? (
-                      <span className="muted">—</span>
-                    ) : (
-                      transaction.tagIds.map((id) => {
-                        const tag = tags.items.find((candidate) => candidate.id === id);
-                        return (
-                          <span key={id} className="tag-pill">
-                            <span
-                              className="swatch"
-                              style={{ background: tag?.color ?? "#4648d4" }}
-                            />
-                            {tag?.name ?? "…"}
-                          </span>
-                        );
-                      })
-                    )}
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="chip-button"
-                      title="Switch between booked and pending"
-                      aria-label={`Set status for ${transaction.payee ?? transaction.id}`}
-                      onClick={() => void toggleStatus(transaction)}
-                    >
-                      <Chip tone={transaction.status === "booked" ? "income" : "vault"}>
-                        {transaction.status}
-                      </Chip>
-                    </button>
-                  </td>
-                  <td>
-                    <span className="chip mono neutral">
-                      <Icon name="lock" size={12} />
-                      {transaction.source}
-                    </span>
-                  </td>
-                  <td>
-                    {editing?.id === transaction.id ? (
-                      <span className="amount-edit">
+                <Fragment key={transaction.id}>
+                  <tr>
+                    <td className="mono">{transaction.bookingDate}</td>
+                    <td>
+                      {editing?.id === transaction.id ? (
                         <input
-                          aria-label={`Amount in ${transaction.currency}`}
-                          value={editing.amount}
+                          aria-label={`Payee for ${transaction.id}`}
+                          value={editing.payee}
                           onChange={(event) =>
-                            setEditing({ ...editing, amount: event.target.value })
+                            setEditing({ ...editing, payee: event.target.value })
                           }
                         />
-                        <span className="sub mono">{transaction.currency}</span>
-                      </span>
-                    ) : (
-                      <Money minor={transaction.amountMinor} currency={transaction.currency} />
-                    )}
-                  </td>
-                  <td>
-                    <div className="cell-actions">
-                      {editing?.id === transaction.id ? (
-                        <>
-                          <button
-                            type="button"
-                            className="btn small primary"
-                            onClick={() => void saveEdits(transaction)}
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            className="btn small"
-                            onClick={() => setEditing(undefined)}
-                          >
-                            Cancel
-                          </button>
-                        </>
                       ) : (
+                        <span className="tx">
+                          <span
+                            className={
+                              transaction.amountMinor < 0 ? "tx-icon expense" : "tx-icon income"
+                            }
+                          >
+                            <Icon name="transactions" size={15} />
+                          </span>
+                          <span className="stack">
+                            <strong>{transaction.payee ?? "—"}</strong>
+                            {transaction.description ? (
+                              <span className="sub">{transaction.description}</span>
+                            ) : null}
+                          </span>
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {editing?.id === transaction.id ? (
+                        <input
+                          aria-label={`Note for ${transaction.payee ?? transaction.id}`}
+                          value={editing.note}
+                          onChange={(event) => setEditing({ ...editing, note: event.target.value })}
+                        />
+                      ) : (
+                        (transaction.userNote ?? "—")
+                      )}
+                    </td>
+                    <td>
+                      {editing?.id === transaction.id ? (
+                        <TagPicker
+                          tags={tags.items}
+                          selected={editing.tagIds}
+                          onChange={(tagIds) => setEditing({ ...editing, tagIds })}
+                          label={`Edit tags for ${transaction.payee ?? transaction.id}`}
+                        />
+                      ) : transaction.tagIds.length === 0 ? (
+                        <span className="muted">—</span>
+                      ) : (
+                        transaction.tagIds.map((id) => {
+                          const tag = tags.items.find((candidate) => candidate.id === id);
+                          return (
+                            <span key={id} className="tag-pill">
+                              <span
+                                className="swatch"
+                                style={{ background: tag?.color ?? "#4648d4" }}
+                              />
+                              {tag?.name ?? "…"}
+                            </span>
+                          );
+                        })
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="chip-button"
+                        title="Switch between booked and pending"
+                        aria-label={`Set status for ${transaction.payee ?? transaction.id}`}
+                        onClick={() => void toggleStatus(transaction)}
+                      >
+                        <Chip tone={transaction.status === "booked" ? "income" : "vault"}>
+                          {transaction.status}
+                        </Chip>
+                      </button>
+                    </td>
+                    <td>
+                      <span className="chip mono neutral">
+                        <Icon name="lock" size={12} />
+                        {transaction.source}
+                      </span>
+                    </td>
+                    <td>
+                      {editing?.id === transaction.id ? (
+                        <span className="amount-edit">
+                          <input
+                            aria-label={`Amount in ${transaction.currency}`}
+                            value={editing.amount}
+                            onChange={(event) =>
+                              setEditing({ ...editing, amount: event.target.value })
+                            }
+                          />
+                          <span className="sub mono">{transaction.currency}</span>
+                        </span>
+                      ) : (
+                        <Money minor={transaction.amountMinor} currency={transaction.currency} />
+                      )}
+                    </td>
+                    <td>
+                      <div className="cell-actions">
                         <button
                           type="button"
                           className="btn small"
+                          aria-expanded={rawOpen === transaction.id}
                           onClick={() =>
-                            setEditing({
-                              id: transaction.id,
-                              payee: transaction.payee ?? "",
-                              amount: formatMinorToAmount(
-                                transaction.amountMinor,
-                                transaction.currency,
-                              ),
-                              note: transaction.userNote ?? "",
-                              tagIds: transaction.tagIds,
-                            })
+                            setRawOpen(rawOpen === transaction.id ? undefined : transaction.id)
                           }
                         >
-                          Edit
+                          <Icon name="eye" size={14} />
+                          Raw
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        className="btn small danger"
-                        onClick={() => void remove(transaction)}
-                      >
-                        <Icon name="trash" size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                        {editing?.id === transaction.id ? (
+                          <>
+                            <button
+                              type="button"
+                              className="btn small primary"
+                              onClick={() => void saveEdits(transaction)}
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              className="btn small"
+                              onClick={() => setEditing(undefined)}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn small"
+                            onClick={() =>
+                              setEditing({
+                                id: transaction.id,
+                                payee: transaction.payee ?? "",
+                                amount: formatMinorToAmount(
+                                  transaction.amountMinor,
+                                  transaction.currency,
+                                ),
+                                note: transaction.userNote ?? "",
+                                tagIds: transaction.tagIds,
+                              })
+                            }
+                          >
+                            Edit
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn small danger"
+                          onClick={() => void remove(transaction)}
+                        >
+                          <Icon name="trash" size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {rawOpen === transaction.id ? (
+                    <tr className="raw-row">
+                      <td colSpan={8}>
+                        <RawTransactionPanel transaction={transaction} />
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>

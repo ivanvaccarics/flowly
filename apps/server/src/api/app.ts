@@ -355,6 +355,28 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   });
   // --- dashboard and search -------------------------------------------------
 
+  app.get("/api/transactions/:id/raw", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    const { id } = request.params as { id: string };
+    const transaction = await context.vault.transactions.get(id);
+    if (!transaction) {
+      reply.code(404);
+      return { error: "not_found" };
+    }
+    const record = await bankingFor(context.vault).findRawTransaction(transaction);
+    if (!record) {
+      reply.code(404);
+      return {
+        error: "raw_record_not_found",
+        message:
+          "Flowly has no provider record for this transaction. It was entered by hand or " +
+          "imported from a file, or it was imported before the raw responses were kept.",
+      };
+    }
+    return record;
+  });
+
   app.get("/api/dashboard", async (request, reply) => {
     const context = requireContext(request, reply);
     if (!context) return errorBody(reply);

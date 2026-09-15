@@ -159,6 +159,57 @@ describe("Enable Banking sync", () => {
     expect([...payee].length).toBeLessThanOrEqual(120);
   });
 
+  it("serves the raw provider record behind an imported transaction", async () => {
+    const bank = new FakeBank();
+    const { harness: session } = await mappedHarness(bank);
+    await post(session, "/api/banking/sync", {});
+    const items = (await get(session, "/api/transactions")).json<{ items: TransactionRow[] }>()
+      .items;
+    const id = items[0]?.id as string;
+
+    const raw = await get(session, `/api/transactions/${id}/raw`);
+    expect(raw.statusCode).toBe(200);
+    const record = raw.json<{
+      provider: string;
+      aspspName: string;
+      matchedBy: string;
+      requestFrom?: string;
+      raw: { entry_reference?: string; transaction_amount?: { amount?: string } };
+    }>();
+    expect(record.provider).toBe("enable-banking");
+    expect(record.aspspName).toBe("UniCredit");
+    expect(record.matchedBy).toBe("provider-transaction-id");
+    expect(record.requestFrom).toBe("2026-06-06");
+    expect(record.raw.entry_reference).toBe("6a970267-0e42-a2f0-93b8-b7c9cf4b7862");
+    expect(record.raw.transaction_amount?.amount).toBe("3.75");
+  });
+
+  it("explains when a transaction has no provider record", async () => {
+    const { harness: session, accountId } = await mappedHarness();
+    const now = "2026-09-11T09:00:00.000Z";
+    const created = await post(session, "/api/transactions", {
+      entity: {
+        formatVersion: 1,
+        revision: 1,
+        id: crypto.randomUUID(),
+        accountId,
+        bookingDate: "2026-09-10",
+        amountMinor: -500,
+        currency: "EUR",
+        status: "booked",
+        source: "manual",
+        tagIds: [],
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    const id = created.json<{ entity: { id: string } }>().entity.id;
+
+    const raw = await get(session, `/api/transactions/${id}/raw`);
+    expect(raw.statusCode).toBe(404);
+    expect(raw.json<{ error: string }>().error).toBe("raw_record_not_found");
+  });
+
   it("is idempotent: a second sync changes nothing", async () => {
     const { harness: session } = await mappedHarness();
     await post(session, "/api/banking/sync", {});

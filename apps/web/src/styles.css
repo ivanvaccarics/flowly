@@ -858,6 +858,68 @@ details[open] > summary::before {
 
 /* ----------------------------------------------------------------- chips */
 
+/* ------------------------------------------------- raw provider records */
+
+/* The row that opens under a transaction: two small tables and the exact
+   payload, on the sunken surface so it reads as an aside to the ledger. */
+.raw-row > td {
+  padding: 0;
+  background: var(--surface-low);
+}
+
+.raw-panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+}
+
+.raw-panel h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.raw-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.raw-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.raw-panel th,
+.raw-panel td {
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.8125rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.raw-panel th {
+  width: 42%;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.raw-json {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  overflow-x: auto;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;

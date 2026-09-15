@@ -19,7 +19,8 @@ export type IconName =
   | "alert"
   | "bank"
   | "refresh"
-  | "link";
+  | "link"
+  | "eye";
 
 const PATHS: Record<IconName, string> = {
   dashboard: "M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z",
@@ -42,6 +43,7 @@ const PATHS: Record<IconName, string> = {
   bank: "M3 9.5 12 4l9 5.5M5 10v9M19 10v9M9 19v-6h6v6M3 21h18M8 6.2h.01",
   refresh: "M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4",
   link: "M10.5 13.5a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7l-1 1M13.5 10.5a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1-1",
+  eye: "M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
 };
 
 export function Icon({
