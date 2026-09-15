@@ -110,23 +110,44 @@ docker compose ps
 
 ## Certificates
 
-Caddy issues certificates from its own local CA. Browsers will warn until you
-trust that CA — this is the "guided local certificate enrollment" step:
+Two ways to stop the browser warning — pick by how Flowly is reached:
+
+**Tailnet only (no trusting anything).** Keep `FLOWLY_BIND_IP=127.0.0.1` and let
+Tailscale terminate TLS with a real certificate for the tailnet name:
 
 ```bash
-docker compose exec proxy cat /data/caddy/pki/authorities/local/root.crt > flowly-local-ca.crt
+tailscale serve --bg --https=443 https+insecure://127.0.0.1:8443
+```
+
+Nothing to install on any device that is on your tailnet, and nothing published
+on the LAN.
+
+**LAN, localhost or plain Compose (trust Caddy's local CA).** Caddy signs with
+its own CA, so each device has to trust that root once. One command exports it
+from the Caddy volume and prints the platform command:
+
+```bash
+pnpm ca:export        # writes data/flowly-local-ca.crt and shows the next step
+pnpm ca:trust         # the same, and runs the trust command (asks for sudo)
+```
+
+By hand it is:
+
+```bash
+cp data/caddy/data/caddy/pki/authorities/local/root.crt data/flowly-local-ca.crt
 
 # macOS
 sudo security add-trusted-cert -d -r trustRoot \
-  -k /Library/Keychains/System.keychain flowly-local-ca.crt
+  -k /Library/Keychains/System.keychain data/flowly-local-ca.crt
 
 # Linux (Debian/Ubuntu)
-sudo cp flowly-local-ca.crt /usr/local/share/ca-certificates/flowly-local-ca.crt
+sudo cp data/flowly-local-ca.crt /usr/local/share/ca-certificates/flowly-local-ca.crt
 sudo update-ca-certificates
 ```
 
-Then open `https://flowly.local:8443` (or whatever `FLOWLY_SITE_ADDRESS` says).
-Delete `flowly-local-ca.crt` from where you exported it once it is installed.
+Phones need the same certificate installed as a profile, with full trust enabled
+for it afterwards. Then open Flowly at the address in `.env`; the address bar
+shows a normal padlock instead of "Not secure".
 
 Direct IP access works too: Caddy falls back to the `localhost` certificate when
 the client sends no SNI (`default_sni localhost`), so `https://192.168.1.20:8443`
