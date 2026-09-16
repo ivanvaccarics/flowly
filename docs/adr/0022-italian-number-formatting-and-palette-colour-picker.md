@@ -7,6 +7,11 @@ Corrects the presentation rules of
 "no native colour wheel" line of
 [ADR 0012](./0012-align-web-ui-with-sovereign-ledger-mockups.md).
 
+> **Update (2026-09-16, later the same day).** The top-bar **Export data**
+> shortcut was removed: exporting has one home, Settings. The deep link survives
+> on the dashboard hero's **Export data** button, which is now the only shortcut
+> that lands on the export block.
+
 ## Context
 
 Reading the running app surfaced four presentation problems:

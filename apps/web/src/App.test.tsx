@@ -316,15 +316,13 @@ describe("Flowly web client", () => {
     await waitFor(() => expect(screen.getByText("Groceries")).toBeTruthy());
   });
 
-  it("takes the top bar's Export data shortcut to the export section", async () => {
+  it("takes the dashboard's Export data shortcut to the export section", async () => {
     mockFetch(unlockedRoutes());
     await unlock();
 
-    await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Export data" }).length).toBeGreaterThan(0),
-    );
-    // The first one is the top bar shortcut; the dashboard hero has its own.
-    screen.getAllByRole("button", { name: "Export data" })[0]!.click();
+    // Export lives in Settings; the dashboard hero is the only shortcut to it.
+    await waitFor(() => expect(screen.getByRole("button", { name: "Export data" })).toBeTruthy());
+    screen.getByRole("button", { name: "Export data" }).click();
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Export transactions CSV" })).toBeTruthy(),

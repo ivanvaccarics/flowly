@@ -99,8 +99,9 @@ not shift.
   hairline outline and a teal icon.
 - Sticky 64 px white top bar carrying the current section's `h1`, the vault state
   pill (pulsing dot, an `AES-256` badge), the short vault id, the local clock, and
-  the session controls (Export data, Lock session, Lock all). **Export data** is
-  a deep link: it opens Settings, scrolls the export block into view and puts
+  the session controls (Lock session, Lock all). Exporting has one home —
+  Settings — and no top-bar shortcut; the dashboard hero's **Export data** button
+  is a deep link that opens Settings, scrolls the export block into view and puts
   focus on it.
 - Content column capped at 1600 px with 32 px gutters; cards carry 24 px internal
   padding and a 20 px gap inside a grid.

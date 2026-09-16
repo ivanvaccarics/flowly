@@ -53,8 +53,9 @@ export function AppShell({
   onClearError,
 }: AppShellProps) {
   const [view, setView] = useState("dashboard");
-  // Section anchors: a shortcut in the top bar (or the dashboard hero) can open
-  // Settings straight at the block it is about instead of the top of the page.
+  // Section anchors: a shortcut can open Settings straight at the block it is
+  // about instead of the top of the page. Export is reached from the dashboard
+  // hero and the navigation; the top bar keeps only the session controls.
   const [anchor, setAnchor] = useState<string | undefined>(undefined);
   const vaultId = status?.vaultId ?? null;
   const section = NAVIGATION.find((entry) => entry.key === view) ?? NAVIGATION[0]!;
@@ -138,15 +139,6 @@ export function AppShell({
             <Icon name="clock" size={14} />
             {localTime}
           </time>
-          <button
-            type="button"
-            className="btn small"
-            onClick={openExport}
-            title="Export and import live in Settings"
-          >
-            <Icon name="download" size={14} />
-            Export data
-          </button>
           <button
             type="button"
             className="btn small danger"
