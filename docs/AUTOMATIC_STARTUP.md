@@ -397,6 +397,19 @@ accident, run `startup.sh` again to put it back.
 | The build dies with `Killed` or `virtual memory exhausted` | The compiler ran out of memory on a small host | Add swap (2 GB is plenty for this), or build on another machine and load the image |
 | Creating the vault answers `vault_storage_unavailable` | The server cannot write to `data/`: usually the folder is owned by root (Docker created it) while the container runs as uid 1000, or the disk is full or mounted read-only | `cd /home/ivanv/flowly && sudo chown -R 1000:1000 data`, then reload the page. If it persists, check `df -h` and `mount | grep ' ro,'` |
 | Any other API error with no explanation in the log | The image predates the server logging the cause of a 5xx | Update the image, then `docker compose logs --tail=50 server`: the stack trace names the failure |
+
+`startup.sh` prevents the first of those on its own: it creates `data/` as the
+user running the script, and if the folder already belongs to somebody else it
+fixes the ownership when it can (it runs as root from the systemd unit, or uses
+`sudo -n` when that needs no password) and otherwise prints the exact `chown`
+command. The image runs as uid 1000, so that is what `data/` has to belong to;
+`FLOWLY_CONTAINER_UID` and `FLOWLY_CONTAINER_GID` exist for the case where you
+rebuilt the image with a different user.
+
+On Docker Desktop — macOS, Windows, and its Linux edition — the host folder is
+mounted in a way that ignores ownership, so the script deliberately leaves
+`data/` alone there: chowning it would take the vault away from its owner without
+buying anything.
 | Enable Banking says the redirect URL is not allowed | The URL registered does not match the address in use | Register `https://<host>.<tailnet>.ts.net/enablebanking/auth_callback`; Settings warns when the two differ, and **Use the address I am using now** fills in the right one |
 | `ASPSP_RATE_LIMIT_EXCEEDED` while syncing | The bank's own limit on daily unattended reads | Nothing to do with the network: sync less often and retry the next day ([RUNNING.md](./RUNNING.md)) |
 

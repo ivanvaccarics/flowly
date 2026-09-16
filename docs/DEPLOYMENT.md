@@ -45,6 +45,13 @@ already happened, `sudo chown -R 1000:1000 data` is the fix. On Docker Desktop
 (macOS, Windows) the mount hides the difference, so a stack can work there for
 months and fail the first time it runs on a Linux host.
 
+`deployment/self-hosted/startup.sh` takes care of this before it starts the
+stack: it creates the folder as the user running the script and, when it has the
+rights (it runs as root from the systemd unit in
+[AUTOMATIC_STARTUP.md](./AUTOMATIC_STARTUP.md)), it fixes the ownership too. On
+Docker Desktop it leaves the folder untouched, because that mount ignores
+ownership and the change would only hurt.
+
 Two containers start:
 
 - `server` — the TypeScript service, listening on port 8787 **inside** the

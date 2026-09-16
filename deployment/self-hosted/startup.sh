@@ -69,6 +69,7 @@ Options:
 Environment (read from .env, optional):
   FLOWLY_BIND_IP, FLOWLY_SITE_PORT, FLOWLY_SITE_ADDRESS   See .env.example
   FLOWLY_IMAGE                                            Image to build and check (default: the one in compose.yaml)
+  FLOWLY_CONTAINER_UID, FLOWLY_CONTAINER_GID              User the server runs as inside the container (default 1000)
   TS_SERVE_HTTPS_PORT                                     Tailnet HTTPS port on Serve (default 443)
   FLOWLY_STARTUP_DOCKER_WAIT                              Seconds to wait for the Docker daemon
   FLOWLY_STARTUP_TAILSCALE_WAIT                           Seconds to wait for tailscaled to connect
@@ -218,6 +219,11 @@ FLOWLY_SITE_PORT="${FLOWLY_SITE_PORT:-8443}"
 FLOWLY_SITE_ADDRESS="${FLOWLY_SITE_ADDRESS:-localhost}"
 FLOWLY_BIND_IP="${FLOWLY_BIND_IP:-127.0.0.1}"
 TS_SERVE_HTTPS_PORT="${TS_SERVE_HTTPS_PORT:-443}"
+# The uid the server runs as inside its container: the `node` user of the image.
+# Only change it if you rebuilt the image with another user.
+CONTAINER_UID="${FLOWLY_CONTAINER_UID:-1000}"
+CONTAINER_GID="${FLOWLY_CONTAINER_GID:-$CONTAINER_UID}"
+DATA_DIR="$REPO_ROOT/data"
 
 # ---------------------------------------------------------------- the stack
 
@@ -259,6 +265,66 @@ if ! docker_ready; then
     fi
     sleep 2
   done
+fi
+
+# ------------------------------------------------------------ the data folder
+
+# The vault lives in a bind mount, so on Linux the folder on the host has to
+# belong to the user inside the container. Docker creates a missing bind-mount
+# source as root, and then the server cannot write its own vault: the first
+# attempt to create one fails. Docker Desktop reaches the host through a VM whose
+# mount ignores host ownership, which is why a stack can work on a laptop for
+# months and fail the first time it runs on a Linux host — and why `chown` there
+# would only lock the person out of their own files.
+owner_uid() {
+  case "$(uname -s)" in
+    Darwin) stat -f %u "$1" 2>/dev/null ;;
+    *) stat -c %u "$1" 2>/dev/null ;;
+  esac
+}
+
+mount_ignores_ownership() {
+  case "$(uname -s)" in
+    Darwin | MINGW* | MSYS* | CYGWIN*) return 0 ;;
+  esac
+  docker info --format '{{.OperatingSystem}}' 2>/dev/null | grep -qi "docker desktop"
+}
+
+data_dir_needs_owner() {
+  [ -d "$DATA_DIR" ] || return 1
+  local owner
+  owner="$(owner_uid "$DATA_DIR")"
+  # No `stat` that answers: leave the folder alone rather than chown blindly.
+  [ -n "$owner" ] || return 1
+  [ "$owner" = "$CONTAINER_UID" ] || return 0
+  if [ -d "$DATA_DIR/vault" ]; then
+    owner="$(owner_uid "$DATA_DIR/vault")"
+    [ -n "$owner" ] || return 1
+    [ "$owner" = "$CONTAINER_UID" ] || return 0
+  fi
+  return 1
+}
+
+# Created as the current user, so Docker never gets the chance to create it as
+# root in the first place.
+mkdir -p "$DATA_DIR" || fail "Cannot create $DATA_DIR. Check the path and its permissions."
+
+if data_dir_needs_owner; then
+  if mount_ignores_ownership; then
+    log "data/ belongs to uid $(owner_uid "$DATA_DIR"): this Docker ignores host ownership on bind mounts, so it is left alone"
+  elif [ "$(id -u)" -eq 0 ]; then
+    chown "$CONTAINER_UID:$CONTAINER_GID" "$DATA_DIR"
+    [ -d "$DATA_DIR/vault" ] && chown -R "$CONTAINER_UID:$CONTAINER_GID" "$DATA_DIR/vault"
+    log "data/ now belongs to uid $CONTAINER_UID, the user inside the container"
+  elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+    sudo -n chown "$CONTAINER_UID:$CONTAINER_GID" "$DATA_DIR"
+    [ -d "$DATA_DIR/vault" ] && sudo -n chown -R "$CONTAINER_UID:$CONTAINER_GID" "$DATA_DIR/vault"
+    log "data/ now belongs to uid $CONTAINER_UID, the user inside the container"
+  else
+    log "WARNING: $DATA_DIR is not writable by the user inside the container (uid $CONTAINER_UID)."
+    log "         Creating the vault will fail with vault_storage_unavailable. Fix it once with:"
+    log "           sudo chown -R $CONTAINER_UID:$CONTAINER_GID \"$DATA_DIR\""
+  fi
 fi
 
 image="$(compose_image)"
