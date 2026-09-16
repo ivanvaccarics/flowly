@@ -59,6 +59,9 @@ Options:
   --compose-only   Start the stack and stop: do not touch Tailscale.
   --build          Rebuild the server image, whatever the source stamp says.
   --no-build       Never rebuild: start the image that is already there.
+  --print-stamp    Print the source stamp of this checkout and stop. Use it to
+                   build the image on a faster machine and have this one accept
+                   it without rebuilding (see docs/AUTOMATIC_STARTUP.md).
   --help           Show this message.
 
 Environment (read from .env, optional):
@@ -76,6 +79,7 @@ EOF
 compose_only=0
 # auto: rebuild only when the sources changed since the image was built.
 build="auto"
+print_stamp=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -95,6 +99,10 @@ while [[ $# -gt 0 ]]; do
       build="never"
       shift
       ;;
+    --print-stamp)
+      print_stamp=1
+      shift
+      ;;
     --funnel)
       fail "--funnel is not an option: Funnel publishes Flowly to the public internet. Use Serve (the default) and read docs/AUTOMATIC_STARTUP.md."
       ;;
@@ -105,40 +113,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -f "$ENV_FILE" ]]; then
-  log "Reading $ENV_FILE"
-  set -a
-  # shellcheck source=/dev/null
-  . "$ENV_FILE"
-  set +a
-else
-  fail "Missing $ENV_FILE. Copy .env.example to .env next to it, edit the values, then run this script again."
-fi
-
-FLOWLY_SITE_PORT="${FLOWLY_SITE_PORT:-8443}"
-FLOWLY_SITE_ADDRESS="${FLOWLY_SITE_ADDRESS:-localhost}"
-FLOWLY_BIND_IP="${FLOWLY_BIND_IP:-127.0.0.1}"
-TS_SERVE_HTTPS_PORT="${TS_SERVE_HTTPS_PORT:-443}"
-
-# ---------------------------------------------------------------- the stack
-
-command -v docker >/dev/null 2>&1 ||
-  fail "docker not found. Install Docker Engine (see docs/AUTOMATIC_STARTUP.md)."
-
-docker compose version >/dev/null 2>&1 ||
-  fail "Docker Compose v2 is not available. Install the Compose plugin and run this script again."
-
-docker_ready() {
-  docker info >/dev/null 2>&1
-}
-
 # --------------------------------------------------------- the source stamp
 
 # Hash of everything the image is built from — the same paths the Dockerfile
 # copies, minus the directories that are not part of the build. Two facts make
 # this exact: it follows the checkout (a `git pull` or a hand edit changes it)
 # and it ignores what the image does not contain (docs, README, tooling), so a
-# documentation-only update does not cost a rebuild.
+# documentation-only update does not cost a rebuild. The same sources produce the
+# same stamp on any machine, which is what lets an image be built elsewhere and
+# loaded here.
 source_files() {
   (
     cd "$REPO_ROOT" &&
@@ -172,6 +155,42 @@ source_stamp() {
       printf '%s %s\n' "$file" "$(hash_stdin <"$REPO_ROOT/$file")"
     done <<<"$files"
   } | hash_stdin
+}
+
+# Asked before anything else, and without needing .env: the point is to run it on
+# the machine that builds the image, not on the one that runs it.
+if [ "$print_stamp" -eq 1 ]; then
+  stamp="$(source_stamp)" ||
+    fail "Cannot stamp the sources. Run this from a full Flowly checkout (apps/, packages/ and the lockfile), with sha256sum, shasum or openssl available."
+  printf '%s\n' "$stamp"
+  exit 0
+fi
+
+if [[ -f "$ENV_FILE" ]]; then
+  log "Reading $ENV_FILE"
+  set -a
+  # shellcheck source=/dev/null
+  . "$ENV_FILE"
+  set +a
+else
+  fail "Missing $ENV_FILE. Copy .env.example to .env next to it, edit the values, then run this script again."
+fi
+
+FLOWLY_SITE_PORT="${FLOWLY_SITE_PORT:-8443}"
+FLOWLY_SITE_ADDRESS="${FLOWLY_SITE_ADDRESS:-localhost}"
+FLOWLY_BIND_IP="${FLOWLY_BIND_IP:-127.0.0.1}"
+TS_SERVE_HTTPS_PORT="${TS_SERVE_HTTPS_PORT:-443}"
+
+# ---------------------------------------------------------------- the stack
+
+command -v docker >/dev/null 2>&1 ||
+  fail "docker not found. Install Docker Engine (see docs/AUTOMATIC_STARTUP.md)."
+
+docker compose version >/dev/null 2>&1 ||
+  fail "Docker Compose v2 is not available. Install the Compose plugin and run this script again."
+
+docker_ready() {
+  docker info >/dev/null 2>&1
 }
 
 # The image Compose builds: the compose file is the source of truth, and

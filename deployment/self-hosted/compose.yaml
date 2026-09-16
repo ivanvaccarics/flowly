@@ -10,6 +10,9 @@ services:
         # files it was built from, so the next run can tell whether a rebuild is
         # needed. Building by hand records "unknown" and costs one extra rebuild.
         FLOWLY_SOURCE_STAMP: ${FLOWLY_SOURCE_STAMP:-unknown}
+        # Set FLOWLY_BUILD_CFLAGS=-O1 in .env on a slow host: the SQLCipher
+        # compile is the long pole when building on a Raspberry Pi.
+        FLOWLY_BUILD_CFLAGS: ${FLOWLY_BUILD_CFLAGS:-}
     image: flowly-server:local
     restart: unless-stopped
     environment:

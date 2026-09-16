@@ -147,6 +147,7 @@ Flags:
 | `--compose-only` | Start the stack and stop; do not touch Tailscale |
 | `--build` | Rebuild the `flowly-server:local` image, whatever the source stamp says |
 | `--no-build` | Never rebuild: start the image that is already there |
+| `--print-stamp` | Print the source stamp of this checkout and stop, for building the image elsewhere |
 | `--help` | Usage, including the environment knobs the script honours |
 
 ### When the image is built
@@ -187,6 +188,49 @@ When a rebuild is needed but fails — no network yet, a broken dependency — t
 script does **not** leave you with an app that will not start: it says so loudly
 and starts the previous image, so Flowly is up, running the code that image has.
 Run the script again once the network is back, or force it with `--build`.
+
+### Building where it is fast
+
+The long pole of a build is SQLCipher, and it cannot be skipped: the package
+ships no prebuilt binary on any platform — its install script is literally
+`node-gyp rebuild` — and that compiles a single C file of 9.2 MB with about
+270,000 lines, `deps/sqlcipher-amalgamation/sqlite3.c`, in one translation unit.
+On a modern laptop that is under a minute; on a Raspberry Pi 3 it is tens of
+minutes of `cc1` at 100 %, and it wants a few hundred megabytes of RAM. The
+warnings scrolling past (`-Wstringop-overread` and friends) come from that file:
+the build is working, not stuck.
+
+Three ways to live with it, best first:
+
+1. **Let it happen once.** The compile sits in the dependency layer, which only
+   the manifests and the lockfile invalidate, so ordinary source updates reuse
+   it. Resist `docker builder prune` on that machine unless you are ready to pay
+   again.
+2. **Build on a faster machine and load the image.** Both machines must be the
+   same architecture — a 64-bit Pi OS (`uname -m` says `aarch64`) with an Apple
+   Silicon Mac, or two `x86_64` machines:
+
+   ```bash
+   # On the fast machine, in a checkout with the same content.
+   stamp="$(./deployment/self-hosted/startup.sh --print-stamp)"
+   docker buildx build --platform linux/arm64 --load \
+     --build-arg FLOWLY_SOURCE_STAMP="$stamp" \
+     -f apps/server/Dockerfile -t flowly-server:local .
+   docker save flowly-server:local | gzip -1 | ssh pi@raspberrypi 'gunzip | docker load'
+
+   # On the Pi.
+   cd /home/ivanv/flowly && ./deployment/self-hosted/startup.sh --no-build
+   ```
+
+   `--print-stamp` prints the same hash on any machine for identical sources, so
+   the loaded image counts as current and the Pi does not rebuild. Keep the two
+   checkouts on the same commit: a local edit on either side changes the stamp
+   and the Pi rebuilds after all.
+3. **Trade a little runtime speed for a shorter compile.** Put
+   `FLOWLY_BUILD_CFLAGS=-O1` in `.env` and the amalgamation is compiled at a
+   lower optimisation level: much less work for the compiler, and SQLite's hot
+   paths do not depend on it. Changing the value invalidates the dependency
+   layer, so force it with `--build` the first time.
 
 Then check it from the machine itself:
 
@@ -335,6 +379,8 @@ accident, run `startup.sh` again to put it back.
 | The Serve mapping disappeared | Node renamed, logged out, or `serve reset` was run | Run `startup.sh` again; the node's name must match `FLOWLY_SITE_ADDRESS` |
 | A code update is not visible after a restart | The rebuild failed, so the previous image is running | Look for the warning in the output, fix the cause, then `./deployment/self-hosted/startup.sh --build` |
 | The script rebuilds on a boot you did not expect | The checkout changed since the image was built | Expected: it means the image was behind. `--no-build` turns it off |
+| The build sits on `pnpm install … @journeyapps/sqlcipher` for many minutes | It is compiling the SQLCipher amalgamation, not hung | Confirm with `top` (`cc1` at 100 % means progress) and `free -m`; see "Building where it is fast"; it is a one-time cost |
+| The build dies with `Killed` or `virtual memory exhausted` | The compiler ran out of memory on a small host | Add swap (2 GB is plenty for this), or build on another machine and load the image |
 | Enable Banking says the redirect URL is not allowed | The URL registered does not match the address in use | Register `https://<host>.<tailnet>.ts.net/enablebanking/auth_callback`; Settings warns when the two differ, and **Use the address I am using now** fills in the right one |
 | `ASPSP_RATE_LIMIT_EXCEEDED` while syncing | The bank's own limit on daily unattended reads | Nothing to do with the network: sync less often and retry the next day ([RUNNING.md](./RUNNING.md)) |
 

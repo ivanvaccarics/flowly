@@ -14,7 +14,14 @@ COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 COPY packages/web-contracts/package.json packages/web-contracts/
 
-RUN pnpm install --frozen-lockfile --filter "@flowly/server..."
+# SQLCipher ships no prebuilt binary on any platform: its install script is
+# `node-gyp rebuild`, and that compiles a 9 MB amalgamation with 270k lines of C
+# in one translation unit. A lighter optimisation level shortens the wait a lot
+# on a slow or memory-tight host (a Raspberry Pi 3, for example): put
+# FLOWLY_BUILD_CFLAGS=-O1 in .env and rebuild.
+ARG FLOWLY_BUILD_CFLAGS=""
+RUN CFLAGS="${FLOWLY_BUILD_CFLAGS}" CXXFLAGS="${FLOWLY_BUILD_CFLAGS}" \
+    pnpm install --frozen-lockfile --filter "@flowly/server..."
 RUN pnpm install --frozen-lockfile --filter "@flowly/web..."
 
 # Sources last, one workspace package at a time and in dependency order, so a
