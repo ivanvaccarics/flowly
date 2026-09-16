@@ -368,14 +368,16 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                 <th>Status</th>
                 <th>Source</th>
                 <th style={{ textAlign: "right" }}>Amount</th>
-                <th />
+                <th>
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {items.map((transaction) => (
                 <Fragment key={transaction.id}>
                   <tr>
-                    <td className="mono">{transaction.bookingDate}</td>
+                    <td className="mono cell-nowrap">{transaction.bookingDate}</td>
                     <td>
                       {editing?.id === transaction.id ? (
                         <input
@@ -396,7 +398,8 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                           </span>
                           <span className="stack">
                             <strong>{transaction.payee ?? "—"}</strong>
-                            {transaction.description ? (
+                            {transaction.description &&
+                            transaction.description !== transaction.payee ? (
                               <span className="sub">{transaction.description}</span>
                             ) : null}
                           </span>
@@ -471,7 +474,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                       )}
                     </td>
                     <td>
-                      <div className="cell-actions">
+                      <div className="row-actions">
                         <button
                           type="button"
                           className="btn small"

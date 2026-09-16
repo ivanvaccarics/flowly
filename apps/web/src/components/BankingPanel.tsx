@@ -10,7 +10,7 @@ import {
 import { useBanking } from "../hooks/use-banking.js";
 import { BankAccountMapping, type DiscoveredAccount } from "./BankAccountMapping.js";
 import { Icon } from "./icons.js";
-import { Banner, Chip, Empty } from "./ui.js";
+import { Banner, Chip, Empty, FileField } from "./ui.js";
 import { describeBankAuthorizationError } from "../lib/banking-errors.js";
 import { formatMoney } from "../lib/money.js";
 
@@ -831,22 +831,17 @@ function ConnectionForm({
           </label>
           <div className="dropzone">
             <Icon name="lock" size={22} />
-            <span className="sub">
-              {keyName === "" ? "Choose the .pem private key you downloaded" : keyName}
-            </span>
-            <label>
-              Private key (.pem)
-              <input
-                type="file"
-                accept=".pem,application/x-pem-file,text/plain"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  setKeyName(file.name);
-                  void file.text().then(setPrivateKeyPem);
-                }}
-              />
-            </label>
+            <span className="sub">Choose the .pem private key you downloaded</span>
+            <FileField
+              id="bank-private-key"
+              label="Private key (.pem)"
+              accept=".pem,application/x-pem-file,text/plain"
+              fileName={keyName === "" ? undefined : keyName}
+              onFile={(file) => {
+                setKeyName(file.name);
+                void file.text().then(setPrivateKeyPem);
+              }}
+            />
           </div>
         </section>
 

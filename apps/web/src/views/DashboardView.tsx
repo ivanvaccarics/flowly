@@ -382,8 +382,14 @@ export function DashboardView({
                                 <strong>
                                   {transaction.payee ?? transaction.description ?? "—"}
                                 </strong>
-                                <span className="sub mono">
-                                  {transaction.providerTransactionId ?? transaction.source}
+                                {/* Never the provider's raw row id: it is a
+                                    UUID nobody can read. Show the bank's own
+                                    description, or where the row came from. */}
+                                <span className="sub">
+                                  {transaction.description &&
+                                  transaction.description !== transaction.payee
+                                    ? transaction.description
+                                    : transaction.source}
                                 </span>
                               </span>
                             </span>
@@ -418,10 +424,8 @@ export function DashboardView({
                             </Chip>
                           </td>
                           <td>
-                            <span className="stack mono date-cell">
-                              <span>{day}</span>
-                              <span>{MONTHS[Number(month) - 1]}</span>
-                              <span>{year}</span>
+                            <span className="cell-nowrap">
+                              {day} {MONTHS[Number(month) - 1]} {year}
                             </span>
                           </td>
                           <td>

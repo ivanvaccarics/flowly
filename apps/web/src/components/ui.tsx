@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Icon, type IconName } from "./icons.js";
 
@@ -154,4 +155,54 @@ export function tagPillStyle(color: string | null | undefined): CSSProperties | 
     background: `${color}1f`,
     color: `color-mix(in srgb, ${color} 72%, #0f172a)`,
   };
+}
+
+/**
+ * A file field that does not look like 1996: the native control is hidden and
+ * the label itself is the button, so the browser still opens the picker, the
+ * keyboard still reaches it, and the chosen file is named next to it.
+ */
+export function FileField({
+  id,
+  label,
+  accept,
+  onFile,
+  fileName,
+}: {
+  /** Unique DOM id for the field; the visible label points at it. */
+  id: string;
+  label: string;
+  accept: string;
+  onFile: (file: File) => void;
+  fileName?: string | undefined;
+}) {
+  const [chosen, setChosen] = useState<string | undefined>(undefined);
+  const shown = fileName ?? chosen;
+  const labelId = `${id}-label`;
+  return (
+    <div className="file-field">
+      <span className="file-label" id={labelId}>
+        {label}
+      </span>
+      <label className="file-button">
+        <input
+          type="file"
+          className="sr-only"
+          accept={accept}
+          aria-labelledby={labelId}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            setChosen(file.name);
+            onFile(file);
+          }}
+        />
+        <Icon name="upload" size={14} />
+        Choose file
+      </label>
+      <span className={shown ? "file-name chosen" : "file-name"} title={shown ?? "No file chosen"}>
+        {shown ?? "No file chosen"}
+      </span>
+    </div>
+  );
 }

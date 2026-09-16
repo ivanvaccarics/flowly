@@ -87,7 +87,12 @@ export function TagsView({ csrf }: { csrf: string }) {
           </label>
           <div className="field">
             <span id="tag-colour-new">Colour</span>
-            <TagColorField color={color} onChange={setColor} labelId="tag-colour-new" />
+            <TagColorField
+              color={color}
+              onChange={setColor}
+              labelId="tag-colour-new"
+              previewLabel={name.trim() === "" ? "Tag preview" : name.trim()}
+            />
           </div>
           <button type="submit" className="btn primary" disabled={name.trim() === ""}>
             <Icon name="plus" size={16} />
@@ -125,6 +130,7 @@ export function TagsView({ csrf }: { csrf: string }) {
                       color={editing.color}
                       onChange={(value) => setEditing({ ...editing, color: value })}
                       labelId={`tag-colour-${tag.id}`}
+                      previewLabel={editing.name.trim() === "" ? tag.name : editing.name.trim()}
                     />
                   </div>
                   <div className="cell-actions">

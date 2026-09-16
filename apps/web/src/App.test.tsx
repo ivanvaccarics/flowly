@@ -246,6 +246,35 @@ describe("Flowly web client", () => {
     expect(screen.queryByLabelText("Passphrase")).toBeNull();
   });
 
+  it("names where a dashboard row came from instead of its provider row id", async () => {
+    const imported = {
+      formatVersion: 1,
+      revision: 1,
+      id: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+      accountId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+      bookingDate: "2026-09-16",
+      amountMinor: -186,
+      currency: "EUR",
+      status: "pending",
+      source: "enable-banking",
+      payee: "Deepseerwea",
+      description: "Deepseerwea",
+      providerTransactionId: "00000000-1111-4222-8333-444444444444",
+      tagIds: [],
+      userNote: null,
+    };
+    mockFetch({
+      ...unlockedRoutes(),
+      "/api/transactions": () => json({ items: [imported], total: 1, limit: 100, offset: 0 }),
+    });
+    await unlock();
+
+    await waitFor(() => expect(screen.getByText("Deepseerwea")).toBeTruthy());
+    // The row says where it came from; the provider's own id stays in Raw.
+    expect(screen.getByText("enable-banking")).toBeTruthy();
+    expect(screen.queryByText(/00000000-1111/)).toBeNull();
+  });
+
   it("asks for the passphrase again only when the session cookie is gone", async () => {
     mockFetch({
       "/api/vault/status": () => json(unlockedStatus),
@@ -269,6 +298,22 @@ describe("Flowly web client", () => {
     expect(screen.getByLabelText("New passphrase")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export transactions CSV" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Export complete archive" })).toBeTruthy();
+    // Imports use the styled file field, not the browser's native control.
+    expect(screen.getByLabelText("Transaction CSV")).toBeTruthy();
+    expect(screen.getByLabelText("Complete archive (.flowly)")).toBeTruthy();
+  });
+
+  it("previews a tag colour before it is saved", async () => {
+    mockFetch(unlockedRoutes());
+    await unlock();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Tags" })).toBeTruthy());
+    screen.getByRole("button", { name: "Tags" }).click();
+
+    await waitFor(() => expect(screen.getByLabelText("Custom hex colour")).toBeTruthy());
+    expect(screen.getByText("Tag preview")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Groceries" } });
+    await waitFor(() => expect(screen.getByText("Groceries")).toBeTruthy());
   });
 
   it("surfaces a revision conflict in plain language", () => {

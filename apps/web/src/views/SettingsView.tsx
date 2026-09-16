@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api } from "../api/client.js";
 import { BankingPanel } from "../components/BankingPanel.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, PageHeader } from "../components/ui.js";
+import { Banner, Chip, FileField, PageHeader } from "../components/ui.js";
 import { describeError } from "../hooks/use-workspace.js";
 
 interface CsvPreview {
@@ -254,23 +254,19 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
             <div className="dropzone">
               <Icon name="upload" size={22} />
               <span className="sub">Choose a bank or provider CSV export</span>
-              <label>
-                Transaction CSV
-                <input
-                  type="file"
-                  accept=".csv,text/csv"
-                  onChange={(event) =>
-                    void run(async () => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
-                      const content = await file.text();
-                      setCsvContent(content);
-                      setCsvPreview(await api.previewCsv(csrf, content));
-                      setStatus(undefined);
-                    })
-                  }
-                />
-              </label>
+              <FileField
+                id="import-csv"
+                label="Transaction CSV"
+                accept=".csv,text/csv"
+                onFile={(file) =>
+                  void run(async () => {
+                    const content = await file.text();
+                    setCsvContent(content);
+                    setCsvPreview(await api.previewCsv(csrf, content));
+                    setStatus(undefined);
+                  })
+                }
+              />
             </div>
           </section>
 
@@ -294,28 +290,24 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
             <div className="dropzone">
               <Icon name="lock" size={22} />
               <span className="sub">Choose a .flowly archive</span>
-              <label>
-                Complete archive (.flowly)
-                <input
-                  type="file"
-                  accept=".flowly,application/octet-stream"
-                  onChange={(event) =>
-                    void run(async () => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
-                      const confirmed = window.confirm(
-                        "Importing a complete archive replaces every account, transaction and rule in this vault. Continue?",
-                      );
-                      if (!confirmed) return;
-                      const base64 = toBase64(new Uint8Array(await file.arrayBuffer()));
-                      const report = await api.importArchive(csrf, archivePassword, base64);
-                      setStatus(
-                        `Archive imported: ${report.accounts} accounts, ${report.transactions} transactions, ${report.tags} tags, ${report.taggingRules} rules.`,
-                      );
-                    })
-                  }
-                />
-              </label>
+              <FileField
+                id="import-archive"
+                label="Complete archive (.flowly)"
+                accept=".flowly,application/octet-stream"
+                onFile={(file) =>
+                  void run(async () => {
+                    const confirmed = window.confirm(
+                      "Importing a complete archive replaces every account, transaction and rule in this vault. Continue?",
+                    );
+                    if (!confirmed) return;
+                    const base64 = toBase64(new Uint8Array(await file.arrayBuffer()));
+                    const report = await api.importArchive(csrf, archivePassword, base64);
+                    setStatus(
+                      `Archive imported: ${report.accounts} accounts, ${report.transactions} transactions, ${report.tags} tags, ${report.taggingRules} rules.`,
+                    );
+                  })
+                }
+              />
             </div>
           </section>
         </div>

@@ -113,7 +113,10 @@ not shift.
   ribbons, list rows and option cards.
 - **Data table:** uppercase micro-headers over a hairline, 44 px rows, hover tint,
   right-aligned amounts in the display face — red for outflows, emerald for
-  inflows.
+  inflows. Dates never wrap, and a row's Raw/Edit/Delete buttons stay on one
+  line: the ledger scrolls sideways instead of pushing the actions under the row.
+  The row's second line names where it came from (the bank's own description, or
+  the source); a provider's raw row id lives only behind **Raw**.
 - **Pie chart:** the dashboard's spending breakdown, one SVG donut per currency,
   each arc an `--income-graphic`-class tag colour with the period total in the
   hole and the legend rows (label, amount, share) underneath. Hand-rolled
@@ -129,10 +132,16 @@ not shift.
   `info`, `neutral`); `meta` and `mono` variants cover uppercase and hashed data.
 - **Tag pill:** pill tinted with the tag's own colour — a 12 % background tint of
   it and a text colour mixed toward `--text` so contrast holds.
-- **Colour picker:** eight palette swatches from the design tokens rendered as a
-  radiogroup (a ring plus a check marks the selection), with a monospaced
-  `#rrggbb` field beside it so any colour stays reachable. No native colour
-  wheel. Shared by the create form and the inline tag editor.
+- **Colour picker:** eight palette swatches from the design tokens, each a 30 px
+  rounded tile in a white tray, rendered as a radiogroup; the selection carries a
+  white check and a ring that stays visible on any colour. Beside it sit the
+  monospaced `#rrggbb` field (so any colour stays reachable) and a live preview
+  pill showing the tag's name in the chosen colour. No native colour wheel.
+  Shared by the create form and the inline tag editor.
+- **File field:** a bordered row with the field name, a secondary "Choose file"
+  button and the selected file name. The native `<input type="file">` is hidden
+  but still the control that opens the picker, so the keyboard and screen readers
+  keep working; the browser's own 1990s chrome is never shown.
 - **Switch:** 40×22 px on/off control for pausing a tagging rule.
 - **Tag picker:** a compact trigger that summarises the selection (up to two tag
   pills plus a `+N` counter) and opens a popup with a search field, a scrollable

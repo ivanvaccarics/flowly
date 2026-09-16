@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Icon } from "./icons.js";
+import { tagPillStyle } from "./ui.js";
 
 /**
  * Tag colours are interface-only, so the palette is a fixed set built from the
@@ -23,13 +24,17 @@ export function TagColorField({
   color,
   onChange,
   labelId,
+  previewLabel,
 }: {
   color: string;
   onChange: (value: string) => void;
   /** Id of the visible label that names the swatch radiogroup. */
   labelId: string;
+  /** Optional tag name, rendered as a pill in the chosen colour. */
+  previewLabel?: string | undefined;
 }) {
   const [draft, setDraft] = useState(color);
+  const hexId = useId();
 
   // The picked colour can change from outside (a swatch click here, or a reset
   // after saving), so the text field follows it.
@@ -59,23 +64,36 @@ export function TagColorField({
               role="radio"
               aria-checked={selected}
               aria-label={`${option.label} ${option.value}`}
+              title={`${option.label} ${option.value}`}
               className={selected ? "swatch-choice selected" : "swatch-choice"}
               style={{ background: option.value }}
               onClick={() => pick(option.value)}
             >
-              {selected ? <Icon name="check" size={13} /> : null}
+              {selected ? <Icon name="check" size={15} /> : null}
             </button>
           );
         })}
       </div>
-      <input
-        className="hex-field"
-        aria-label="Custom hex colour"
-        spellCheck={false}
-        placeholder="#0f766e"
-        value={draft}
-        onChange={(event) => type(event.target.value)}
-      />
+      <div className="colour-side">
+        <label className="hex-field" htmlFor={hexId}>
+          Custom hex
+          <input
+            id={hexId}
+            aria-label="Custom hex colour"
+            spellCheck={false}
+            placeholder="#0f766e"
+            value={draft}
+            onChange={(event) => type(event.target.value)}
+          />
+        </label>
+        {previewLabel ? (
+          <span className="colour-preview">
+            <span className="tag-pill" style={tagPillStyle(color)}>
+              {previewLabel}
+            </span>
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
