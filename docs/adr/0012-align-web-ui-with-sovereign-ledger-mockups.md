@@ -7,6 +7,8 @@ Supersedes the palette and panel decisions of
 
 Palette, shape, page-header and panel decisions superseded by
 [ADR 0021](./0021-slate-and-teal-ui-with-dashboard-pie-chart.md).
+The "no native colour wheel" rule is superseded by
+[ADR 0022](./0022-italian-number-formatting-and-palette-colour-picker.md).
 
 ## Context
 

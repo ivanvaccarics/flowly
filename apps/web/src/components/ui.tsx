@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Icon, type IconName } from "./icons.js";
+import { formatMinorToAmount } from "../lib/money.js";
 
 export function Chip({
   tone = "neutral",
@@ -129,16 +130,10 @@ export function Stat({
 
 export function Money({ minor, currency }: { minor: number; currency: string }) {
   const sign = minor < 0 ? "-" : minor > 0 ? "+" : "";
-  const amount = Math.abs(minor);
-  const units = ["BHD", "KWD"].includes(currency) ? 3 : ["JPY", "KRW"].includes(currency) ? 0 : 2;
-  const text =
-    units === 0
-      ? String(amount)
-      : `${Math.trunc(amount / 10 ** units)}.${String(amount % 10 ** units).padStart(units, "0")}`;
   return (
     <span className={minor < 0 ? "amount negative" : minor > 0 ? "amount positive" : "amount"}>
       {sign}
-      {text} {currency}
+      {formatMinorToAmount(Math.abs(minor), currency)} {currency}
     </span>
   );
 }

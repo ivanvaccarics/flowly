@@ -134,7 +134,9 @@ you should see.
 | --- | --- |
 | Open Dashboard and change the period | Balances, cash flow and spending recompute; pending transactions are excluded |
 | Look at the per-currency cards | Each currency has its own totals; nothing is converted or blended |
+| Look at any amount | Figures are written the Italian way — `1.234,56` — with the currency code after them, and the ledger's amount column lines up under its own header |
 | Look at the spending pie chart and its legend rows | Each currency gets its own pie, sized by booked outflows per tag, with the period total in the middle and one legend row per tag |
+| Press **Export data** in the top bar | Settings opens with the export block already in view and focused |
 | Look at the **Bank sync** card | Without a connected bank it offers **Connect to Enable Banking**; with one it shows the last sync, the paired accounts and a **Sync now** button |
 
 ### Bank connection (Enable Banking)

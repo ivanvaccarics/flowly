@@ -351,7 +351,7 @@ describe("Enable Banking in Settings", () => {
     await waitFor(() => expect(screen.getByText("Conto corrente")).toBeTruthy());
     expect(screen.getByRole("button", { name: /Sync now/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Unlink/ })).toBeTruthy();
-    expect(screen.getByText("1234.56 EUR")).toBeTruthy();
+    expect(screen.getByText("1.234,56 EUR")).toBeTruthy();
   });
 
   it("keeps the authorization recoverable: paste the redirect back into Flowly", async () => {
@@ -639,7 +639,7 @@ describe("Enable Banking in Settings", () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByText("1234.56 EUR")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("1.234,56 EUR")).toBeTruthy());
     expect(screen.queryByRole("button", { name: /Align/ })).toBeNull();
     expect(screen.queryByText("Flowly balance")).toBeNull();
     expect(screen.getByRole("columnheader", { name: "Balance" })).toBeTruthy();

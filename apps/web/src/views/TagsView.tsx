@@ -85,7 +85,7 @@ export function TagsView({ csrf }: { csrf: string }) {
             Name
             <input value={name} onChange={(event) => setName(event.target.value)} required />
           </label>
-          <div className="field">
+          <div className="field colour-field">
             <span id="tag-colour-new">Colour</span>
             <TagColorField
               color={color}
@@ -94,6 +94,8 @@ export function TagsView({ csrf }: { csrf: string }) {
               previewLabel={name.trim() === "" ? "Tag preview" : name.trim()}
             />
           </div>
+        </div>
+        <div className="cell-actions">
           <button type="submit" className="btn primary" disabled={name.trim() === ""}>
             <Icon name="plus" size={16} />
             Add tag
@@ -124,7 +126,7 @@ export function TagsView({ csrf }: { csrf: string }) {
                       onChange={(event) => setEditing({ ...editing, name: event.target.value })}
                     />
                   </label>
-                  <div className="field">
+                  <div className="field colour-field">
                     <span id={`tag-colour-${tag.id}`}>Colour</span>
                     <TagColorField
                       color={editing.color}

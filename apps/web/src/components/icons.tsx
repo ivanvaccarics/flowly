@@ -21,7 +21,8 @@ export type IconName =
   | "refresh"
   | "link"
   | "eye"
-  | "clock";
+  | "clock"
+  | "eyedropper";
 
 const PATHS: Record<IconName, string> = {
   dashboard: "M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z",
@@ -46,6 +47,7 @@ const PATHS: Record<IconName, string> = {
   link: "M10.5 13.5a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7l-1 1M13.5 10.5a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1-1",
   eye: "M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
   clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5V12l3 2",
+  eyedropper: "M16.5 3.5a3 3 0 0 1 4 4L18 10l-4-4zM13 8l3 3-8.5 8.5L3 21l1.5-4.5z",
 };
 
 export function Icon({

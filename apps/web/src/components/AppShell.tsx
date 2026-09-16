@@ -53,9 +53,26 @@ export function AppShell({
   onClearError,
 }: AppShellProps) {
   const [view, setView] = useState("dashboard");
+  // Section anchors: a shortcut in the top bar (or the dashboard hero) can open
+  // Settings straight at the block it is about instead of the top of the page.
+  const [anchor, setAnchor] = useState<string | undefined>(undefined);
   const vaultId = status?.vaultId ?? null;
   const section = NAVIGATION.find((entry) => entry.key === view) ?? NAVIGATION[0]!;
   const localTime = useLocalTime();
+
+  useEffect(() => {
+    if (!anchor) return;
+    const target = document.getElementById(anchor);
+    setAnchor(undefined);
+    if (!target) return;
+    target.scrollIntoView?.({ block: "start" });
+    target.focus({ preventScroll: true });
+  }, [anchor, view]);
+
+  function openExport() {
+    setView("settings");
+    setAnchor("settings-export");
+  }
 
   return (
     <div className="shell">
@@ -124,7 +141,7 @@ export function AppShell({
           <button
             type="button"
             className="btn small"
-            onClick={() => setView("settings")}
+            onClick={openExport}
             title="Export and import live in Settings"
           >
             <Icon name="download" size={14} />
@@ -161,7 +178,7 @@ export function AppShell({
               csrf={csrf}
               onNewTransaction={() => setView("transactions")}
               onSeeAllTransactions={() => setView("transactions")}
-              onExportData={() => setView("settings")}
+              onExportData={openExport}
               onOpenSettings={() => setView("settings")}
             />
           ) : null}

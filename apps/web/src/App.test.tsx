@@ -224,8 +224,8 @@ describe("Flowly web client", () => {
       ).toBeTruthy(),
     );
     expect(screen.getByRole("img", { name: "Spending by tag in USD: Travel 100%" })).toBeTruthy();
-    expect(screen.getByText("75.0%")).toBeTruthy();
-    expect(screen.getByText("25.0%")).toBeTruthy();
+    expect(screen.getByText("75,0%")).toBeTruthy();
+    expect(screen.getByText("25,0%")).toBeTruthy();
   });
 
   it("resumes an open vault from its session cookie instead of asking again", async () => {
@@ -310,10 +310,26 @@ describe("Flowly web client", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Tags" })).toBeTruthy());
     screen.getByRole("button", { name: "Tags" }).click();
 
-    await waitFor(() => expect(screen.getByLabelText("Custom hex colour")).toBeTruthy());
+    await waitFor(() => expect(screen.getByLabelText("Custom colour")).toBeTruthy());
     expect(screen.getByText("Tag preview")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Groceries" } });
     await waitFor(() => expect(screen.getByText("Groceries")).toBeTruthy());
+  });
+
+  it("takes the top bar's Export data shortcut to the export section", async () => {
+    mockFetch(unlockedRoutes());
+    await unlock();
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Export data" }).length).toBeGreaterThan(0),
+    );
+    // The first one is the top bar shortcut; the dashboard hero has its own.
+    screen.getAllByRole("button", { name: "Export data" })[0]!.click();
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Export transactions CSV" })).toBeTruthy(),
+    );
+    expect(document.activeElement?.id).toBe("settings-export");
   });
 
   it("surfaces a revision conflict in plain language", () => {

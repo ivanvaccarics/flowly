@@ -367,7 +367,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                 <th>Tags</th>
                 <th>Status</th>
                 <th>Source</th>
-                <th style={{ textAlign: "right" }}>Amount</th>
+                <th className="cell-amount">Amount</th>
                 <th>
                   <span className="sr-only">Actions</span>
                 </th>
@@ -457,7 +457,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                         {transaction.source}
                       </span>
                     </td>
-                    <td>
+                    <td className="cell-amount">
                       {editing?.id === transaction.id ? (
                         <span className="amount-edit">
                           <input

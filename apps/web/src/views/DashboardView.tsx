@@ -5,6 +5,7 @@ import { Icon } from "../components/icons.js";
 import { Banner, Chip, Empty, Money, PageHeader, tagPillStyle } from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { describeError } from "../hooks/use-workspace.js";
+import { formatDecimal, formatMinorToAmount } from "../lib/money.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -52,15 +53,9 @@ function delta(
   if (previous === 0) return { text: "no previous data", tone: "neutral" };
   const change = ((current - previous) / Math.abs(previous)) * 100;
   return {
-    text: `${change >= 0 ? "+" : ""}${change.toFixed(1)}% vs previous period`,
+    text: `${change >= 0 ? "+" : ""}${formatDecimal(change)}% vs previous period`,
     tone: change >= 0 ? "income" : "expense",
   };
-}
-
-function formatPerMinor(minor: number, currency: string): string {
-  const units = ["BHD", "KWD"].includes(currency) ? 3 : ["JPY", "KRW"].includes(currency) ? 0 : 2;
-  const value = Math.abs(minor) / 10 ** units;
-  return `${minor < 0 ? "-" : ""}${value.toFixed(units === 0 ? 0 : 2)}`;
 }
 
 export interface DashboardViewProps {
@@ -268,7 +263,9 @@ export function DashboardView({
                   <Icon name="accounts" size={16} />
                 </span>
               </header>
-              <span className="metric-value">{formatPerMinor(balanceTotal, flow.currency)}</span>
+              <span className="metric-value">
+                {formatMinorToAmount(balanceTotal, flow.currency)}
+              </span>
               <span className="muted">{accounts.length} accounts</span>
             </article>
             <article className="metric">
@@ -279,7 +276,7 @@ export function DashboardView({
                 </span>
               </header>
               <span className="metric-value">
-                {formatPerMinor(flow.incomeMinor, flow.currency)}
+                {formatMinorToAmount(flow.incomeMinor, flow.currency)}
               </span>
               <Chip tone={incomeDelta.tone}>{incomeDelta.text}</Chip>
             </article>
@@ -291,7 +288,7 @@ export function DashboardView({
                 </span>
               </header>
               <span className="metric-value">
-                {formatPerMinor(flow.expensesMinor, flow.currency)}
+                {formatMinorToAmount(flow.expensesMinor, flow.currency)}
               </span>
               <Chip tone={expenseDelta.tone}>{expenseDelta.text}</Chip>
             </article>
@@ -299,12 +296,12 @@ export function DashboardView({
               <header>
                 <span className="eyebrow">Net flow</span>
                 <span className="metric-icon vault">
-                  {savingsRate === null ? "—" : `${savingsRate.toFixed(1)}%`}
+                  {savingsRate === null ? "—" : `${formatDecimal(savingsRate)}%`}
                 </span>
               </header>
               <span className="metric-value">
                 {flow.netMinor >= 0 ? "+" : ""}
-                {formatPerMinor(flow.netMinor, flow.currency)}
+                {formatMinorToAmount(flow.netMinor, flow.currency)}
               </span>
               <span className="muted">
                 {flow.transactionCount} booked transactions
@@ -364,7 +361,7 @@ export function DashboardView({
                       <th>Category</th>
                       <th>Status</th>
                       <th>Date</th>
-                      <th style={{ textAlign: "right" }}>Amount</th>
+                      <th className="cell-amount">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -428,7 +425,7 @@ export function DashboardView({
                               {day} {MONTHS[Number(month) - 1]} {year}
                             </span>
                           </td>
-                          <td>
+                          <td className="cell-amount">
                             <Money
                               minor={transaction.amountMinor}
                               currency={transaction.currency}
@@ -455,7 +452,7 @@ export function DashboardView({
                 <span className="sub">
                   {spendingGroups.length > 1
                     ? "One pie per currency · totals never mix currencies"
-                    : `Total: ${formatPerMinor(spendingGroups[0]?.totalMinor ?? spendingTotal, spendingGroups[0]?.currency ?? primaryCurrency)}`}
+                    : `Total: ${formatMinorToAmount(spendingGroups[0]?.totalMinor ?? spendingTotal, spendingGroups[0]?.currency ?? primaryCurrency)}`}
                 </span>
               </div>
             </header>
@@ -476,7 +473,7 @@ export function DashboardView({
               <span className="stack">
                 <span className="eyebrow">Average daily spend</span>
                 <span className="mono">
-                  {formatPerMinor(
+                  {formatMinorToAmount(
                     Math.round(
                       (spendingGroups.find((group) => group.currency === primaryCurrency)
                         ?.totalMinor ?? spendingTotal) / days,
@@ -592,7 +589,7 @@ function SpendingPie({
     consumed += share * circumference;
     return slice;
   });
-  const totalText = formatPerMinor(totalMinor, currency);
+  const totalText = formatMinorToAmount(totalMinor, currency);
   const label = `Spending by tag in ${currency}: ${entries
     .map(
       (entry) =>
@@ -634,9 +631,9 @@ function SpendingPie({
               <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
               {entry.tagName}
             </span>
-            <span className="mono">{formatPerMinor(entry.spentMinor, entry.currency)}</span>
+            <span className="mono">{formatMinorToAmount(entry.spentMinor, entry.currency)}</span>
             <span className="muted mono">
-              {totalMinor > 0 ? ((entry.spentMinor / totalMinor) * 100).toFixed(1) : "0.0"}%
+              {formatDecimal(totalMinor > 0 ? (entry.spentMinor / totalMinor) * 100 : 0)}%
             </span>
           </li>
         ))}

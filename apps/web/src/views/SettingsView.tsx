@@ -134,7 +134,7 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
         </p>
       </form>
 
-      <div className="card">
+      <div className="card" id="settings-export" tabIndex={-1}>
         <header>
           <div>
             <h2>Portable export</h2>

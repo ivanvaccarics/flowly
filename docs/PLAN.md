@@ -1317,6 +1317,18 @@ Status: **complete** (2026-09-16), decision in `docs/adr/0021`.
 - Keep the API surface unchanged: no new endpoint, no new runtime dependency, and
   no figure that the vault cannot compute.
 
+#### Task `polish-web-presentation-rules`
+
+Status: **complete** (2026-09-16), decision in `docs/adr/0022`.
+
+- Format money and rates the Italian way at the presentation boundary
+  (`1.234,56`), keep storage, the API and every export canonical, and teach the
+  amount fields to read both conventions.
+- Right-align the amount column as a column, header included.
+- Make **Export data** in the top bar a deep link into the Settings export block,
+  and replace the tag colour picker with the token palette plus one free colour
+  from the browser's own picker.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`

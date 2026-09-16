@@ -174,7 +174,7 @@ describe("transactions view", () => {
     render(<TransactionsView csrf="csrf-token" />);
 
     await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
-    expect(screen.getByText("-12.30 EUR")).toBeTruthy();
+    expect(screen.getByText("-12,30 EUR")).toBeTruthy();
     expect(screen.getAllByText("Coffee").length).toBeGreaterThan(0);
     // The status of every row is visible, and it is switchable.
     expect(screen.getByRole("button", { name: /Set status for Bar Centrale/ })).toBeTruthy();
@@ -267,8 +267,8 @@ describe("transactions view", () => {
 
     // The row prefills the amount in its own currency, editable as a decimal.
     const amount = (await screen.findByLabelText("Amount in EUR")) as HTMLInputElement;
-    expect(amount.value).toBe("-12.30");
-    fireEvent.change(amount, { target: { value: "-15.00" } });
+    expect(amount.value).toBe("-12,30");
+    fireEvent.change(amount, { target: { value: "-15,00" } });
     fireEvent.change(screen.getByLabelText(`Payee for ${transaction.id}`), {
       target: { value: "Bar Centrale Roma" },
     });
