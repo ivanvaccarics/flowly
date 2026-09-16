@@ -85,7 +85,7 @@ function normalizeLicenseGroups(groups, previousLicenses) {
       for (const version of entry.versions ?? []) {
         const key = `${entry.name}@${version}`;
         const resolvedLicense =
-          license === "Unknown" ? previousLicenses.get(key) ?? license : license;
+          license === "Unknown" ? (previousLicenses.get(key) ?? license) : license;
 
         if (!grouped.has(resolvedLicense)) grouped.set(resolvedLicense, new Map());
         const packages = grouped.get(resolvedLicense);
