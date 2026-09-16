@@ -227,6 +227,9 @@ interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
   use it from a phone today, and what the planned mobile/desktop apps will need.
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — install on Docker Compose, trust the
   local certificate authority, upgrade, roll back and back up.
+- [docs/AUTOMATIC_STARTUP.md](docs/AUTOMATIC_STARTUP.md) — Docker and Tailscale
+  on a machine that reboots on its own: the `startup.sh` script and the systemd
+  unit that bring the stack and the tailnet HTTPS mapping back at boot.
 - [docs/TESTING.md](docs/TESTING.md) — the acceptance script and the manual test
   plan, with what a pass looks like for every screen.
 - [docs/DESIGN.md](docs/DESIGN.md) — the UI design system, its tokens and the

@@ -53,6 +53,11 @@ FLOWLY_SITE_ADDRESS=flowly.local   # or <machine>.<tailnet>.ts.net
 and start the stack again. `0.0.0.0` publishes on every interface: only do that
 inside a private network you control.
 
+Want the stack and the tailnet mapping to come back by themselves after a
+reboot? [AUTOMATIC_STARTUP.md](./AUTOMATIC_STARTUP.md) walks through Docker,
+Tailscale and the `deployment/self-hosted/startup.sh` script, including the
+systemd unit that runs it at boot.
+
 Flowly never asks your router to open a port (no UPnP, no NAT-PMP), so anything
 reachable from the internet is reachable because a forward exists somewhere
 else. Worth checking once, because routers often ship with UPnP enabled and a

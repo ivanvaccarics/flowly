@@ -215,7 +215,9 @@ where the port mapping itself stays private.
 
 Open <https://localhost:8443> and trust the local CA once if the browser warns:
 the exact commands, plus upgrade, rollback and backup procedures, are in
-[DEPLOYMENT.md](./DEPLOYMENT.md).
+[DEPLOYMENT.md](./DEPLOYMENT.md). To put the stack and its tailnet HTTPS mapping
+back automatically after a reboot, follow
+[AUTOMATIC_STARTUP.md](./AUTOMATIC_STARTUP.md).
 
 To reach it from other devices:
 
