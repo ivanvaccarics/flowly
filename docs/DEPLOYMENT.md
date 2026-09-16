@@ -32,6 +32,19 @@ the Compose project directory here — and the project directory is where Compos
 looks for `.env`. Run `docker compose config | grep -E "host_ip|published"` after
 editing it to see what Compose resolved.
 
+Create the folder the vault lives in before the first start, as your own user:
+
+```bash
+mkdir -p data
+```
+
+Docker creates a missing bind-mount source directory as `root`, and the server
+runs as uid 1000 inside its container, so a `data/` born that way can never be
+written to: creating the vault fails with `vault_storage_unavailable`. If it
+already happened, `sudo chown -R 1000:1000 data` is the fix. On Docker Desktop
+(macOS, Windows) the mount hides the difference, so a stack can work there for
+months and fail the first time it runs on a Linux host.
+
 Two containers start:
 
 - `server` — the TypeScript service, listening on port 8787 **inside** the

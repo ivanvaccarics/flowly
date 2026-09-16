@@ -569,8 +569,14 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     return { error: "not_found" };
   });
 
-  app.setErrorHandler(async (error, _request, reply) => {
+  app.setErrorHandler(async (error, request, reply) => {
     const mapped = mapError(error);
+    if (mapped.status >= 500) {
+      // An internal error has to leave a trace: the client only receives a code,
+      // and without the cause there is nothing to act on. Request bodies are
+      // never logged, so no passphrase or payload ever lands here.
+      request.log.error({ err: error }, "request failed");
+    }
     reply.code(mapped.status);
     return mapped.body;
   });
@@ -886,5 +892,46 @@ function mapError(error: unknown): { status: number; body: Record<string, unknow
       return { status, body: { error: "request_failed" } };
     }
   }
+  const storage = storageFailure(error);
+  if (storage) return storage;
   return { status: 500, body: { error: "internal_error" } };
+}
+
+/**
+ * The one internal failure a person can fix on their own: the vault directory is
+ * not usable. "internal_error" told nobody anything, and the usual cause is a
+ * `data/` folder Docker created as root, which the container's own user (uid
+ * 1000) then cannot write to.
+ */
+function storageFailure(
+  error: unknown,
+): { status: number; body: { error: string; message: string } } | undefined {
+  const code = (error as { code?: unknown } | null)?.code;
+  // Every filesystem call this server makes belongs to the vault area, so an
+  // errno here means the vault directory, whichever way it fails: no permission,
+  // read-only mount, missing parent, full or failing disk.
+  const known = [
+    "EACCES",
+    "EPERM",
+    "EROFS",
+    "ENOENT",
+    "ENOSPC",
+    "EDQUOT",
+    "EIO",
+    "ENOTDIR",
+    "EISDIR",
+    "ENAMETOOLONG",
+  ];
+  if (typeof code !== "string" || !known.includes(code)) return undefined;
+  return {
+    status: 500,
+    body: {
+      error: "vault_storage_unavailable",
+      message:
+        `The server cannot create or use its vault directory on disk (${code}). ` +
+        "Check that data/ exists next to compose.yaml, that the user inside the " +
+        "container can write to it (on Linux the image runs as uid 1000: " +
+        "sudo chown -R 1000:1000 data), and that the disk is not full or read-only.",
+    },
+  };
 }

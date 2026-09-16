@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { chmodSync, existsSync } from "node:fs";
 import type { FastifyInstance, InjectOptions, LightMyRequestResponse } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 import { appState, buildApp } from "../src/api/app.js";
@@ -203,6 +203,27 @@ describe("vault API", () => {
     });
     expect(response.statusCode).toBe(409);
     expect(response.json<{ error: string }>().error).toBe("vault_exists");
+  });
+
+  it("says why the vault directory is unusable instead of a bare internal error", async () => {
+    // Root ignores the mode bits, so the check would not fail there.
+    if (typeof process.getuid === "function" && process.getuid() === 0) return;
+    const dir = tempDir("flowly-api-readonly-");
+    openDirs.push(dir);
+    chmodSync(dir, 0o500);
+    const app = startApp(makeConfig({ vaultDir: dir }));
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/vault/create",
+      payload: { passphrase: PASSPHRASE },
+    });
+
+    expect(response.statusCode).toBe(500);
+    const body = response.json<{ error: string; message: string }>();
+    expect(body.error).toBe("vault_storage_unavailable");
+    expect(body.message).toContain("chown");
+    chmodSync(dir, 0o700);
   });
 
   it("rejects a wrong passphrase and reports a missing vault", async () => {
