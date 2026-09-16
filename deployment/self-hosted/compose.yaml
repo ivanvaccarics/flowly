@@ -13,7 +13,15 @@ services:
         # Set FLOWLY_BUILD_CFLAGS=-O1 in .env on a slow host: the SQLCipher
         # compile is the long pole when building on a Raspberry Pi.
         FLOWLY_BUILD_CFLAGS: ${FLOWLY_BUILD_CFLAGS:-}
-    image: flowly-server:local
+    # Built by .github/workflows/image.yml and published to GHCR, so a machine
+    # can pull it instead of compiling SQLCipher locally. Set FLOWLY_IMAGE in
+    # .env to pin a version tag, or to flowly-server:local to use an image you
+    # built on this host. `docker compose up -d` builds from source only when the
+    # image is missing, and `startup.sh` asks for a build when the checkout has
+    # moved on (see docs/AUTOMATIC_STARTUP.md).
+    # Forking? Point FLOWLY_IMAGE at your own registry path, or the stack will
+    # happily run the upstream image.
+    image: ${FLOWLY_IMAGE:-ghcr.io/ivanvaccarics/flowly:latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
