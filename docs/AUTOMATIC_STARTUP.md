@@ -145,40 +145,48 @@ Flags:
 | Flag | Effect |
 | --- | --- |
 | `--compose-only` | Start the stack and stop; do not touch Tailscale |
-| `--build` | Rebuild the `flowly-server:local` image first: use it after updating the code |
+| `--build` | Rebuild the `flowly-server:local` image, whatever the source stamp says |
+| `--no-build` | Never rebuild: start the image that is already there |
 | `--help` | Usage, including the environment knobs the script honours |
 
 ### When the image is built
 
-By default the script starts the stack without rebuilding: Compose builds
-`flowly-server:local` only when the image is **missing**, and reuses it
-otherwise. That is the behaviour a boot unit wants.
+You do not have to decide this yourself. Every image records a **source stamp** —
+a hash of the files it was built from, written into the label
+`org.flowly.source-stamp` — and on every run the script computes the same hash
+for the checkout and compares the two:
 
-A rebuild is not cheap. The Dockerfile copies the whole build context in one
-layer and then runs two `pnpm install` passes and three builds (contracts,
-server, web), so any change to a tracked source file re-runs all of that — and a
-cold cache needs the network. Forcing it on every boot would mean a Raspberry Pi
-spending minutes compiling code it already compiled, with the app down until it
-finishes, and a boot that can fail simply because the network is slow or absent.
-
-So the rule is:
-
-| When | What to run |
+| Stamp | What the script does |
 | --- | --- |
-| First install, or after `git pull` with code changes | `./deployment/self-hosted/startup.sh --build` |
-| Every boot | `./deployment/self-hosted/startup.sh --no-build` (the unit below) |
-| Only the stack, Tailscale untouched | add `--compose-only` |
+| Image missing, or built before stamps existed | Builds once |
+| Image stamp equals the checkout | Starts the stack, no build |
+| Image stamp differs (a `git pull`, or an edit by hand) | Builds, then starts |
+| `--build` given | Builds, whatever the stamps say |
+| `--no-build` given | Never builds; says so when the image is behind |
 
-The unit never passes `--build`: a machine that comes back after a blackout has
-the image already, and the first start of a fresh checkout still builds it,
-because Compose builds a missing image even without the flag.
+The stamp covers exactly what the image contains — `apps/`, `packages/`,
+`tsconfig.base.json` and the manifests and lockfile — so a `git pull` that only
+touches `docs/`, `README.md`, `AGENTS.md`, `.github/` or `tooling/` changes
+nothing and costs no build. Editing one line of a view does change it, and the
+next run rebuilds.
 
-When a rebuild does happen, the Dockerfile is ordered so it stays cheap: the
-manifests and the lockfile are copied first, the two `pnpm install` passes sit in
-their own layer, and the sources come after them one workspace package at a time.
-A change in the web client therefore leaves both installs in the cache and only
-re-runs the web build and what comes after it, instead of reinstalling the whole
-workspace.
+Building by hand (`docker compose build`, or `docker compose up --build`) records
+`unknown`: the next run rebuilds once to stamp the image properly, and then it
+settles.
+
+A rebuild is not free, which is why it is not unconditional. The Dockerfile is
+ordered to keep it cheap — manifests and lockfile first, the two `pnpm install`
+passes in their own layer, sources after them one workspace package at a time —
+so a change in the web client leaves both installs in the cache and re-runs only
+the builds from that package onwards. A cold cache is the expensive case: it
+needs the network for `pnpm install`. Rebuilding on every boot would mean a
+Raspberry Pi compiling code it already compiled, with the app down until it
+finishes, and a boot that fails whenever the network is slow.
+
+When a rebuild is needed but fails — no network yet, a broken dependency — the
+script does **not** leave you with an app that will not start: it says so loudly
+and starts the previous image, so Flowly is up, running the code that image has.
+Run the script again once the network is back, or force it with `--build`.
 
 Then check it from the machine itself:
 
@@ -220,7 +228,7 @@ After=network-online.target docker.service tailscaled.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/flowly
-ExecStart=/opt/flowly/deployment/self-hosted/startup.sh --no-build
+ExecStart=/opt/flowly/deployment/self-hosted/startup.sh
 TimeoutStartSec=600
 
 [Install]
@@ -244,6 +252,10 @@ Notes on that unit:
   other things and exits.
 - The script waits for Docker and tailscaled by itself (up to 120 s and 60 s by
   default), so a slow daemon at boot does not fail the unit.
+- No flag on purpose: the source-stamp check means a boot rebuilds only when the
+  checkout really changed since the image was built, and a failed rebuild falls
+  back to the previous image instead of leaving Flowly down. Pass `--no-build`
+  if you want a machine that never compiles anything at boot.
 - No `User=` line: the script talks to the Docker socket and to tailscaled,
   which is simplest as root. If your user is in the `docker` group and you
   prefer that, add `User=<you>` and make sure the user can run `tailscale`
@@ -321,7 +333,8 @@ accident, run `startup.sh` again to put it back.
 | Browser certificate warning on the tailnet URL | Serve did not issue the certificate yet, or you are on `https://localhost:<port>` | Give it a minute; make sure MagicDNS is on; use the `<host>.<tailnet>.ts.net` URL |
 | `404` or an empty page on the tailnet URL | The proxy container is not healthy yet | `docker compose logs proxy`, then `docker compose ps` |
 | The Serve mapping disappeared | Node renamed, logged out, or `serve reset` was run | Run `startup.sh` again; the node's name must match `FLOWLY_SITE_ADDRESS` |
-| A code update is not visible after a restart | The image was not rebuilt | `./deployment/self-hosted/startup.sh --build` |
+| A code update is not visible after a restart | The rebuild failed, so the previous image is running | Look for the warning in the output, fix the cause, then `./deployment/self-hosted/startup.sh --build` |
+| The script rebuilds on a boot you did not expect | The checkout changed since the image was built | Expected: it means the image was behind. `--no-build` turns it off |
 | Enable Banking says the redirect URL is not allowed | The URL registered does not match the address in use | Register `https://<host>.<tailnet>.ts.net/enablebanking/auth_callback`; Settings warns when the two differ, and **Use the address I am using now** fills in the right one |
 | `ASPSP_RATE_LIMIT_EXCEEDED` while syncing | The bank's own limit on daily unattended reads | Nothing to do with the network: sync less often and retry the next day ([RUNNING.md](./RUNNING.md)) |
 

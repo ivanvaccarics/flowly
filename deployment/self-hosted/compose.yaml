@@ -5,6 +5,11 @@ services:
     build:
       context: ../..
       dockerfile: apps/server/Dockerfile
+      args:
+        # deployment/self-hosted/startup.sh stamps the image with a hash of the
+        # files it was built from, so the next run can tell whether a rebuild is
+        # needed. Building by hand records "unknown" and costs one extra rebuild.
+        FLOWLY_SOURCE_STAMP: ${FLOWLY_SOURCE_STAMP:-unknown}
     image: flowly-server:local
     restart: unless-stopped
     environment:

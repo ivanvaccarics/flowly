@@ -224,6 +224,10 @@ git pull                     # or check out the new tag
 docker compose up --build -d
 ```
 
+Using `deployment/self-hosted/startup.sh` instead? It notices the pull by itself
+and rebuilds only when it has to: see
+[AUTOMATIC_STARTUP.md](./AUTOMATIC_STARTUP.md#when-the-image-is-built).
+
 On startup the server applies pending migrations. Every migration runs in a
 transaction, and any failure rolls back to the previous schema, so an
 interrupted upgrade never leaves a half-migrated vault. Before a schema change,

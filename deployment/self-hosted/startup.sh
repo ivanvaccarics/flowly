@@ -2,17 +2,20 @@
 #
 # Flowly — start the self-hosted stack and publish it inside the tailnet.
 #
-#   deployment/self-hosted/startup.sh [--compose-only] [--build] [--help]
+#   deployment/self-hosted/startup.sh [--compose-only] [--build] [--no-build] [--help]
 #
 # The script, in order:
 #   1. reads the single `.env` in the repository root (the Compose project
 #      directory, which is what makes Compose substitute it),
-#   2. starts the stack — the server and Caddy — with `docker compose up -d`,
+#   2. rebuilds the server image only when the checkout has moved on since the
+#      image was built (see "The source stamp" below), then starts the stack —
+#      the server and Caddy — with `docker compose up -d`,
 #   3. publishes it to the tailnet with `tailscale serve` (never Funnel).
 #
-# The server image is not rebuilt unless you ask for it with --build: Compose
-# builds it only when it is missing, which is what makes a boot fast and
-# offline-safe. Pass --build after updating the code.
+# The source stamp: the image records a hash of the files it was built from, and
+# this script compares it with the checkout on every run. Same hash, no build; a
+# `git pull` (or a hand edit) changes it and the image is rebuilt. Use --build to
+# force a rebuild and --no-build to never build, whatever the stamp says.
 #
 # Safe to run repeatedly, by hand or from a systemd unit at boot: every step
 # waits for the daemon it needs instead of assuming it is already up.
@@ -46,19 +49,21 @@ fail() {
 
 usage() {
   cat <<'EOF'
-Usage: startup.sh [--compose-only] [--build] [--help]
+Usage: startup.sh [--compose-only] [--build] [--no-build] [--help]
 
 Starts the Flowly Compose stack with the `.env` in the repository root, then
-publishes it inside your tailnet with Tailscale Serve.
+publishes it inside your tailnet with Tailscale Serve. The server image is
+rebuilt only when the files it was built from have changed since.
 
 Options:
   --compose-only   Start the stack and stop: do not touch Tailscale.
-  --build          Rebuild the server image first (`docker compose up --build`).
-                   Use it after updating the code, not on a boot schedule.
+  --build          Rebuild the server image, whatever the source stamp says.
+  --no-build       Never rebuild: start the image that is already there.
   --help           Show this message.
 
 Environment (read from .env, optional):
   FLOWLY_BIND_IP, FLOWLY_SITE_PORT, FLOWLY_SITE_ADDRESS   See .env.example
+  FLOWLY_IMAGE                                            Image to build and check (default: the one in compose.yaml)
   TS_SERVE_HTTPS_PORT                                     Tailnet HTTPS port on Serve (default 443)
   FLOWLY_STARTUP_DOCKER_WAIT                              Seconds to wait for the Docker daemon
   FLOWLY_STARTUP_TAILSCALE_WAIT                           Seconds to wait for tailscaled to connect
@@ -69,7 +74,8 @@ EOF
 }
 
 compose_only=0
-build=0
+# auto: rebuild only when the sources changed since the image was built.
+build="auto"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -82,13 +88,11 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --build)
-      build=1
+      build="always"
       shift
       ;;
     --no-build)
-      # Kept so units and notes written against the first version keep working:
-      # not rebuilding is the default.
-      build=0
+      build="never"
       shift
       ;;
     --funnel)
@@ -128,6 +132,67 @@ docker_ready() {
   docker info >/dev/null 2>&1
 }
 
+# --------------------------------------------------------- the source stamp
+
+# Hash of everything the image is built from — the same paths the Dockerfile
+# copies, minus the directories that are not part of the build. Two facts make
+# this exact: it follows the checkout (a `git pull` or a hand edit changes it)
+# and it ignores what the image does not contain (docs, README, tooling), so a
+# documentation-only update does not cost a rebuild.
+source_files() {
+  (
+    cd "$REPO_ROOT" &&
+      find apps packages tsconfig.base.json package.json pnpm-lock.yaml pnpm-workspace.yaml \
+        -type f \
+        -not -path "*/node_modules/*" \
+        -not -path "*/dist/*" \
+        -not -path "*/coverage/*" |
+      LC_ALL=C sort
+  )
+}
+
+hash_stdin() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | cut -d" " -f1
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 | cut -d" " -f1
+  elif command -v openssl >/dev/null 2>&1; then
+    openssl dgst -sha256 | awk '{print $NF}'
+  else
+    return 1
+  fi
+}
+
+source_stamp() {
+  local files
+  files="$(source_files)" || return 1
+  {
+    while IFS= read -r file; do
+      [ -n "$file" ] || continue
+      printf '%s %s\n' "$file" "$(hash_stdin <"$REPO_ROOT/$file")"
+    done <<<"$files"
+  } | hash_stdin
+}
+
+# The image Compose builds: the compose file is the source of truth, and
+# FLOWLY_IMAGE overrides it for an unusual setup.
+compose_image() {
+  local images
+  images="$(cd "$REPO_ROOT" && docker compose config --images 2>/dev/null | head -n1 || true)"
+  printf '%s' "${FLOWLY_IMAGE:-${images:-flowly-server:local}}"
+}
+
+image_stamp() {
+  local value
+  value="$(
+    docker image inspect --format '{{ if .Config.Labels }}{{ index .Config.Labels "org.flowly.source-stamp" }}{{ end }}' "$1" 2>/dev/null || true
+  )"
+  if [ "$value" = "<no value>" ]; then
+    value=""
+  fi
+  printf '%s' "$value"
+}
+
 if ! docker_ready; then
   log "Waiting for the Docker daemon (up to ${DOCKER_WAIT_SECONDS}s)…"
   deadline=$((SECONDS + DOCKER_WAIT_SECONDS))
@@ -139,16 +204,51 @@ if ! docker_ready; then
   done
 fi
 
+image="$(compose_image)"
+want_stamp="$(source_stamp || true)"
+have_stamp="$(image_stamp "$image")"
+build_reason=""
+
+case "$build" in
+  always)
+    build_reason="--build was given"
+    ;;
+  never)
+    if [ -n "$want_stamp" ] && [ "$have_stamp" != "$want_stamp" ]; then
+      log "Note: --no-build was given and the image does not match the checkout. Flowly will run the code in $image."
+    fi
+    ;;
+  *)
+    if [ -z "$want_stamp" ]; then
+      log "Cannot hash the sources (no sha256sum, shasum or openssl): rebuilding is left to you (--build)."
+    elif [ -z "$have_stamp" ]; then
+      build_reason="no image yet, or one built before this check existed"
+    elif [ "$have_stamp" != "$want_stamp" ]; then
+      build_reason="the checkout changed since ${image} was built"
+    fi
+    ;;
+esac
+
+built=0
+build_failed=0
+if [ -n "$build_reason" ]; then
+  log "Rebuilding $image: ${build_reason}"
+  if (cd "$REPO_ROOT" && FLOWLY_SOURCE_STAMP="$want_stamp" docker compose build); then
+    built=1
+  else
+    build_failed=1
+    log "WARNING: the image build failed (offline, or a broken dependency)."
+    log "         Starting the previous $image instead: Flowly runs the code that image has, not this checkout."
+  fi
+elif [ "$build" = "auto" ]; then
+  log "No rebuild needed: $image already matches the checkout"
+fi
+
 # The Compose project directory is the repository root, which is where Compose
 # looks for `.env`; the root compose.yaml only includes the stack definition in
 # this folder.
-if [[ $build -eq 1 ]]; then
-  log "Starting the stack and rebuilding the server image (docker compose up --build -d)"
-  (cd "$REPO_ROOT" && docker compose up --build -d)
-else
-  log "Starting the stack (docker compose up -d): reusing the image, building it only if it is missing"
-  (cd "$REPO_ROOT" && docker compose up -d)
-fi
+log "Starting the stack (docker compose up -d)"
+(cd "$REPO_ROOT" && docker compose up -d)
 
 if [[ $compose_only -eq 1 ]]; then
   log "Done: the stack is up. Tailscale left untouched (--compose-only)."
@@ -200,6 +300,15 @@ if ! (cd "$REPO_ROOT" && docker compose ps); then
 fi
 
 log "Flowly is up."
+if [ "$built" -eq 1 ]; then
+  log "  Image            rebuilt from this checkout just now (${image})"
+elif [ "$build_failed" -eq 1 ]; then
+  log "  Image            ${image}, from an earlier build: the rebuild failed, so this is not this checkout"
+elif [ "$build" = "never" ]; then
+  log "  Image            ${image}, reused as asked"
+else
+  log "  Image            ${image}, already matching this checkout"
+fi
 log "  Local loopback   https://localhost:${FLOWLY_SITE_PORT} (Caddy's own CA: trust it once, or ignore this URL)"
 if [[ -n "$serve_url" ]]; then
   log "  On the tailnet   ${serve_url}"

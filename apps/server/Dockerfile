@@ -71,3 +71,9 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8787/api/health || exit 1
 
 CMD ["node", "apps/server/dist/index.js"]
+
+# Which sources produced this image. Last on purpose: changing the stamp only
+# adds this small metadata layer instead of invalidating the ones above, and
+# deployment/self-hosted/startup.sh reads it to decide whether to rebuild.
+ARG FLOWLY_SOURCE_STAMP=unknown
+LABEL org.flowly.source-stamp=$FLOWLY_SOURCE_STAMP
