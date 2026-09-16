@@ -8,3 +8,4 @@ coverage/
 *.local
 *.tsbuildinfo
 data_bank
+.DS_Store
