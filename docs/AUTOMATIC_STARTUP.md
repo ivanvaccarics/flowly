@@ -173,6 +173,13 @@ The unit never passes `--build`: a machine that comes back after a blackout has
 the image already, and the first start of a fresh checkout still builds it,
 because Compose builds a missing image even without the flag.
 
+When a rebuild does happen, the Dockerfile is ordered so it stays cheap: the
+manifests and the lockfile are copied first, the two `pnpm install` passes sit in
+their own layer, and the sources come after them one workspace package at a time.
+A change in the web client therefore leaves both installs in the cache and only
+re-runs the web build and what comes after it, instead of reinstalling the whole
+workspace.
+
 Then check it from the machine itself:
 
 ```bash

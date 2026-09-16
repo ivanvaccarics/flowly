@@ -7,12 +7,28 @@ RUN apk add --no-cache python3 make g++ linux-headers openssl-dev
 RUN corepack enable
 WORKDIR /repo
 
-COPY . .
+# Manifests and the lockfile come first, so the dependency layers below survive
+# every source change: without this, editing one file re-ran both installs.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/server/package.json apps/server/
+COPY apps/web/package.json apps/web/
+COPY packages/web-contracts/package.json packages/web-contracts/
+
 RUN pnpm install --frozen-lockfile --filter "@flowly/server..."
 RUN pnpm install --frozen-lockfile --filter "@flowly/web..."
-RUN pnpm --filter @flowly/web-contracts build \
-    && pnpm --filter @flowly/server build \
-    && pnpm --filter @flowly/web build
+
+# Sources last, one workspace package at a time and in dependency order, so a
+# source change never re-runs the installs above and only the packages from the
+# changed one onwards are rebuilt.
+COPY tsconfig.base.json ./
+COPY packages/web-contracts/ packages/web-contracts/
+RUN pnpm --filter @flowly/web-contracts build
+
+COPY apps/web/ apps/web/
+RUN pnpm --filter @flowly/web build
+
+COPY apps/server/ apps/server/
+RUN pnpm --filter @flowly/server build
 
 FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS runtime
 
