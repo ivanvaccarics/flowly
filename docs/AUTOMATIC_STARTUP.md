@@ -171,6 +171,13 @@ touches `docs/`, `README.md`, `AGENTS.md`, `.github/` or `tooling/` changes
 nothing and costs no build. Editing one line of a view does change it, and the
 next run rebuilds.
 
+`.env` is not part of the stamp either, and that is deliberate: the image does
+not contain it (Compose reads it at container start), and hashing it would make
+every port or address tweak trigger a full rebuild. A change there takes effect
+with the `docker compose up -d` the script runs anyway. The one exception is
+`FLOWLY_BUILD_CFLAGS`, which is a build argument: it changes the image but not
+the stamp, so force a rebuild with `--build` when you change it.
+
 Building by hand (`docker compose build`, or `docker compose up --build`) records
 `unknown`: the next run rebuilds once to stamp the image properly, and then it
 settles.
