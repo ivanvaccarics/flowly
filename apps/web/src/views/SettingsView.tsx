@@ -63,8 +63,6 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
     <section className="view" aria-labelledby="settings-title">
       <PageHeader
         eyebrow="Settings · bank, passphrase and portable data"
-        title="Settings & vault data"
-        titleId="settings-title"
         lead="Connect your bank, protect the local vault with its passphrase, and export or import your ledger without giving up sovereignty."
         facts={
           <>

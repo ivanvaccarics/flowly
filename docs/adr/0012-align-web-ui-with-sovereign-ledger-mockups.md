@@ -5,6 +5,9 @@ Status: Accepted (2026-09-11)
 Supersedes the palette and panel decisions of
 [ADR 0011](./0011-ui-design-system.md).
 
+Palette, shape, page-header and panel decisions superseded by
+[ADR 0021](./0021-slate-and-teal-ui-with-dashboard-pie-chart.md).
+
 ## Context
 
 ADR 0011 adopted the Sovereign Ledger design system, but the first pass

@@ -82,7 +82,7 @@ export function TagPicker({ tags, selected, onChange, label, emptyHint }: TagPic
           <>
             {visible.map((tag) => (
               <span key={tag.id} className="tag-pill">
-                <span className="swatch" style={{ background: tag.color ?? "#4648d4" }} />
+                <span className="swatch" style={{ background: tag.color ?? "#0f766e" }} />
                 {tag.name}
               </span>
             ))}
@@ -123,7 +123,7 @@ export function TagPicker({ tags, selected, onChange, label, emptyHint }: TagPic
                     checked={selected.includes(tag.id)}
                     onChange={(event) => toggle(tag.id, event.target.checked)}
                   />
-                  <span className="swatch" style={{ background: tag.color ?? "#4648d4" }} />
+                  <span className="swatch" style={{ background: tag.color ?? "#0f766e" }} />
                   <span>{tag.name}</span>
                 </label>
               ))

@@ -98,6 +98,7 @@ export function BankCallbackView({ csrf, onFinished }: { csrf: string; onFinishe
         eyebrow="Enable Banking · authorizing your bank"
         title={result ? `${result.aspsp.name} is connected` : "Finishing the bank connection"}
         titleId="bank-callback-title"
+        titleLevel={1}
         lead={
           result
             ? "Tell Flowly what to do with each account the bank shared."

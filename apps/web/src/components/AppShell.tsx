@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { VaultStatus } from "@flowly/web-contracts";
 import { Icon, type IconName } from "./icons.js";
 import { Banner } from "./ui.js";
@@ -9,14 +9,29 @@ import { SettingsView } from "../views/SettingsView.js";
 import { TagsView } from "../views/TagsView.js";
 import { TransactionsView } from "../views/TransactionsView.js";
 
-const NAVIGATION: Array<{ key: string; label: string; icon: IconName }> = [
-  { key: "dashboard", label: "Dashboard", icon: "dashboard" },
-  { key: "accounts", label: "Accounts", icon: "accounts" },
-  { key: "transactions", label: "Transactions", icon: "transactions" },
-  { key: "tags", label: "Tags", icon: "tags" },
-  { key: "rules", label: "Rules", icon: "rules" },
-  { key: "settings", label: "Settings", icon: "settings" },
+/**
+ * One entry per section: the sidebar label, the `h1` the top bar shows for that
+ * section (the id is what every view points its `aria-labelledby` at) and the
+ * icon.
+ */
+const NAVIGATION: Array<{ key: string; label: string; title: string; icon: IconName }> = [
+  { key: "dashboard", label: "Dashboard", title: "Financial overview", icon: "dashboard" },
+  { key: "accounts", label: "Accounts", title: "Accounts & resources", icon: "accounts" },
+  { key: "transactions", label: "Transactions", title: "Transactions", icon: "transactions" },
+  { key: "tags", label: "Tags", title: "Tags", icon: "tags" },
+  { key: "rules", label: "Rules", title: "Tagging & automation", icon: "rules" },
+  { key: "settings", label: "Settings", title: "Settings & vault data", icon: "settings" },
 ];
+
+/** The wall clock in the top bar: local time, refreshed every 30 s. */
+function useLocalTime(): string {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
 
 export interface AppShellProps {
   csrf: string;
@@ -39,16 +54,19 @@ export function AppShell({
 }: AppShellProps) {
   const [view, setView] = useState("dashboard");
   const vaultId = status?.vaultId ?? null;
+  const section = NAVIGATION.find((entry) => entry.key === view) ?? NAVIGATION[0]!;
+  const localTime = useLocalTime();
 
   return (
     <div className="shell">
       <aside className="sidebar">
         <div>
           <div className="brand">
-            <img className="brand-mark" src="/favicon.svg" alt="" width={30} height={30} />
+            <span className="brand-tile" aria-hidden="true">
+              <img src="/logo-mark-mono.svg" alt="" width={22} height={22} />
+            </span>
             Flowly
           </div>
-          <p className="nav-section">Vault navigation</p>
           <nav className="nav" aria-label="Sections">
             {NAVIGATION.map((item) => (
               <button
@@ -80,20 +98,29 @@ export function AppShell({
       </aside>
 
       <header className="topbar">
-        <div className="topbar-status">
-          <span className="status-pill" title="Encrypted vault, unlocked for this session">
-            <span className="pulse" />
-            <strong>Vault unlocked</strong>
-            <span className="badge">AES-256</span>
-          </span>
-          {vaultId ? (
-            <span className="chip mono neutral" title={`Vault identifier ${vaultId}`}>
-              {vaultId.slice(0, 13)}
+        <div className="topbar-heading">
+          <h1 className="topbar-title" id={`${section.key}-title`}>
+            {section.title}
+          </h1>
+          <div className="topbar-status">
+            <span className="status-pill" title="Encrypted vault, unlocked for this session">
+              <span className="pulse" />
+              <strong>Vault unlocked</strong>
+              <span className="badge">AES-256</span>
             </span>
-          ) : null}
+            {vaultId ? (
+              <span className="chip mono neutral" title={`Vault identifier ${vaultId}`}>
+                {vaultId.slice(0, 13)}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="cell-actions">
+          <time className="clock-chip" dateTime={new Date().toISOString()} title="Local time">
+            <Icon name="clock" size={14} />
+            {localTime}
+          </time>
           <button
             type="button"
             className="btn small"
@@ -105,7 +132,7 @@ export function AppShell({
           </button>
           <button
             type="button"
-            className="btn small primary"
+            className="btn small danger"
             disabled={busy}
             onClick={() => void onLock("current")}
           >
@@ -114,7 +141,7 @@ export function AppShell({
           </button>
           <button
             type="button"
-            className="btn small danger"
+            className="btn small"
             disabled={busy}
             onClick={() => void onLock("all")}
           >

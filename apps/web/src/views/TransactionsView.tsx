@@ -3,7 +3,7 @@ import type { Account, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
 import { TagPicker } from "../components/TagPicker.js";
-import { Banner, Chip, Empty, Money, PageHeader } from "../components/ui.js";
+import { Banner, Chip, Empty, Money, PageHeader, tagPillStyle } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { parseAmountToMinor } from "../lib/money.js";
@@ -166,8 +166,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
     <section className="view" aria-labelledby="transactions-title">
       <PageHeader
         eyebrow="Ledger · every movement, notes and tags"
-        title="Transactions"
-        titleId="transactions-title"
+        title="Transaction ledger"
         lead="Search and filters run on the server against the encrypted vault; nothing leaves this device."
         facts={
           <>
@@ -341,6 +340,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                 key={tag.id}
                 type="button"
                 className={filters.tagId === tag.id ? "tag-pill active" : "tag-pill"}
+                style={filters.tagId === tag.id ? undefined : tagPillStyle(tag.color)}
                 aria-pressed={filters.tagId === tag.id}
                 onClick={() =>
                   setFilters({ ...filters, tagId: filters.tagId === tag.id ? "" : tag.id })
@@ -428,11 +428,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                         transaction.tagIds.map((id) => {
                           const tag = tags.items.find((candidate) => candidate.id === id);
                           return (
-                            <span key={id} className="tag-pill">
-                              <span
-                                className="swatch"
-                                style={{ background: tag?.color ?? "#4648d4" }}
-                              />
+                            <span key={id} className="tag-pill" style={tagPillStyle(tag?.color)}>
                               {tag?.name ?? "…"}
                             </span>
                           );

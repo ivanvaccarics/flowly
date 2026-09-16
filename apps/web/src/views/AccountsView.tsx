@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Account, Dashboard } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon, type IconName } from "../components/icons.js";
-import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
+import { Banner, Chip, Empty, PageHeader, Stat } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { ACCOUNT_TYPES, CURRENCIES, formatMoney } from "../lib/money.js";
@@ -89,13 +89,18 @@ export function AccountsView({ csrf }: { csrf: string }) {
   }
 
   const currencies = new Set(balances.map((line) => line.currency));
+  // Totals are per currency: Flowly never converts to invent one number.
+  const totals = [...currencies].map((currency) => ({
+    currency,
+    balanceMinor: balances
+      .filter((line) => line.currency === currency)
+      .reduce((total, line) => total + line.balanceMinor, 0),
+  }));
 
   return (
     <section className="view" aria-labelledby="accounts-title">
       <PageHeader
         eyebrow="Accounts · balances per currency"
-        title="Accounts & resources"
-        titleId="accounts-title"
         lead="Every account is a local endpoint: a bank-linked account shows the balance your bank sends, every other account books its own movements, and no currency is ever converted."
         facts={
           <>
@@ -104,6 +109,19 @@ export function AccountsView({ csrf }: { csrf: string }) {
               {currencies.size} {currencies.size === 1 ? "currency" : "currencies"}
             </Chip>
           </>
+        }
+        ribbon={
+          totals.length > 0 ? (
+            <>
+              {totals.map((total) => (
+                <Stat
+                  key={total.currency}
+                  label={`Booked balance · ${total.currency}`}
+                  value={formatMoney(total.balanceMinor, total.currency)}
+                />
+              ))}
+            </>
+          ) : null
         }
       />
 

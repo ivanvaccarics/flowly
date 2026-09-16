@@ -92,12 +92,11 @@ export function RulesView({ csrf }: { csrf: string }) {
     <section className="view" aria-labelledby="rules-title">
       <PageHeader
         eyebrow="Automation engine · local rule evaluation"
-        title="Tagging & automation"
-        titleId="rules-title"
+        tone="info"
         lead="Rules run when a transaction is created or imported, and they only ever add tags. Editing a transaction never re-runs them, so a tag you remove by hand stays removed."
         facts={
           <>
-            <Chip tone="neutral">{rules.items.length} rules</Chip>
+            <Chip tone="info">{rules.items.length} rules</Chip>
             <Chip tone="income">{rules.items.filter((rule) => rule.enabled).length} active</Chip>
           </>
         }
@@ -262,7 +261,7 @@ export function RulesView({ csrf }: { csrf: string }) {
                         )
                       }
                     />
-                    <span className="swatch" style={{ background: tag.color ?? "#4648d4" }} />
+                    <span className="swatch" style={{ background: tag.color ?? "#0f766e" }} />
                     {tag.name}
                   </label>
                 ))

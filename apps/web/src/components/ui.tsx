@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Icon, type IconName } from "./icons.js";
 
 export function Chip({
@@ -6,7 +6,7 @@ export function Chip({
   icon,
   children,
 }: {
-  tone?: "neutral" | "income" | "expense" | "vault";
+  tone?: "neutral" | "income" | "expense" | "vault" | "info";
   icon?: IconName;
   children: ReactNode;
 }) {
@@ -63,33 +63,39 @@ export function Empty({ children }: { children: ReactNode }) {
 }
 
 /**
- * The page header the mockups open every screen with: an eyebrow line, the
- * title, an optional lead paragraph, right-aligned facts and actions, and an
- * optional sunken ribbon of key figures.
+ * The summary block a section opens with, under the top bar's `h1`: an eyebrow
+ * line, an optional card heading, a lead paragraph, right-aligned facts and
+ * actions, and an optional sunken ribbon of key figures.
  */
 export function PageHeader({
   eyebrow,
   title,
   titleId,
+  titleLevel = 2,
   lead,
   facts,
   actions,
   ribbon,
+  tone = "default",
 }: {
   eyebrow: string;
-  title: string;
-  titleId: string;
+  title?: string;
+  titleId?: string;
+  /** 1 on the screens that render outside the shell (the bank callback). */
+  titleLevel?: 1 | 2;
   lead?: ReactNode;
   facts?: ReactNode;
   actions?: ReactNode;
   ribbon?: ReactNode;
+  tone?: "default" | "info";
 }) {
   return (
-    <section className="hero">
+    <section className={tone === "info" ? "hero info" : "hero"}>
       <div className="hero-top">
         <div className="hero-title">
           <p className="eyebrow primary">{eyebrow}</p>
-          <h1 id={titleId}>{title}</h1>
+          {title && titleLevel === 1 ? <h1 id={titleId}>{title}</h1> : null}
+          {title && titleLevel === 2 ? <h2 id={titleId}>{title}</h2> : null}
           {lead ? <p className="lead">{lead}</p> : null}
         </div>
         <div className="hero-side">
@@ -134,4 +140,18 @@ export function Money({ minor, currency }: { minor: number; currency: string }) 
       {text} {currency}
     </span>
   );
+}
+
+/**
+ * Pills wear the tag's own colour: a pastel tint of it for the surface and a
+ * darker mix of the same hue for the text, so a coloured tag stays readable.
+ * The `color-mix` needs a current browser; older ones fall back to the token
+ * colours in `.tag-pill`.
+ */
+export function tagPillStyle(color: string | null | undefined): CSSProperties | undefined {
+  if (!color) return undefined;
+  return {
+    background: `${color}1f`,
+    color: `color-mix(in srgb, ${color} 72%, #0f172a)`,
+  };
 }

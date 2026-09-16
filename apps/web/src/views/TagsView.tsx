@@ -6,7 +6,7 @@ import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { normalizeTagName } from "../lib/tags.js";
 
-const DEFAULT_COLOR = "#4648d4";
+const DEFAULT_COLOR = "#0f766e";
 
 interface Draft {
   id: string;
@@ -69,8 +69,6 @@ export function TagsView({ csrf }: { csrf: string }) {
     <section className="view" aria-labelledby="tags-title">
       <PageHeader
         eyebrow="Taxonomy · case-insensitive, Unicode-aware"
-        title="Tags"
-        titleId="tags-title"
         lead="Tags bucket spending and drive the tagging rules. Renaming one keeps every transaction and rule that uses it."
         facts={<Chip tone="neutral">{tags.items.length} defined</Chip>}
       />

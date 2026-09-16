@@ -22,7 +22,7 @@ const tag = {
   id: TAG_ID,
   name: "Coffee",
   normalizedName: "coffee",
-  color: "#4648d4",
+  color: "#0f766e",
   createdAt: "2026-09-01T08:00:00.000Z",
   updatedAt: "2026-09-01T08:00:00.000Z",
 };

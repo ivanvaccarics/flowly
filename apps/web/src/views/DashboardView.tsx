@@ -2,11 +2,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Account, Dashboard, Tag, Transaction, VaultStatus } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, Empty, Money, PageHeader } from "../components/ui.js";
+import { Banner, Chip, Empty, Money, PageHeader, tagPillStyle } from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { describeError } from "../hooks/use-workspace.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Slice colours for tags that have no colour of their own. */
+const SPENDING_COLOURS = [
+  "#0d9488",
+  "#3b82f6",
+  "#f59e0b",
+  "#8b5cf6",
+  "#ef4444",
+  "#10b981",
+  "#0ea5e9",
+  "#ec4899",
+];
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -127,6 +139,28 @@ export function DashboardView({
   const primaryCurrency = dashboard?.cashFlow[0]?.currency ?? "EUR";
   const primaryBuckets =
     dashboard?.cashFlowBuckets?.filter((bucket) => bucket.currency === primaryCurrency) ?? [];
+  // Spending is grouped per currency: Flowly never adds unlike currencies into
+  // one number without a real exchange rate, not even for a chart total.
+  const spendingGroups = useMemo(() => {
+    const groups = new Map<string, Dashboard["spendingByTag"]>();
+    for (const entry of dashboard?.spendingByTag ?? []) {
+      groups.set(entry.currency, [...(groups.get(entry.currency) ?? []), entry]);
+    }
+    return [...groups.entries()]
+      .map(([currency, entries]) => ({
+        currency,
+        entries,
+        totalMinor: entries.reduce((total, entry) => total + entry.spentMinor, 0),
+      }))
+      .sort((left, right) => right.totalMinor - left.totalMinor);
+  }, [dashboard]);
+  const colourOf = useCallback(
+    (tagId: string, index: number) =>
+      tagById.get(tagId)?.color ??
+      SPENDING_COLOURS[index % SPENDING_COLOURS.length] ??
+      SPENDING_COLOURS[0]!,
+    [tagById],
+  );
 
   function applyPreset(next: "month" | "quarter" | "year" | "custom") {
     setPreset(next);
@@ -146,8 +180,6 @@ export function DashboardView({
     <section className="view" aria-labelledby="dashboard-title">
       <PageHeader
         eyebrow="Sovereign vault ledger"
-        title="Financial overview"
-        titleId="dashboard-title"
         lead={`${accounts.length} accounts · period ${from} → ${to} · aggregates use booked transactions only`}
         facts={
           <>
@@ -216,77 +248,75 @@ export function DashboardView({
 
       {error ? <Banner tone="error">{error}</Banner> : null}
 
+      {/* The metric row spans the whole content column, as in the mockups: the
+          focal number of each currency sits beside the secondary panels. */}
+      {(dashboard?.cashFlow ?? []).map((flow) => {
+        const previousFlow = previous?.cashFlow.find((entry) => entry.currency === flow.currency);
+        const balanceTotal = (dashboard?.balances ?? [])
+          .filter((line) => line.currency === flow.currency)
+          .reduce((total, line) => total + line.balanceMinor, 0);
+        const savingsRate =
+          flow.incomeMinor === 0 ? null : (flow.netMinor / flow.incomeMinor) * 100;
+        const incomeDelta = delta(flow.incomeMinor, previousFlow?.incomeMinor ?? 0);
+        const expenseDelta = delta(flow.expensesMinor, previousFlow?.expensesMinor ?? 0);
+        return (
+          <div className="grid-cards" key={flow.currency}>
+            <article className="metric">
+              <header>
+                <span className="eyebrow">Total balance · {flow.currency}</span>
+                <span className="metric-icon vault">
+                  <Icon name="accounts" size={16} />
+                </span>
+              </header>
+              <span className="metric-value">{formatPerMinor(balanceTotal, flow.currency)}</span>
+              <span className="muted">{accounts.length} accounts</span>
+            </article>
+            <article className="metric">
+              <header>
+                <span className="eyebrow">Income</span>
+                <span className="metric-icon income">
+                  <Icon name="check" size={16} />
+                </span>
+              </header>
+              <span className="metric-value">
+                {formatPerMinor(flow.incomeMinor, flow.currency)}
+              </span>
+              <Chip tone={incomeDelta.tone}>{incomeDelta.text}</Chip>
+            </article>
+            <article className="metric">
+              <header>
+                <span className="eyebrow">Expenses</span>
+                <span className="metric-icon expense">
+                  <Icon name="alert" size={16} />
+                </span>
+              </header>
+              <span className="metric-value">
+                {formatPerMinor(flow.expensesMinor, flow.currency)}
+              </span>
+              <Chip tone={expenseDelta.tone}>{expenseDelta.text}</Chip>
+            </article>
+            <article className="metric lead">
+              <header>
+                <span className="eyebrow">Net flow</span>
+                <span className="metric-icon vault">
+                  {savingsRate === null ? "—" : `${savingsRate.toFixed(1)}%`}
+                </span>
+              </header>
+              <span className="metric-value">
+                {flow.netMinor >= 0 ? "+" : ""}
+                {formatPerMinor(flow.netMinor, flow.currency)}
+              </span>
+              <span className="muted">
+                {flow.transactionCount} booked transactions
+                {savingsRate === null ? "" : " · savings rate"}
+              </span>
+            </article>
+          </div>
+        );
+      })}
+
       <div className="dash">
         <div className="dash-main">
-          {(dashboard?.cashFlow ?? []).map((flow) => {
-            const previousFlow = previous?.cashFlow.find(
-              (entry) => entry.currency === flow.currency,
-            );
-            const balanceTotal = (dashboard?.balances ?? [])
-              .filter((line) => line.currency === flow.currency)
-              .reduce((total, line) => total + line.balanceMinor, 0);
-            const savingsRate =
-              flow.incomeMinor === 0 ? null : (flow.netMinor / flow.incomeMinor) * 100;
-            const incomeDelta = delta(flow.incomeMinor, previousFlow?.incomeMinor ?? 0);
-            const expenseDelta = delta(flow.expensesMinor, previousFlow?.expensesMinor ?? 0);
-            return (
-              <div className="grid-cards" key={flow.currency}>
-                <article className="metric">
-                  <header>
-                    <span className="eyebrow">Total balance · {flow.currency}</span>
-                    <span className="metric-icon vault">
-                      <Icon name="accounts" size={16} />
-                    </span>
-                  </header>
-                  <span className="metric-value">
-                    {formatPerMinor(balanceTotal, flow.currency)}
-                  </span>
-                  <span className="muted">{accounts.length} accounts</span>
-                </article>
-                <article className="metric">
-                  <header>
-                    <span className="eyebrow">Income</span>
-                    <span className="metric-icon income">
-                      <Icon name="check" size={16} />
-                    </span>
-                  </header>
-                  <span className="metric-value">
-                    {formatPerMinor(flow.incomeMinor, flow.currency)}
-                  </span>
-                  <Chip tone={incomeDelta.tone}>{incomeDelta.text}</Chip>
-                </article>
-                <article className="metric">
-                  <header>
-                    <span className="eyebrow">Expenses</span>
-                    <span className="metric-icon expense">
-                      <Icon name="alert" size={16} />
-                    </span>
-                  </header>
-                  <span className="metric-value">
-                    {formatPerMinor(flow.expensesMinor, flow.currency)}
-                  </span>
-                  <Chip tone={expenseDelta.tone}>{expenseDelta.text}</Chip>
-                </article>
-                <article className="metric">
-                  <header>
-                    <span className="eyebrow">Net flow</span>
-                    <span className="metric-icon vault">
-                      {savingsRate === null ? "—" : `${savingsRate.toFixed(1)}%`}
-                    </span>
-                  </header>
-                  <span className="metric-value primary">
-                    {flow.netMinor >= 0 ? "+" : ""}
-                    {formatPerMinor(flow.netMinor, flow.currency)}
-                  </span>
-                  <span className="muted">
-                    {flow.transactionCount} booked transactions
-                    {savingsRate === null ? "" : " · savings rate"}
-                  </span>
-                </article>
-              </div>
-            );
-          })}
-
           <div className="card">
             <header>
               <div>
@@ -374,14 +404,7 @@ export function DashboardView({
                                   <span
                                     key={id}
                                     className="tag-pill"
-                                    style={
-                                      tag?.color
-                                        ? {
-                                            borderColor: `${tag.color}55`,
-                                            background: `${tag.color}14`,
-                                          }
-                                        : undefined
-                                    }
+                                    style={tagPillStyle(tag?.color)}
                                   >
                                     {tag?.name ?? "…"}
                                   </span>
@@ -425,42 +448,23 @@ export function DashboardView({
             <header>
               <div>
                 <h2>Spending breakdown</h2>
-                <span className="sub">Total: {formatPerMinor(spendingTotal, primaryCurrency)}</span>
+                <span className="sub">
+                  {spendingGroups.length > 1
+                    ? "One pie per currency · totals never mix currencies"
+                    : `Total: ${formatPerMinor(spendingGroups[0]?.totalMinor ?? spendingTotal, spendingGroups[0]?.currency ?? primaryCurrency)}`}
+                </span>
               </div>
             </header>
             {dashboard && dashboard.spendingByTag.length > 0 ? (
-              <>
-                <div className="stacked-bar" role="img" aria-label="Spending share by tag">
-                  {dashboard.spendingByTag.map((entry) => (
-                    <span
-                      key={`${entry.tagId}-${entry.currency}`}
-                      style={{
-                        width: `${(entry.spentMinor / spendingTotal) * 100}%`,
-                        background: tagById.get(entry.tagId)?.color ?? "#4648d4",
-                      }}
-                    />
-                  ))}
-                </div>
-                <ul className="legend-rows">
-                  {dashboard.spendingByTag.map((entry) => (
-                    <li key={`${entry.tagId}-${entry.currency}`}>
-                      <span className="legend-item">
-                        <span
-                          className="dot"
-                          style={{ background: tagById.get(entry.tagId)?.color ?? "#4648d4" }}
-                        />
-                        {entry.tagName}
-                      </span>
-                      <span className="mono">
-                        {formatPerMinor(entry.spentMinor, entry.currency)}
-                      </span>
-                      <span className="muted mono">
-                        {((entry.spentMinor / spendingTotal) * 100).toFixed(1)}%
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </>
+              spendingGroups.map((group) => (
+                <SpendingPie
+                  key={group.currency}
+                  currency={group.currency}
+                  totalMinor={group.totalMinor}
+                  entries={group.entries}
+                  colourOf={colourOf}
+                />
+              ))
             ) : (
               <Empty>No tagged spending in this period.</Empty>
             )}
@@ -468,7 +472,13 @@ export function DashboardView({
               <span className="stack">
                 <span className="eyebrow">Average daily spend</span>
                 <span className="mono">
-                  {formatPerMinor(Math.round(spendingTotal / days), primaryCurrency)}
+                  {formatPerMinor(
+                    Math.round(
+                      (spendingGroups.find((group) => group.currency === primaryCurrency)
+                        ?.totalMinor ?? spendingTotal) / days,
+                    ),
+                    primaryCurrency,
+                  )}
                 </span>
               </span>
               <span className="stack">
@@ -540,6 +550,94 @@ export function DashboardView({
         only and never convert between currencies.
       </p>
     </section>
+  );
+}
+
+/**
+ * The dashboard's pie chart: one arc per tag, drawn as an SVG donut so the
+ * period total can sit in the middle. Hand-rolled — Flowly ships no charting
+ * dependency and must work with no Internet access.
+ */
+function SpendingPie({
+  entries,
+  totalMinor,
+  currency,
+  colourOf,
+}: {
+  entries: Array<{ tagId: string; tagName: string; currency: string; spentMinor: number }>;
+  totalMinor: number;
+  currency: string;
+  colourOf: (tagId: string, index: number) => string;
+}) {
+  const size = 168;
+  const centre = size / 2;
+  const radius = 66;
+  const circumference = 2 * Math.PI * radius;
+  // A hair of space between slices keeps neighbours visually separate.
+  const gap = entries.length > 1 ? 3 : 0;
+  let consumed = 0;
+  const slices = entries.map((entry, index) => {
+    const share = totalMinor > 0 ? entry.spentMinor / totalMinor : 0;
+    const length = Math.max(0, share * circumference - gap);
+    const slice = {
+      key: `${entry.tagId}-${entry.currency}`,
+      colour: colourOf(entry.tagId, index),
+      dash: `${length} ${circumference - length}`,
+      offset: -consumed,
+    };
+    consumed += share * circumference;
+    return slice;
+  });
+  const totalText = formatPerMinor(totalMinor, currency);
+  const label = `Spending by tag in ${currency}: ${entries
+    .map(
+      (entry) =>
+        `${entry.tagName} ${totalMinor > 0 ? Math.round((entry.spentMinor / totalMinor) * 100) : 0}%`,
+    )
+    .join(", ")}`;
+
+  return (
+    <div className="donut">
+      <div className="donut-figure">
+        <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
+          <circle className="donut-track" cx={centre} cy={centre} r={radius} />
+          {slices.map((slice) => (
+            <circle
+              key={slice.key}
+              className="donut-slice"
+              cx={centre}
+              cy={centre}
+              r={radius}
+              stroke={slice.colour}
+              strokeDasharray={slice.dash}
+              strokeDashoffset={slice.offset}
+              transform={`rotate(-90 ${centre} ${centre})`}
+            />
+          ))}
+        </svg>
+        <div className="donut-center">
+          <span className="eyebrow" style={{ margin: 0 }}>
+            {currency}
+          </span>
+          <span className={totalText.length > 9 ? "total small" : "total"}>{totalText}</span>
+          <span className="sub">spent</span>
+        </div>
+      </div>
+      <ul className="legend-rows">
+        {entries.map((entry, index) => (
+          <li key={`${entry.tagId}-${entry.currency}`}>
+            <span className="legend-item">
+              <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
+              {entry.tagName}
+            </span>
+            <span className="mono">{formatPerMinor(entry.spentMinor, entry.currency)}</span>
+            <span className="muted mono">
+              {totalMinor > 0 ? ((entry.spentMinor / totalMinor) * 100).toFixed(1) : "0.0"}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

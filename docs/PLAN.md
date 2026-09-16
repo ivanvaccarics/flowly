@@ -296,15 +296,17 @@ never silently overwrites a newer edit from another browser session.
 ### 6.5 User interfaces
 
 The web client implements the repository's own design system — *Sovereign
-Ledger*, defined in `ui/sovereign_ledger/DESIGN.md` and the `ui/*` mockups — with
-one sidebar shell and six sections: Dashboard, Accounts, Transactions, Tags,
-Rules and Settings. Settings opens with the Enable Banking connection and then
-carries the passphrase change plus export and import. Each section opens with a
-header card (eyebrow, title, facts and
-actions), cards are white and borderless over a lavender canvas, and tinted
-panels carry nested controls. Only implemented features are rendered, fonts use
-local stacks so the app never needs a CDN, and `docs/DESIGN.md` records the
-tokens, the brand assets shipped from `apps/web/public` and the mapping.
+Ledger*, re-tokened from the redrawn `ui/*` mockups and summarized in
+`docs/DESIGN.md` — with one sidebar shell and six sections: Dashboard, Accounts,
+Transactions, Tags, Rules and Settings. Settings opens with the Enable Banking
+connection and then carries the passphrase change plus export and import. The
+shell's top bar carries the section title, the vault state and the session
+controls; cards are white with a hairline outline over a slate canvas, tinted
+panels carry nested controls, and the dashboard charts cash flow per week and
+spending by tag as a pie chart per currency. Only implemented features are
+rendered, fonts use local stacks so the app never needs a CDN, and
+`docs/DESIGN.md` records the tokens, the brand assets shipped from
+`apps/web/public` and the mapping.
 
 The two UIs follow one product design specification but are implemented with
 their platform-native toolkit:
@@ -1296,6 +1298,22 @@ Status: **complete** (2026-09-11), decision in `docs/adr/0012`.
   ribbon of figures, and restyle accounts (endpoint cards with real balances),
   rules (tiles with on/off switches), settings (export/import option cards) and
   the transactions filters (quick tag pills).
+- Keep the API surface unchanged: no new endpoint, no new runtime dependency, and
+  no figure that the vault cannot compute.
+
+#### Task `restyle-web-ui-for-the-redrawn-mockups`
+
+Status: **complete** (2026-09-16), decision in `docs/adr/0021`.
+
+- Re-token the web client to the redrawn mockups: slate canvas, tinted sidebar,
+  white cards with a hairline outline and a 16 px radius, teal primary, pill
+  chips, and text colours darkened where the mockup value would miss WCAG AA.
+- Move the section title into the shell's top bar next to the vault-state pill,
+  the local clock and the session controls; sections now open with a summary card
+  instead of repeating their own name.
+- Add the dashboard's spending pie chart (one SVG donut per currency) in place of
+  the stacked share bar, keep the cash-flow chart, and give Accounts a ribbon of
+  booked balances.
 - Keep the API surface unchanged: no new endpoint, no new runtime dependency, and
   no figure that the vault cannot compute.
 

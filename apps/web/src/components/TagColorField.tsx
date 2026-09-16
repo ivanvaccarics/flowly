@@ -7,13 +7,13 @@ import { Icon } from "./icons.js";
  * every `#rrggbb` value reachable.
  */
 export const TAG_COLORS: Array<{ value: string; label: string }> = [
-  { value: "#4648d4", label: "Indigo" },
-  { value: "#2f2ebe", label: "Deep indigo" },
-  { value: "#006c49", label: "Emerald" },
   { value: "#0f766e", label: "Teal" },
-  { value: "#b90538", label: "Rose" },
-  { value: "#dc2c4f", label: "Coral" },
+  { value: "#0d9488", label: "Mint" },
+  { value: "#1d4ed8", label: "Blue" },
+  { value: "#7c3aed", label: "Violet" },
+  { value: "#047857", label: "Emerald" },
   { value: "#b45309", label: "Amber" },
+  { value: "#dc2626", label: "Red" },
   { value: "#475569", label: "Slate" },
 ];
 
@@ -72,7 +72,7 @@ export function TagColorField({
         className="hex-field"
         aria-label="Custom hex colour"
         spellCheck={false}
-        placeholder="#4648d4"
+        placeholder="#0f766e"
         value={draft}
         onChange={(event) => type(event.target.value)}
       />

@@ -134,7 +134,7 @@ you should see.
 | --- | --- |
 | Open Dashboard and change the period | Balances, cash flow and spending recompute; pending transactions are excluded |
 | Look at the per-currency cards | Each currency has its own totals; nothing is converted or blended |
-| Look at the spending-by-tag list | Booked outflows are grouped by tag and currency |
+| Look at the spending pie chart and its legend rows | Each currency gets its own pie, sized by booked outflows per tag, with the period total in the middle and one legend row per tag |
 | Look at the **Bank sync** card | Without a connected bank it offers **Connect to Enable Banking**; with one it shows the last sync, the paired accounts and a **Sync now** button |
 
 ### Bank connection (Enable Banking)

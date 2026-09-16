@@ -75,10 +75,10 @@ rounding drama. Each transaction keeps its original currency, and Flowly refuses
 to blend unlike currencies into one fake number without a real exchange rate.
 
 ### 📊 A dashboard worth opening
-Balances per account, net cash flow, income vs. expenses, spending by tag and
-the latest movements — all computed on your self-hosted server, without an
-Internet dependency. Totals always carry their currency, and only booked
-transactions move a balance.
+Balances per account, net cash flow, income vs. expenses, a pie chart of
+spending by tag and the latest movements — all computed on your self-hosted
+server, without an Internet dependency. Totals always carry their currency, and
+only booked transactions move a balance.
 
 ### 🔎 Search that actually finds it
 Filter by date range, account, tag, amount, currency, status or source — and
@@ -194,14 +194,18 @@ away. Writes carry the revision they read, so two browsers can never overwrite
 each other silently: a stale write gets `409 revision_conflict`.
 
 The browser UI follows the repository's own design system (*Sovereign Ledger*:
-lavender canvas, white borderless cards over soft shadows, monospaced figures)
-with one sidebar and six sections: **Dashboard**, **Accounts**, **Transactions**,
-**Tags**, **Rules** and **Settings**. Every section opens with a header card
-carrying its status facts and actions; accounts are endpoint cards with their real
-balances, rules are tiles with an on/off switch, and the ledger's filters include
-quick tag pills. Accounts can be archived and restored, tags can be renamed and
-recoloured in place, and Settings holds the passphrase change plus export and
-import, after the Enable Banking connection. Export comes in three shapes: the single transaction CSV, a plain ZIP
+slate canvas, white cards with a hairline outline, a tinted sidebar, teal
+accents) with one sidebar and six sections: **Dashboard**, **Accounts**,
+**Transactions**, **Tags**, **Rules** and **Settings**. The top bar carries the
+section title, the vault state, the local clock and the session controls, and
+every section opens with a summary card carrying its status facts and actions.
+Accounts are endpoint cards with their real balances and a ribbon of booked
+totals, rules are tiles with an on/off switch, and the ledger's filters include
+quick tag pills. The dashboard charts weekly cash flow and draws spending by tag
+as a pie chart per currency, so no chart ever blends currencies. Accounts can be
+archived and restored, tags can be renamed and recoloured in place, and Settings
+holds the passphrase change plus export and import, after the Enable Banking
+connection. Export comes in three shapes: the single transaction CSV, a plain ZIP
 with one CSV per table (and a manifest) for taking everything elsewhere, and the
 password-encrypted complete archive. Import is additive for a CSV merge and
 replaces the vault for a complete archive, after an explicit confirmation and an
