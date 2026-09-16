@@ -148,8 +148,36 @@ Flags:
 | `--pull-only` | Pull the published image if it matches this checkout, and never compile here |
 | `--build` | Rebuild the `flowly-server:local` image, whatever the source stamp says |
 | `--no-build` | Never rebuild: start the image that is already there |
+| `--prune` | Also clear the local build cache, on top of the image layers a new image replaced |
 | `--print-stamp` | Print the source stamp of this checkout and stop, for building the image elsewhere |
 | `--help` | Usage, including the environment knobs the script honours |
+
+### Disk housekeeping
+
+Every pull leaves the previous image behind as an untagged pile of layers, and on
+a Raspberry Pi's SD card that is the difference between months and weeks of room.
+Whenever the image changed — pulled from the registry or built here — the script
+runs `docker image prune --force` once the stack is back up, and reports what it
+freed:
+
+```
+[startup.sh] Disk: cleared what the new image replaced (Total reclaimed space: 612MB)
+```
+
+It runs after `docker compose up -d` on purpose: until the container is recreated
+the old image is still in use and its layers could not be freed anyway.
+
+What is removed is only what nothing points at: **dangling images**, meaning no
+tag and no container. Tagged images, running containers and every volume stay
+exactly where they are — and the vault and the certificates live in `data/`, a
+bind mount, so `docker system prune` and volume pruning are never needed here and
+the script does not go near them.
+
+`--prune` goes one step further and empties the BuildKit build cache, which is
+the big one on a machine that has compiled SQLCipher (gigabytes, not megabytes).
+Use it on a host that only pulls: the next *local* build there would start from
+scratch and recompile SQLCipher from source. Check what is on disk with
+`docker system df`.
 
 ### When the image is built
 

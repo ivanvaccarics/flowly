@@ -256,7 +256,8 @@ docker compose up -d
 
 Using `deployment/self-hosted/startup.sh` instead? It notices the new commit by
 itself, pulls the published image for it, and builds only when the registry has
-nothing for that commit: see
+nothing for that commit. It also clears the image layers the new one replaced,
+which is what keeps a small disk from filling up: see
 [AUTOMATIC_STARTUP.md](./AUTOMATIC_STARTUP.md#when-the-image-is-built).
 
 On startup the server applies pending migrations. Every migration runs in a

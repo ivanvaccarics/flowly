@@ -2,7 +2,7 @@
 #
 # Flowly — start the self-hosted stack and publish it inside the tailnet.
 #
-#   deployment/self-hosted/startup.sh [--compose-only] [--pull-only] [--build] [--no-build] [--help]
+#   deployment/self-hosted/startup.sh [--compose-only] [--pull-only] [--build] [--no-build] [--prune] [--help]
 #
 # The script, in order:
 #   1. reads the single `.env` in the repository root (the Compose project
@@ -63,6 +63,8 @@ Options:
                    this checkout, otherwise start the image already on disk.
   --build          Rebuild the server image, whatever the source stamp says.
   --no-build       Never rebuild: start the image that is already there.
+  --prune          Also drop the local build cache, not just the image layers a
+                   new image leaves behind (a local build then starts cold).
   --print-stamp    Print the source stamp of this checkout and stop. Use it to
                    build the image on a faster machine and have this one accept
                    it without rebuilding (see docs/AUTOMATIC_STARTUP.md).
@@ -88,6 +90,7 @@ compose_only=0
 build="auto"
 print_stamp=0
 print_stamp_files=0
+prune_cache=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -117,6 +120,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --stamp-files)
       print_stamp_files=1
+      shift
+      ;;
+    --prune)
+      prune_cache=1
       shift
       ;;
     --funnel)
@@ -387,6 +394,20 @@ if [ -n "$build_reason" ] && [ "$build" = "pull" ]; then
   log "         Wait for the workflow, or run: docker compose pull server"
 fi
 
+# A new image leaves the previous one untagged on disk, and on a Raspberry Pi's SD
+# card that is the difference between months and weeks of room. Only dangling
+# images are removed — no tag points at them and no container uses them — so what
+# is running, what you named and every volume stay exactly where they are.
+reclaim_old_layers() {
+  local reclaimed
+  reclaimed="$(docker image prune --force 2>&1 | tail -n1 || true)"
+  log "Disk: cleared what the new image replaced (${reclaimed:-nothing to clear})"
+  if [ "$prune_cache" -eq 1 ]; then
+    reclaimed="$(docker builder prune --force 2>&1 | tail -n1 || true)"
+    log "Disk: cleared the build cache too (${reclaimed:-nothing to clear})"
+  fi
+}
+
 if [ -n "$build_reason" ] && [ "$build" != "pull" ]; then
   log "Building $image here: ${build_reason}"
   if (cd "$REPO_ROOT" && FLOWLY_SOURCE_STAMP="$want_stamp" docker compose build); then
@@ -405,6 +426,12 @@ fi
 # this folder.
 log "Starting the stack (docker compose up -d)"
 (cd "$REPO_ROOT" && docker compose up -d)
+
+# After the container has been recreated: until then the old image is still in
+# use, so its layers could not be freed anyway.
+if [ "$pulled" -eq 1 ] || [ "$built" -eq 1 ]; then
+  reclaim_old_layers
+fi
 
 if [[ $compose_only -eq 1 ]]; then
   log "Done: the stack is up. Tailscale left untouched (--compose-only)."
