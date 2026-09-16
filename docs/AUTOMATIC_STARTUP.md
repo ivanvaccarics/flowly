@@ -116,15 +116,15 @@ host, and binding a LAN or Tailscale address fails with
 
 ```bash
 chmod +x deployment/self-hosted/startup.sh
-./deployment/self-hosted/startup.sh
+./deployment/self-hosted/startup.sh --build
 ```
 
 The script:
 
 1. reads `.env` from the repository root (the Compose project directory, which is
    what makes Compose substitute those values),
-2. waits for the Docker daemon, then runs `docker compose up --build -d` from
-   the repository root,
+2. waits for the Docker daemon, then runs `docker compose up -d` from the
+   repository root (with `--build` when you asked for a rebuild),
 3. waits for tailscaled, then applies
    `tailscale serve --bg --https=443 https+insecure://127.0.0.1:<FLOWLY_SITE_PORT>`,
 4. prints `docker compose ps`, the tailnet URL, and the callback URL to register
@@ -145,8 +145,33 @@ Flags:
 | Flag | Effect |
 | --- | --- |
 | `--compose-only` | Start the stack and stop; do not touch Tailscale |
-| `--no-build` | Skip `--build` and reuse the existing `flowly-server:local` image |
+| `--build` | Rebuild the `flowly-server:local` image first: use it after updating the code |
 | `--help` | Usage, including the environment knobs the script honours |
+
+### When the image is built
+
+By default the script starts the stack without rebuilding: Compose builds
+`flowly-server:local` only when the image is **missing**, and reuses it
+otherwise. That is the behaviour a boot unit wants.
+
+A rebuild is not cheap. The Dockerfile copies the whole build context in one
+layer and then runs two `pnpm install` passes and three builds (contracts,
+server, web), so any change to a tracked source file re-runs all of that — and a
+cold cache needs the network. Forcing it on every boot would mean a Raspberry Pi
+spending minutes compiling code it already compiled, with the app down until it
+finishes, and a boot that can fail simply because the network is slow or absent.
+
+So the rule is:
+
+| When | What to run |
+| --- | --- |
+| First install, or after `git pull` with code changes | `./deployment/self-hosted/startup.sh --build` |
+| Every boot | `./deployment/self-hosted/startup.sh --no-build` (the unit below) |
+| Only the stack, Tailscale untouched | add `--compose-only` |
+
+The unit never passes `--build`: a machine that comes back after a blackout has
+the image already, and the first start of a fresh checkout still builds it,
+because Compose builds a missing image even without the flag.
 
 Then check it from the machine itself:
 
@@ -188,7 +213,7 @@ After=network-online.target docker.service tailscaled.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/flowly
-ExecStart=/opt/flowly/deployment/self-hosted/startup.sh
+ExecStart=/opt/flowly/deployment/self-hosted/startup.sh --no-build
 TimeoutStartSec=600
 
 [Install]
@@ -289,6 +314,7 @@ accident, run `startup.sh` again to put it back.
 | Browser certificate warning on the tailnet URL | Serve did not issue the certificate yet, or you are on `https://localhost:<port>` | Give it a minute; make sure MagicDNS is on; use the `<host>.<tailnet>.ts.net` URL |
 | `404` or an empty page on the tailnet URL | The proxy container is not healthy yet | `docker compose logs proxy`, then `docker compose ps` |
 | The Serve mapping disappeared | Node renamed, logged out, or `serve reset` was run | Run `startup.sh` again; the node's name must match `FLOWLY_SITE_ADDRESS` |
+| A code update is not visible after a restart | The image was not rebuilt | `./deployment/self-hosted/startup.sh --build` |
 | Enable Banking says the redirect URL is not allowed | The URL registered does not match the address in use | Register `https://<host>.<tailnet>.ts.net/enablebanking/auth_callback`; Settings warns when the two differ, and **Use the address I am using now** fills in the right one |
 | `ASPSP_RATE_LIMIT_EXCEEDED` while syncing | The bank's own limit on daily unattended reads | Nothing to do with the network: sync less often and retry the next day ([RUNNING.md](./RUNNING.md)) |
 

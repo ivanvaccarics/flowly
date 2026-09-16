@@ -2,13 +2,17 @@
 #
 # Flowly — start the self-hosted stack and publish it inside the tailnet.
 #
-#   deployment/self-hosted/startup.sh [--compose-only] [--no-build] [--help]
+#   deployment/self-hosted/startup.sh [--compose-only] [--build] [--help]
 #
 # The script, in order:
 #   1. reads the single `.env` in the repository root (the Compose project
 #      directory, which is what makes Compose substitute it),
 #   2. starts the stack — the server and Caddy — with `docker compose up -d`,
 #   3. publishes it to the tailnet with `tailscale serve` (never Funnel).
+#
+# The server image is not rebuilt unless you ask for it with --build: Compose
+# builds it only when it is missing, which is what makes a boot fast and
+# offline-safe. Pass --build after updating the code.
 #
 # Safe to run repeatedly, by hand or from a systemd unit at boot: every step
 # waits for the daemon it needs instead of assuming it is already up.
@@ -42,14 +46,15 @@ fail() {
 
 usage() {
   cat <<'EOF'
-Usage: startup.sh [--compose-only] [--no-build] [--help]
+Usage: startup.sh [--compose-only] [--build] [--help]
 
 Starts the Flowly Compose stack with the `.env` in the repository root, then
 publishes it inside your tailnet with Tailscale Serve.
 
 Options:
   --compose-only   Start the stack and stop: do not touch Tailscale.
-  --no-build       Skip `docker compose up --build` and use the existing image.
+  --build          Rebuild the server image first (`docker compose up --build`).
+                   Use it after updating the code, not on a boot schedule.
   --help           Show this message.
 
 Environment (read from .env, optional):
@@ -64,7 +69,7 @@ EOF
 }
 
 compose_only=0
-build=1
+build=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -76,7 +81,13 @@ while [[ $# -gt 0 ]]; do
       compose_only=1
       shift
       ;;
+    --build)
+      build=1
+      shift
+      ;;
     --no-build)
+      # Kept so units and notes written against the first version keep working:
+      # not rebuilding is the default.
       build=0
       shift
       ;;
@@ -132,10 +143,10 @@ fi
 # looks for `.env`; the root compose.yaml only includes the stack definition in
 # this folder.
 if [[ $build -eq 1 ]]; then
-  log "Starting the stack (docker compose up --build -d)"
+  log "Starting the stack and rebuilding the server image (docker compose up --build -d)"
   (cd "$REPO_ROOT" && docker compose up --build -d)
 else
-  log "Starting the stack (docker compose up -d, no build)"
+  log "Starting the stack (docker compose up -d): reusing the image, building it only if it is missing"
   (cd "$REPO_ROOT" && docker compose up -d)
 fi
 
