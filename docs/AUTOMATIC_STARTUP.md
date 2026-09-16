@@ -134,6 +134,12 @@ The script:
 local CA, Tailscale terminates TLS with the real certificate for the tailnet
 name in front of it, and Caddy's certificate is never validated by a device.
 
+On Linux, `tailscale serve` talks to tailscaled and normally needs root: if the
+last step complains about permissions, run the script with `sudo`, or give your
+own user the operator role once (`sudo tailscale set --operator="$USER"`) and
+run it as yourself from then on. The systemd unit below runs as root, so there
+it is a non-issue.
+
 Flags:
 
 | Flag | Effect |
