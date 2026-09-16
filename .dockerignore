@@ -9,3 +9,9 @@ spikes
 ui
 .env
 *.local
+
+# Per-machine leftovers: they are not part of the image, and keeping them out of
+# the context keeps the build identical whatever operating system produced it.
+**/.DS_Store
+**/._*
+**/*.tsbuildinfo

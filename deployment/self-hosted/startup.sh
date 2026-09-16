@@ -62,6 +62,8 @@ Options:
   --print-stamp    Print the source stamp of this checkout and stop. Use it to
                    build the image on a faster machine and have this one accept
                    it without rebuilding (see docs/AUTOMATIC_STARTUP.md).
+  --stamp-files    Print one line per file — `<path> <sha256>` — that feeds the
+                   stamp, to diff two checkouts and see what actually differs.
   --help           Show this message.
 
 Environment (read from .env, optional):
@@ -80,6 +82,7 @@ compose_only=0
 # auto: rebuild only when the sources changed since the image was built.
 build="auto"
 print_stamp=0
+print_stamp_files=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -103,6 +106,10 @@ while [[ $# -gt 0 ]]; do
       print_stamp=1
       shift
       ;;
+    --stamp-files)
+      print_stamp_files=1
+      shift
+      ;;
     --funnel)
       fail "--funnel is not an option: Funnel publishes Flowly to the public internet. Use Serve (the default) and read docs/AUTOMATIC_STARTUP.md."
       ;;
@@ -115,21 +122,35 @@ done
 
 # --------------------------------------------------------- the source stamp
 
-# Hash of everything the image is built from — the same paths the Dockerfile
-# copies, minus the directories that are not part of the build. Two facts make
-# this exact: it follows the checkout (a `git pull` or a hand edit changes it)
-# and it ignores what the image does not contain (docs, README, tooling), so a
-# documentation-only update does not cost a rebuild. The same sources produce the
-# same stamp on any machine, which is what lets an image be built elsewhere and
-# loaded here.
+# The files the stamp covers: everything the Dockerfile takes from the checkout.
+# It follows what Git tracks, so the same commit hashes the same on every machine
+# no matter what the operating system leaves lying around — a stray .DS_Store was
+# enough to make a Mac and a Raspberry Pi with identical code disagree. Without a
+# repository (a tarball deployment) it walks the filesystem and skips the same
+# kind of junk explicitly.
 source_files() {
+  local paths=(apps packages tsconfig.base.json package.json pnpm-lock.yaml pnpm-workspace.yaml)
+  if [ -d "$REPO_ROOT/.git" ] && command -v git >/dev/null 2>&1; then
+    # --cached: what the commit contains. --others --exclude-standard: files
+    # added but not committed yet, which the Docker build would copy as well.
+    # Anything Git ignores (.DS_Store, dist, node_modules) stays out, and so does
+    # per-machine junk.
+    (
+      cd "$REPO_ROOT" &&
+        git ls-files -z --cached --others --exclude-standard -- "${paths[@]}"
+    ) | tr '\0' '\n' | LC_ALL=C sort
+    return 0
+  fi
   (
     cd "$REPO_ROOT" &&
-      find apps packages tsconfig.base.json package.json pnpm-lock.yaml pnpm-workspace.yaml \
+      find "${paths[@]}" \
         -type f \
         -not -path "*/node_modules/*" \
         -not -path "*/dist/*" \
-        -not -path "*/coverage/*" |
+        -not -path "*/coverage/*" \
+        -not -name ".DS_Store" \
+        -not -name "._*" \
+        -not -name "*.tsbuildinfo" |
       LC_ALL=C sort
   )
 }
@@ -146,15 +167,26 @@ hash_stdin() {
   fi
 }
 
-source_stamp() {
-  local files
+# One line per file: `<path> <sha256>`, the exact input of the stamp. Printed by
+# --stamp-files, so two machines can diff them and see which file diverges.
+stamp_lines() {
+  local files file missing=""
   files="$(source_files)" || return 1
-  {
-    while IFS= read -r file; do
-      [ -n "$file" ] || continue
-      printf '%s %s\n' "$file" "$(hash_stdin <"$REPO_ROOT/$file")"
-    done <<<"$files"
-  } | hash_stdin
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    if [ ! -f "$REPO_ROOT/$file" ]; then
+      missing="$missing $file"
+      continue
+    fi
+    printf '%s %s\n' "$file" "$(hash_stdin <"$REPO_ROOT/$file")"
+  done <<<"$files"
+  if [ -n "$missing" ]; then
+    printf 'warning: tracked files missing from this checkout:%s\n' "$missing" >&2
+  fi
+}
+
+source_stamp() {
+  stamp_lines | hash_stdin
 }
 
 # Asked before anything else, and without needing .env: the point is to run it on
@@ -163,6 +195,12 @@ if [ "$print_stamp" -eq 1 ]; then
   stamp="$(source_stamp)" ||
     fail "Cannot stamp the sources. Run this from a full Flowly checkout (apps/, packages/ and the lockfile), with sha256sum, shasum or openssl available."
   printf '%s\n' "$stamp"
+  exit 0
+fi
+
+if [ "$print_stamp_files" -eq 1 ]; then
+  stamp_lines ||
+    fail "Cannot read the sources. Run this from a full Flowly checkout (apps/, packages/ and the lockfile)."
   exit 0
 fi
 

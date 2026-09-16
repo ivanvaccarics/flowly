@@ -171,6 +171,12 @@ touches `docs/`, `README.md`, `AGENTS.md`, `.github/` or `tooling/` changes
 nothing and costs no build. Editing one line of a view does change it, and the
 next run rebuilds.
 
+It follows **what Git tracks** (plus files you added but have not committed yet,
+which the build would copy as well), so a stray `.DS_Store` or `*.tsbuildinfo`
+from one machine cannot make two identical checkouts disagree. Files Git ignores
+are never part of it: they are also kept out of the build context by
+`.dockerignore`.
+
 `.env` is not part of the stamp either, and that is deliberate: the image does
 not contain it (Compose reads it at container start), and hashing it would make
 every port or address tweak trigger a full rebuild. A change there takes effect
@@ -386,6 +392,7 @@ accident, run `startup.sh` again to put it back.
 | The Serve mapping disappeared | Node renamed, logged out, or `serve reset` was run | Run `startup.sh` again; the node's name must match `FLOWLY_SITE_ADDRESS` |
 | A code update is not visible after a restart | The rebuild failed, so the previous image is running | Look for the warning in the output, fix the cause, then `./deployment/self-hosted/startup.sh --build` |
 | The script rebuilds on a boot you did not expect | The checkout changed since the image was built | Expected: it means the image was behind. `--no-build` turns it off |
+| Two machines disagree about the stamp | They are not on the same commit, one has uncommitted edits, or one has files Git ignores | Compare them: `./deployment/self-hosted/startup.sh --stamp-files` on each, then `diff` the two outputs — the lines that differ name the files |
 | The build sits on `pnpm install … @journeyapps/sqlcipher` for many minutes | It is compiling the SQLCipher amalgamation, not hung | Confirm with `top` (`cc1` at 100 % means progress) and `free -m`; see "Building where it is fast"; it is a one-time cost |
 | The build dies with `Killed` or `virtual memory exhausted` | The compiler ran out of memory on a small host | Add swap (2 GB is plenty for this), or build on another machine and load the image |
 | Enable Banking says the redirect URL is not allowed | The URL registered does not match the address in use | Register `https://<host>.<tailnet>.ts.net/enablebanking/auth_callback`; Settings warns when the two differ, and **Use the address I am using now** fills in the right one |
