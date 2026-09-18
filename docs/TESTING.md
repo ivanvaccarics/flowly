@@ -76,10 +76,16 @@ passphrase, instead of showing a locked vault you cannot open.
 The unit, integration and contract suites are separate:
 
 ```bash
-pnpm verify          # format, lint, secret scan, types, 191 tests
+pnpm verify          # format, lint, frontend env guard, types and test suites
 pnpm build           # compile the server, bundle the UI
 pnpm release:check   # license policy for runtime dependencies
 ```
+
+GitHub CI additionally runs pinned Gitleaks 8.30.1 over the complete Git
+history. The public container workflow runs the same gate before either
+architecture is built, so a failed secret scan cannot publish an image. The
+sole `.gitleaksignore` entry identifies one historical synthetic sandbox fixture
+by its exact finding fingerprint; it does not exempt a file, path or rule.
 
 ## 3. Manual test plan
 

@@ -289,8 +289,10 @@ an explicit, user-driven action.
 
 - `GET /api/health` — liveness, no vault access, safe for Docker health checks.
 - `GET /api/system/info` — version, schema version, engine, uptime.
-- `docker compose ... logs -f server` — request logs; never passphrases,
-  financial payloads or keys.
+- `docker compose ... logs -f server` — request logs contain methods, paths and
+  statuses, never query strings, passphrases, financial payloads or keys. The
+  proxy omits the Enable Banking callback from its access log because that URL
+  carries single-use credentials.
 
 ## Hardening checklist
 

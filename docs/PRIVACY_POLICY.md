@@ -36,7 +36,7 @@ encrypted vault file.
 | Enable Banking application credentials (application id, callback URL and private key) | Encrypted vault | Stored only when you connect a bank; never returned by the API and never sent to the browser |
 | Vault header | Readable part of the vault file | Argon2id parameters, salt and the wrapped data key. It contains no readable secret and no financial data |
 | Snapshots taken before an import or a migration | Encrypted vault | Replaced as you keep using the app |
-| Request logs | Operator's host | Method, URL, status code and timestamp. Never payloads, passphrases, keys or transaction content |
+| Request logs | Operator's host | Method, path without its query string, status code and timestamp. The bank callback is also omitted from the proxy access log. Never payloads, passphrases, keys or transaction content |
 | Session cookie | Your browser | One opaque, random session identifier, `HttpOnly` and `SameSite=Strict`. It is used only to keep you signed in to your own server |
 
 Flowly's browser client keeps no vault data in `localStorage`, `sessionStorage`,

@@ -442,6 +442,9 @@ Persist:
 
 Never place passphrases, unwrapped keys, Enable Banking private keys, access
 tokens, or complete sensitive payloads in logs or telemetry.
+Request logging keeps the method and path but removes every query string; the
+reverse proxy omits the Enable Banking callback because its URL carries a
+single-use authorization code and state.
 
 ### 7.7 Enable Banking tables
 
@@ -935,9 +938,11 @@ The connector is written from the provider's documented API, inside the server:
 
 - TypeScript domain and property-based tests for money, deduplication, and CSV
   round trips during Server MVP development
-- Workspace gate on every change: Prettier, ESLint, the frontend secret scan,
-  TypeScript across all packages, Vitest suites, and a contract-regeneration
-  diff that fails when generated code drifts from `contracts/`
+- Workspace gate on every change: Prettier, ESLint, the frontend environment
+  guard, TypeScript across all packages, Vitest suites, and a
+  contract-regeneration diff that fails when generated code drifts from
+  `contracts/`; CI additionally scans the complete Git history with a pinned
+  Gitleaks image
 - Server storage contract, migration, crypto known-answer, and tamper tests
 - React component and accessibility tests
 - Tagging rule contract, normalization, AND/OR, amount-currency, account,
@@ -1236,7 +1241,8 @@ Delivered:
   loopback interface, and health-checks both containers.
 - The image pins the Node base by its multi-architecture digest, carries OCI
   labels, builds the web client, and is produced for `linux/amd64` and
-  `linux/arm64` with SBOM and provenance attestations in CI.
+  `linux/arm64` with SBOM and provenance attestations in CI. Its publication
+  waits for a pinned Gitleaks scan of the complete Git history.
 - `pnpm release:report` generates `docs/security/sbom.json` (CycloneDX 1.5) and
   the third-party license inventory; `pnpm release:check` fails on denied
   licenses, and CI keeps the artefacts fresh. The generated files are
@@ -1563,7 +1569,8 @@ The first MVP is complete at the end of Phase 5 only when:
 - No shipped artifact contains provider keys, test secrets, or sensitive
   fixture data.
 - Locked storage, journals, caches, logs, and crash reports contain no plaintext
-  financial records.
+  financial records; request logs strip query strings and the proxy omits the
+  bank callback.
 - Accessibility, security, migration, recovery, and server release checks pass.
 - The product clearly explains that there is no synchronization and no
   passphrase recovery service.

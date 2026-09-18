@@ -1,7 +1,12 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
+import Fastify, {
+  type FastifyInstance,
+  type FastifyReply,
+  type FastifyRequest,
+  type FastifyServerOptions,
+} from "fastify";
 import { validateContract, type VaultStatus } from "@flowly/web-contracts";
 import { ImportExportService } from "../application/import-export-service.js";
 import { AnalyticsService } from "../application/analytics.js";
@@ -101,8 +106,23 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     void bankingFor(opened).autoSync(psuFrom(request));
   };
 
+  const logger: FastifyServerOptions["logger"] =
+    config.logLevel === "silent"
+      ? false
+      : {
+          level: config.logLevel,
+          serializers: {
+            req(request) {
+              const queryStart = request.url.indexOf("?");
+              return {
+                method: request.method,
+                url: queryStart === -1 ? request.url : request.url.slice(0, queryStart),
+              };
+            },
+          },
+        };
   const app = Fastify({
-    logger: config.logLevel === "silent" ? false : { level: config.logLevel },
+    logger,
     // Behind the bundled proxy the socket peer is the proxy, so the client
     // address comes from X-Forwarded-For. Trusting *everything* (`true`) would
     // take the leftmost entry the client can write, which lets anyone rotate the

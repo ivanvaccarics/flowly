@@ -226,6 +226,10 @@ The server image itself comes from the GitHub Container Registry: CI builds
 `linux/amd64` and `linux/arm64` on every change to the code, so
 `docker compose pull` fetches `ghcr.io/ivanvaccarics/flowly` instead of compiling
 SQLCipher on your own machine — which is what makes a Raspberry Pi a fine host.
+Both regular CI and image publication scan the complete Git history with a
+pinned Gitleaks image, and publication waits for that scan to pass. The sole
+ignored finding is one exact historical fingerprint for a documented synthetic
+sandbox fixture, not a blanket path or rule exclusion.
 
 ### 📚 Documentation
 

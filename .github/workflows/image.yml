@@ -34,6 +34,22 @@ env:
   IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
+  secrets:
+    name: Scan Git history for secrets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - run: |
+          docker run --rm --network none \
+            --volume "$PWD:/repo:ro" \
+            zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git /repo --log-opts=--all --gitleaks-ignore-path=/repo/.gitleaksignore \
+            --redact=100 --no-banner
+
   # One job per architecture on a runner of that architecture: no QEMU, so the
   # SQLCipher compile takes minutes instead of the better part of an hour.
   # ubuntu-24.04-arm is a standard runner for public repositories; if the label
@@ -42,6 +58,7 @@ jobs:
   build:
     name: Build ${{ matrix.platform }}
     runs-on: ${{ matrix.runner }}
+    needs: secrets
     strategy:
       fail-fast: false
       matrix:

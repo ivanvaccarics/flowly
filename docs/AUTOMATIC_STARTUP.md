@@ -202,7 +202,9 @@ that touches anything the image contains — `apps/`, `packages/`, the manifests
 the lockfile — plus on `v*` tags and on demand. It builds `linux/amd64` and
 `linux/arm64` on runners of their own architecture, with no emulation, and
 publishes the manifest list to `ghcr.io/ivanvaccarics/flowly`, tagged with the
-branch, the version, the short commit, and `latest` on the default branch.
+branch, the version, the short commit, and `latest` on the default branch. A
+pinned Gitleaks scan covers the complete Git history first; neither architecture
+is built when that gate fails.
 
 Updating a Raspberry Pi then looks like this:
 
