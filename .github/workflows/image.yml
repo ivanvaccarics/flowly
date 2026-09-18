@@ -155,9 +155,17 @@ jobs:
       - name: Create the manifest list
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create \
-            $(jq -r '.tags | map("--tag " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}') \
-            $(printf '${{ env.IMAGE }}@sha256:%s ' *)
+          set -euo pipefail
+          # metadata-action's json output is an object — {"tags": [...], "labels": {...}} —
+          # not a list of tags, so the tags live under .tags. Reading it as a list made
+          # jq fail ("string and array cannot be added"), the tag list came out empty and
+          # the step died with "can't push with no tags specified".
+          tags="$(jq -r '.tags | map("--tag " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}')"
+          if [ -z "$tags" ]; then
+            echo "::error::no tags were generated for this ref; refusing to publish an untagged image"
+            exit 1
+          fi
+          docker buildx imagetools create $tags $(printf '${{ env.IMAGE }}@sha256:%s ' *)
 
       - name: Show what was published
         run: docker buildx imagetools inspect "${{ env.IMAGE }}:${{ steps.meta.outputs.version }}"
