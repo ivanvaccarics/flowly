@@ -156,7 +156,7 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create \
-            $(jq -r 'map("--tag " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}') \
+            $(jq -r '.tags | map("--tag " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}') \
             $(printf '${{ env.IMAGE }}@sha256:%s ' *)
 
       - name: Show what was published
