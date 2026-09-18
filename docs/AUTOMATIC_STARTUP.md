@@ -145,10 +145,39 @@ Flags:
 | Flag | Effect |
 | --- | --- |
 | `--compose-only` | Start the stack and stop; do not touch Tailscale |
+| `--pull-only` | Pull the published image if it matches this checkout, and never compile here |
 | `--build` | Rebuild the `flowly-server:local` image, whatever the source stamp says |
 | `--no-build` | Never rebuild: start the image that is already there |
+| `--prune` | Also clear the local build cache, on top of the image layers a new image replaced |
 | `--print-stamp` | Print the source stamp of this checkout and stop, for building the image elsewhere |
 | `--help` | Usage, including the environment knobs the script honours |
+
+### Disk housekeeping
+
+Every pull leaves the previous image behind as an untagged pile of layers, and on
+a Raspberry Pi's SD card that is the difference between months and weeks of room.
+Whenever the image changed — pulled from the registry or built here — the script
+runs `docker image prune --force` once the stack is back up, and reports what it
+freed:
+
+```
+[startup.sh] Disk: cleared what the new image replaced (Total reclaimed space: 612MB)
+```
+
+It runs after `docker compose up -d` on purpose: until the container is recreated
+the old image is still in use and its layers could not be freed anyway.
+
+What is removed is only what nothing points at: **dangling images**, meaning no
+tag and no container. Tagged images, running containers and every volume stay
+exactly where they are — and the vault and the certificates live in `data/`, a
+bind mount, so `docker system prune` and volume pruning are never needed here and
+the script does not go near them.
+
+`--prune` goes one step further and empties the BuildKit build cache, which is
+the big one on a machine that has compiled SQLCipher (gigabytes, not megabytes).
+Use it on a host that only pulls: the next *local* build there would start from
+scratch and recompile SQLCipher from source. Check what is on disk with
+`docker system df`.
 
 ### When the image is built
 
@@ -159,11 +188,47 @@ for the checkout and compares the two:
 
 | Stamp | What the script does |
 | --- | --- |
-| Image missing, or built before stamps existed | Builds once |
-| Image stamp equals the checkout | Starts the stack, no build |
-| Image stamp differs (a `git pull`, or an edit by hand) | Builds, then starts |
-| `--build` given | Builds, whatever the stamps say |
-| `--no-build` given | Never builds; says so when the image is behind |
+| Image stamp equals the checkout | Starts the stack; no pull, no build |
+| Image stamp differs (a `git pull`, or an edit by hand) | Pulls the published image for that commit; compiles here only if the registry has none |
+| Image missing, or built before stamps existed | Same: pull first, build as the fallback |
+| `--pull-only` given | Pulls, and never compiles here: it starts the image on disk and says so when the registry is behind |
+| `--build` given | Builds here, whatever the stamps say (no pull) |
+| `--no-build` given | Neither pulls nor builds; says so when the image is behind |
+
+### Let CI build it
+
+`.github/workflows/image.yml` builds the image on GitHub on every push to `main`
+that touches anything the image contains — `apps/`, `packages/`, the manifests,
+the lockfile — plus on `v*` tags and on demand. It builds `linux/amd64` and
+`linux/arm64` on runners of their own architecture, with no emulation, and
+publishes the manifest list to `ghcr.io/ivanvaccarics/flowly`, tagged with the
+branch, the version, the short commit, and `latest` on the default branch. A
+pinned Gitleaks scan covers the complete Git history first; neither architecture
+is built when that gate fails.
+
+Updating a Raspberry Pi then looks like this:
+
+```bash
+cd /home/ivanv/flowly
+git pull
+./deployment/self-hosted/startup.sh --pull-only
+```
+
+`git pull` changes the source stamp, the script notices that the local image is
+behind, asks the registry for the image of that commit, finds it — the CI job
+computed the same stamp from the same sources — and starts the stack. Nothing is
+compiled, nothing is carried around by hand. `--pull-only` is the important part
+on a slow host: if the registry does not have that commit yet, because you pulled
+before the workflow finished, the script starts the previous image and says so
+instead of quietly starting a thirty-minute compile.
+
+Two details worth knowing:
+
+- **The package is public**, because the repository is: `docker compose pull`
+  needs no credentials. Make the repository private and you have to
+  `docker login ghcr.io` with a token that can read packages.
+- **Pin a version** for a reproducible install: `FLOWLY_IMAGE=ghcr.io/ivanvaccarics/flowly:1.2.3`
+  in `.env` (see `.env.example`). The default tracks `latest`.
 
 The stamp covers exactly what the image contains — `apps/`, `packages/`,
 `tsconfig.base.json` and the manifests and lockfile — so a `git pull` that only
@@ -203,6 +268,10 @@ and starts the previous image, so Flowly is up, running the code that image has.
 Run the script again once the network is back, or force it with `--build`.
 
 ### Building where it is fast
+
+Letting CI build it (the section above) is the first choice: it is free on a
+public repository, it happens on machines with real CPUs, and the Pi only ever
+pulls. The options below are for a host that has to produce the image itself.
 
 The long pole of a build is SQLCipher, and it cannot be skipped: the package
 ships no prebuilt binary on any platform — its install script is literally
@@ -285,7 +354,7 @@ After=network-online.target docker.service tailscaled.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/flowly
-ExecStart=/opt/flowly/deployment/self-hosted/startup.sh
+ExecStart=/opt/flowly/deployment/self-hosted/startup.sh --pull-only
 TimeoutStartSec=600
 
 [Install]
@@ -309,10 +378,12 @@ Notes on that unit:
   other things and exits.
 - The script waits for Docker and tailscaled by itself (up to 120 s and 60 s by
   default), so a slow daemon at boot does not fail the unit.
-- No flag on purpose: the source-stamp check means a boot rebuilds only when the
-  checkout really changed since the image was built, and a failed rebuild falls
-  back to the previous image instead of leaving Flowly down. Pass `--no-build`
-  if you want a machine that never compiles anything at boot.
+- `--pull-only` on purpose: a boot pulls the image CI published for the current
+  checkout and never compiles here. If the registry does not have it, the unit
+  starts the previous image and logs which commit it is running, instead of
+  rebuilding at three in the morning. Drop the flag to let the script build
+  locally when nothing is published, or use `--no-build` to touch neither the
+  registry nor the compiler.
 - No `User=` line: the script talks to the Docker socket and to tailscaled,
   which is simplest as root. If your user is in the `docker` group and you
   prefer that, add `User=<you>` and make sure the user can run `tailscale`
@@ -397,6 +468,9 @@ accident, run `startup.sh` again to put it back.
 | The build dies with `Killed` or `virtual memory exhausted` | The compiler ran out of memory on a small host | Add swap (2 GB is plenty for this), or build on another machine and load the image |
 | Creating the vault answers `vault_storage_unavailable` | The server cannot write to `data/`: usually the folder is owned by root (Docker created it) while the container runs as uid 1000, or the disk is full or mounted read-only | `cd /home/ivanv/flowly && sudo chown -R 1000:1000 data`, then reload the page. If it persists, check `df -h` and `mount | grep ' ro,'` |
 | Any other API error with no explanation in the log | The image predates the server logging the cause of a 5xx | Update the image, then `docker compose logs --tail=50 server`: the stack trace names the failure |
+| `docker compose pull` answers `denied` or `unauthorized` | The package is private, or the tag does not exist | Public repository: nothing to do. Private: `docker login ghcr.io -u <user>` with a token that has `read:packages`. A missing tag means the workflow has not run for that commit yet |
+| The unit started an older commit than the checkout | The workflow had not published that commit when the boot happened | Wait for the workflow (the Actions tab), then `./deployment/self-hosted/startup.sh --pull-only`; the log line names the image it is running |
+
 
 `startup.sh` prevents the first of those on its own: it creates `data/` as the
 user running the script, and if the folder already belongs to somebody else it

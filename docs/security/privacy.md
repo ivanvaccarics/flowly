@@ -67,5 +67,7 @@ removes the application credentials too. The full picture is in
 
 ## Logs
 
-Request logs contain method, URL and status code. They never contain payloads,
-passphrases, keys or transaction contents.
+Server request logs contain the method, path without its query string, and
+status code. The proxy omits the Enable Banking callback from its access log
+because the provider returns single-use credentials in that URL. Logs never
+contain payloads, passphrases, keys or transaction contents.

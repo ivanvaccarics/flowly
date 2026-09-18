@@ -15,6 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Scan Git history for secrets
+        run: |
+          docker run --rm --network none \
+            --volume "$PWD:/repo:ro" \
+            zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git /repo --log-opts=--all --gitleaks-ignore-path=/repo/.gitleaksignore \
+            --redact=100 --no-banner
+      - name: Validate the Caddyfile
+        run: |
+          docker run --rm \
+            --volume "$PWD/deployment/self-hosted/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:

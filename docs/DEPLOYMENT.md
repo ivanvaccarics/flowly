@@ -23,8 +23,17 @@ a multi-architecture image with SBOM and provenance attestations.
 git clone <your fork or checkout>
 cd flowly
 cp .env.example .env        # optional: where Flowly answers, and how it is tuned
-docker compose up --build -d
+mkdir -p data               # the vault lives here; create it as your own user
+docker compose pull         # fetch the image CI published, no local build
+docker compose up -d
 ```
+
+The server image comes from the GitHub Container Registry, built and published by
+[.github/workflows/image.yml](../.github/workflows/image.yml) for `linux/amd64`
+and `linux/arm64`: pulling it takes seconds, while building it locally compiles
+SQLCipher from source and takes minutes (tens of minutes on a Raspberry Pi 3).
+`docker compose up --build -d` still works and builds from source, and Compose
+falls back to that on its own when the registry has no image for the tag yet.
 
 One `.env`, in the repository root, configures the stack. `compose.yaml` at the
 root only includes the stack definition in `deployment/self-hosted/`, which keeps
@@ -241,11 +250,14 @@ which is the supported path.
 ```bash
 docker compose down
 git pull                     # or check out the new tag
-docker compose up --build -d
+docker compose pull          # the image CI built for that commit
+docker compose up -d
 ```
 
-Using `deployment/self-hosted/startup.sh` instead? It notices the pull by itself
-and rebuilds only when it has to: see
+Using `deployment/self-hosted/startup.sh` instead? It notices the new commit by
+itself, pulls the published image for it, and builds only when the registry has
+nothing for that commit. It also clears the image layers the new one replaced,
+which is what keeps a small disk from filling up: see
 [AUTOMATIC_STARTUP.md](./AUTOMATIC_STARTUP.md#when-the-image-is-built).
 
 On startup the server applies pending migrations. Every migration runs in a
@@ -277,8 +289,10 @@ an explicit, user-driven action.
 
 - `GET /api/health` — liveness, no vault access, safe for Docker health checks.
 - `GET /api/system/info` — version, schema version, engine, uptime.
-- `docker compose ... logs -f server` — request logs; never passphrases,
-  financial payloads or keys.
+- `docker compose ... logs -f server` — request logs contain methods, paths and
+  statuses, never query strings, passphrases, financial payloads or keys. The
+  proxy omits the Enable Banking callback from its access log because that URL
+  carries single-use credentials.
 
 ## Hardening checklist
 

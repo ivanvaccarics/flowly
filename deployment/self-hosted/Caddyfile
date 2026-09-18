@@ -24,6 +24,10 @@
 		header_up X-Forwarded-Proto {scheme}
 	}
 
+	# The bank puts single-use credentials in this callback's query string.
+	@bankCallback path /enablebanking/auth_callback
+	log_skip @bankCallback
+
 	log {
 		output stdout
 		format console

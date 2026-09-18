@@ -2,20 +2,22 @@
 #
 # Flowly — start the self-hosted stack and publish it inside the tailnet.
 #
-#   deployment/self-hosted/startup.sh [--compose-only] [--build] [--no-build] [--help]
+#   deployment/self-hosted/startup.sh [--compose-only] [--pull-only] [--build] [--no-build] [--prune] [--help]
 #
 # The script, in order:
 #   1. reads the single `.env` in the repository root (the Compose project
 #      directory, which is what makes Compose substitute it),
-#   2. rebuilds the server image only when the checkout has moved on since the
-#      image was built (see "The source stamp" below), then starts the stack —
-#      the server and Caddy — with `docker compose up -d`,
+#   2. makes sure the server image matches the checkout: it pulls the image
+#      GitHub Actions published when the checkout moved on since the local one
+#      was built, and only compiles here as a last resort (see "The source stamp"
+#      below), then starts the stack with `docker compose up -d`,
 #   3. publishes it to the tailnet with `tailscale serve` (never Funnel).
 #
 # The source stamp: the image records a hash of the files it was built from, and
-# this script compares it with the checkout on every run. Same hash, no build; a
-# `git pull` (or a hand edit) changes it and the image is rebuilt. Use --build to
-# force a rebuild and --no-build to never build, whatever the stamp says.
+# this script compares it with the checkout on every run. Same hash, nothing to
+# do; after a `git pull` it fetches the image CI built for that commit, and only
+# if there is none it builds one here. --pull-only never compiles on this
+# machine, --build always does, --no-build does neither.
 #
 # Safe to run repeatedly, by hand or from a systemd unit at boot: every step
 # waits for the daemon it needs instead of assuming it is already up.
@@ -57,8 +59,12 @@ rebuilt only when the files it was built from have changed since.
 
 Options:
   --compose-only   Start the stack and stop: do not touch Tailscale.
+  --pull-only      Never compile here: pull the published image if it matches
+                   this checkout, otherwise start the image already on disk.
   --build          Rebuild the server image, whatever the source stamp says.
   --no-build       Never rebuild: start the image that is already there.
+  --prune          Also drop the local build cache, not just the image layers a
+                   new image leaves behind (a local build then starts cold).
   --print-stamp    Print the source stamp of this checkout and stop. Use it to
                    build the image on a faster machine and have this one accept
                    it without rebuilding (see docs/AUTOMATIC_STARTUP.md).
@@ -84,6 +90,7 @@ compose_only=0
 build="auto"
 print_stamp=0
 print_stamp_files=0
+prune_cache=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -99,6 +106,10 @@ while [[ $# -gt 0 ]]; do
       build="always"
       shift
       ;;
+    --pull-only)
+      build="pull"
+      shift
+      ;;
     --no-build)
       build="never"
       shift
@@ -109,6 +120,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --stamp-files)
       print_stamp_files=1
+      shift
+      ;;
+    --prune)
+      prune_cache=1
       shift
       ;;
     --funnel)
@@ -354,8 +369,47 @@ esac
 
 built=0
 build_failed=0
-if [ -n "$build_reason" ]; then
-  log "Rebuilding $image: ${build_reason}"
+pulled=0
+if [ -n "$build_reason" ] && [ "$build" != "always" ]; then
+  # Prefer the image CI published for this commit: it is already on the registry,
+  # it took minutes to build there, and it carries the same source stamp.
+  log "Looking for a published image that matches this checkout"
+  if (cd "$REPO_ROOT" && docker compose pull --quiet server); then
+    have_stamp="$(image_stamp "$image")"
+    if [ -n "$want_stamp" ] && [ "$have_stamp" = "$want_stamp" ]; then
+      log "Pulled $image: it matches this checkout, nothing to build"
+      build_reason=""
+      pulled=1
+    else
+      log "The published image does not match this checkout (it is from an older commit)"
+    fi
+  else
+    log "No published image to pull (or no network): $image"
+  fi
+fi
+
+if [ -n "$build_reason" ] && [ "$build" = "pull" ]; then
+  log "WARNING: --pull-only was given, so this machine will not compile anything."
+  log "         Flowly starts the image already on disk, which is not this checkout."
+  log "         Wait for the workflow, or run: docker compose pull server"
+fi
+
+# A new image leaves the previous one untagged on disk, and on a Raspberry Pi's SD
+# card that is the difference between months and weeks of room. Only dangling
+# images are removed — no tag points at them and no container uses them — so what
+# is running, what you named and every volume stay exactly where they are.
+reclaim_old_layers() {
+  local reclaimed
+  reclaimed="$(docker image prune --force 2>&1 | tail -n1 || true)"
+  log "Disk: cleared what the new image replaced (${reclaimed:-nothing to clear})"
+  if [ "$prune_cache" -eq 1 ]; then
+    reclaimed="$(docker builder prune --force 2>&1 | tail -n1 || true)"
+    log "Disk: cleared the build cache too (${reclaimed:-nothing to clear})"
+  fi
+}
+
+if [ -n "$build_reason" ] && [ "$build" != "pull" ]; then
+  log "Building $image here: ${build_reason}"
   if (cd "$REPO_ROOT" && FLOWLY_SOURCE_STAMP="$want_stamp" docker compose build); then
     built=1
   else
@@ -364,7 +418,7 @@ if [ -n "$build_reason" ]; then
     log "         Starting the previous $image instead: Flowly runs the code that image has, not this checkout."
   fi
 elif [ "$build" = "auto" ]; then
-  log "No rebuild needed: $image already matches the checkout"
+  [ "${pulled:-0}" -eq 1 ] || log "No rebuild needed: $image already matches the checkout"
 fi
 
 # The Compose project directory is the repository root, which is where Compose
@@ -372,6 +426,12 @@ fi
 # this folder.
 log "Starting the stack (docker compose up -d)"
 (cd "$REPO_ROOT" && docker compose up -d)
+
+# After the container has been recreated: until then the old image is still in
+# use, so its layers could not be freed anyway.
+if [ "$pulled" -eq 1 ] || [ "$built" -eq 1 ]; then
+  reclaim_old_layers
+fi
 
 if [[ $compose_only -eq 1 ]]; then
   log "Done: the stack is up. Tailscale left untouched (--compose-only)."
@@ -427,8 +487,12 @@ if [ "$built" -eq 1 ]; then
   log "  Image            rebuilt from this checkout just now (${image})"
 elif [ "$build_failed" -eq 1 ]; then
   log "  Image            ${image}, from an earlier build: the rebuild failed, so this is not this checkout"
+elif [ "$pulled" -eq 1 ]; then
+  log "  Image            pulled from the registry, matching this checkout (${image})"
 elif [ "$build" = "never" ]; then
   log "  Image            ${image}, reused as asked"
+elif [ "$build" = "pull" ]; then
+  log "  Image            ${image}, reused because --pull-only never compiles here"
 else
   log "  Image            ${image}, already matching this checkout"
 fi

@@ -14,6 +14,7 @@ No account. No cloud. No tracking. Ever.
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Platforms](https://img.shields.io/badge/platforms-server%20first%20%7C%20native%20planned-8A2BE2)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
+![Container image](https://github.com/ivanvaccarics/flowly/actions/workflows/image.yml/badge.svg)
 
 </div>
 
@@ -220,6 +221,15 @@ You can drive the whole lifecycle against a running server with
 `node tooling/scripts/vault-smoke.mjs verify` after a restart. The Compose file
 publishes the port on `127.0.0.1` only, and the server refuses to bind a public
 interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
+
+The server image itself comes from the GitHub Container Registry: CI builds
+`linux/amd64` and `linux/arm64` on every change to the code, so
+`docker compose pull` fetches `ghcr.io/ivanvaccarics/flowly` instead of compiling
+SQLCipher on your own machine — which is what makes a Raspberry Pi a fine host.
+Both regular CI and image publication scan the complete Git history with a
+pinned Gitleaks image, and publication waits for that scan to pass. The sole
+ignored finding is one exact historical fingerprint for a documented synthetic
+sandbox fixture, not a blanket path or rule exclusion.
 
 ### 📚 Documentation
 
