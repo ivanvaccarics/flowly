@@ -381,7 +381,7 @@ if [ -n "$build_reason" ] && [ "$build" != "always" ]; then
       build_reason=""
       pulled=1
     else
-      log "The published image does not match this checkout (it is from an older commit)"
+      log "The published image does not match this checkout: it was built from another commit"
     fi
   else
     log "No published image to pull (or no network): $image"
