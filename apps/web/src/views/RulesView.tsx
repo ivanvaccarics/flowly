@@ -6,6 +6,7 @@ import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { CURRENCIES } from "../lib/money.js";
+import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
 
 /** Local builder shape: the contract narrows operators per field. */
 interface Condition {
@@ -261,7 +262,10 @@ export function RulesView({ csrf }: { csrf: string }) {
                         )
                       }
                     />
-                    <span className="swatch" style={{ background: tag.color ?? "#0f766e" }} />
+                    <span
+                      className="swatch"
+                      style={{ background: tag.color ?? DEFAULT_TAG_COLOR }}
+                    />
                     {tag.name}
                   </label>
                 ))

@@ -30,13 +30,7 @@ export function UnlockScreen({
   return (
     <div className="unlock-layout">
       <main className="unlock-card" aria-labelledby="shell-title">
-        <img
-          className="logo-lockup"
-          src="/logo.svg"
-          alt="Flowly — your money, your device, your keys"
-          width={228}
-          height={57}
-        />
+        <img className="logo-lockup" src="/logo.svg" alt="Flowly" width={228} height={66} />
 
         <div>
           <p className="eyebrow">

@@ -81,7 +81,7 @@ export function AppShell({
         <div>
           <div className="brand">
             <span className="brand-tile" aria-hidden="true">
-              <img src="/logo-mark-mono.svg" alt="" width={22} height={22} />
+              <img src="/logo-mark-mono.svg" alt="" width={11} height={20} />
             </span>
             Flowly
           </div>

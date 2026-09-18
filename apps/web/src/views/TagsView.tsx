@@ -4,9 +4,7 @@ import { Icon } from "../components/icons.js";
 import { TagColorField } from "../components/TagColorField.js";
 import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
-import { normalizeTagName } from "../lib/tags.js";
-
-const DEFAULT_COLOR = "#0f766e";
+import { DEFAULT_TAG_COLOR, normalizeTagName } from "../lib/tags.js";
 
 interface Draft {
   id: string;
@@ -17,7 +15,7 @@ interface Draft {
 export function TagsView({ csrf }: { csrf: string }) {
   const tags = useCollection<Tag>("tags", csrf, true);
   const [name, setName] = useState("");
-  const [color, setColor] = useState(DEFAULT_COLOR);
+  const [color, setColor] = useState(DEFAULT_TAG_COLOR);
   const [editing, setEditing] = useState<Draft | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -156,7 +154,10 @@ export function TagsView({ csrf }: { csrf: string }) {
               ) : (
                 <li key={tag.id} className="tag-row">
                   <span>
-                    <span className="swatch" style={{ background: tag.color ?? DEFAULT_COLOR }} />
+                    <span
+                      className="swatch"
+                      style={{ background: tag.color ?? DEFAULT_TAG_COLOR }}
+                    />
                     <strong>{tag.name}</strong>
                   </span>
                   <div className="cell-actions">
@@ -167,7 +168,7 @@ export function TagsView({ csrf }: { csrf: string }) {
                         setEditing({
                           id: tag.id,
                           name: tag.name,
-                          color: tag.color ?? DEFAULT_COLOR,
+                          color: tag.color ?? DEFAULT_TAG_COLOR,
                         })
                       }
                     >

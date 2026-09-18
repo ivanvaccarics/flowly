@@ -11,37 +11,53 @@ authoritative summary for anyone cloning the repository.
 
 High-trust, sovereign and quiet: white cards with a hairline outline over a
 cool slate canvas, a tinted sidebar, one accent colour used sparingly, dense
-tabular structures and precise typographic contrast. No gradients in the
-interface chrome, no decorative noise, no dark-mode inversion. Colour only
-enters where it carries meaning: teal for the product's own actions, emerald for
-inflows, red for outflows and destructive actions, violet for engine-level
-information.
+tabular structures and precise typographic contrast. No decorative noise, no
+dark-mode inversion, and the brand gradient is spent where the brand itself
+speaks — the tile and the progress bar — never across the chrome. Colour only
+enters where it carries meaning: the brand green for the product's own actions,
+emerald for inflows, red for outflows and destructive actions, violet for
+engine-level information.
 
 ## Brand
 
-The Flowly mark is three nested "flow" leaves with a folded underside, drawn as
-SVG and served from `apps/web/public`:
+The Flowly mark is a white keyhole knocked out of a green-to-gold squircle,
+locked up with the rounded `Flowly` wordmark. Everything is SVG (plus the one
+PNG the iOS icon needs), served from `apps/web/public`, and every asset carries
+the same three colours:
+
+| Colour | Value | Where it lands |
+| --- | --- | --- |
+| Deep green | `#0b3d2e` | The dark end of every gradient: the tile's top-left, the stem of the `F`, the browser theme colour |
+| Medium green | `#1e6f4e` | The middle stop: the tile's centre, the `o` and `w`, primary actions, the default tag colour |
+| Gold | `#d4af37` | The bright end: the tile's bottom-right, the tail of the `y`, gold tags — never text |
+
+The gradient runs deep green → medium green → gold: left to right in the
+wordmark, top-left to bottom-right in the tile. It never sits behind text; the
+only other fade the product paints is the soft wash behind the unlock card.
 
 | Asset | Use |
 | --- | --- |
-| `logo-mark.svg` | The mark alone, transparent, for light surfaces |
-| `logo-mark-mono.svg` | The mark in white, for dark or tinted surfaces; the sidebar brand tile |
-| `logo.svg` | Horizontal lockup: mark, the `Flowly` wordmark and the tagline; used on the unlock card |
-| `favicon.svg` | Rounded teal-gradient tile with the mark; browser tab |
-| `apple-touch-icon.png` | 180 px full-bleed square of the same tile for iOS home-screen bookmarks |
+| `logo.svg` | Horizontal lockup — tile plus wordmark; the unlock card and the README |
+| `logo-mark.svg` | The tile alone on a transparent square, for light or dark surfaces |
+| `logo-mark-mono.svg` | The keyhole alone in white, for dark or tinted surfaces; the sidebar brand tile |
+| `favicon.svg` | The tile with a little air around it; browser tab |
+| `apple-touch-icon.png` | 180 px full-bleed square — gradient, no corner rounding, white keyhole — for iOS home-screen bookmarks |
 
-The leaves run from the deep green `#0f766e` to the mint `#2dd4bf`, the wordmark
-uses `--text` `#0f172a` and the tagline `--text-muted`. The sidebar renders the
-mono mark inside `.brand-tile`, a CSS gradient tile, so the tile follows the
-theme without another asset. The lockup is drawn for light surfaces; on dark
-surfaces use the mono mark or the tile. The wordmark is live text in the SVG, so
-it follows the same local font stack as the rest of the interface.
+The tile is painted through a mask (the tile's two traced halves minus the
+keyhole) so its knockout edge stays crisp instead of picking up the seam where
+the halves meet. The wordmark ships as outlines, not as live text: it keeps its
+rounded shape with no webfont, which is what a private network without a CDN
+needs. The lockup carries no tagline; the unlock card states it as the lead
+paragraph, where a screen reader reads it once, and `logo.svg` is labelled
+simply "Flowly". The sidebar draws its own tile in CSS — `.brand-tile`, an
+11 px radius on 34 px with `--brand-gradient` — and knocks `logo-mark-mono.svg`
+into it at the share of the tile the mark uses (20 px of 34 px).
 
 ## Tokens
 
-Defined once as CSS custom properties in `apps/web/src/styles.css`, taken from
-the mockups' palette (a slate neutral ramp with teal, emerald, red, amber, blue
-and violet accents).
+Defined once as CSS custom properties in `apps/web/src/styles.css`: the brand
+palette above plus the mockups' slate neutral ramp with emerald, red, amber,
+blue and violet accents.
 
 | Token | Value | Use |
 | --- | --- | --- |
@@ -52,9 +68,12 @@ and violet accents).
 | `--surface-sunken` | `#f1f5f9` | Chips, icon tiles, control tracks, table hairlines |
 | `--border` / `--border-strong` | `#e2e8f0` / `#cbd5e1` | Card outlines, row dividers, dashed dropzones |
 | `--text` / `--text-secondary` / `--text-muted` / `--text-faint` | `#0f172a` / `#475569` / `#64748b` / `#94a3b8` | Headlines and figures, body, metadata, placeholders |
-| `--primary` / `--primary-hover` | `#0f766e` / `#115e59` | Primary actions, active segment, focused fields |
-| `--primary-soft` / `--primary-ink` | `#ccfbf1` / `#0f766e` | Vault chips, icon tiles, tag pills |
-| `--accent` | `#0d9488` | Active navigation icon, progress bars, focus rings |
+| `--brand-deep` / `--brand` / `--brand-gold` | `#0b3d2e` / `#1e6f4e` / `#d4af37` | The brand palette: the tile, the default tag colour, anything that has to read as Flowly |
+| `--brand-gradient` | `#0b3d2e → #1e6f4e (55 %) → #d4af37` at 120° | The sidebar tile and the progress bar — the only gradient the chrome gets |
+| `--brand-shadow` / `--brand-ring` | `rgba(11, 61, 46, 0.26)` / `rgba(30, 111, 78, 0.18)` | The lift under the tile and primary buttons / focus halos |
+| `--primary` / `--primary-hover` | `#1e6f4e` / `#17593f` | Primary actions, active segment, focused fields, the on-state of a switch |
+| `--primary-soft` / `--primary-ink` | `#e3f1e8` / `#17593f` | Vault chips, icon tiles, tag pills |
+| `--accent` | `#0b3d2e` | Active navigation icon, account dot, outlined focus rings |
 | `--income` / `--income-graphic` / `--income-soft` | `#047857` / `#10b981` / `#d1fae5` | Inflow text / chart bars and dots / chips and tiles |
 | `--expense` / `--expense-graphic` / `--expense-soft` | `#dc2626` / `#ef4444` / `#fee2e2` | Outflow text / chart bars / chips and destructive buttons |
 | `--info` / `--info-graphic` / `--info-soft` | `#7c3aed` / `#8b5cf6` / `#ede9fe` | Engine-level banners and chips |
@@ -63,9 +82,12 @@ and violet accents).
 | Radius | 6 px / 10 px / 16 px / pill | Micro controls / inputs and buttons / cards and panels / chips |
 | Shadow | level 1–3 | Cards, hover and popovers, modal and unlock card |
 
-Colour pairs that carry text are one step darker than the mockups where the
-mockup value would miss WCAG AA on white (`--income`, `--expense`, `--primary`,
-`--info`); chart fills, dots and icons keep the mockup values exactly.
+Every colour that carries text clears WCAG AA on white: the gold is a fill, a
+chip tint or a chart slice and never a label, and a tag that is coloured gold
+gets its text mixed toward `--text` (`tagPillStyle`) so the pill stays legible.
+Where a mockup value would have missed AA the token is one step darker
+(`--income`, `--expense`, `--primary`, `--info`); chart fills, dots and icons
+keep the mockup values exactly.
 
 ## Typography
 
@@ -96,7 +118,7 @@ not shift.
 - Fixed 258 px tinted sidebar, separated from the content by a hairline: brand
   tile and wordmark, the six sections, and a footer card showing the local vault
   identity instead of a user account. The active section is a white pill with a
-  hairline outline and a teal icon.
+  hairline outline and a brand-green icon.
 - Sticky 64 px white top bar carrying the current section's `h1`, the vault state
   pill (pulsing dot, an `AES-256` badge), the short vault id, the local clock, and
   the session controls (Lock session, Lock all). Exporting has one home —
@@ -130,9 +152,9 @@ not shift.
   under the row. The row's second line names where it came from (the bank's own
   description, or the source); a provider's raw row id lives only behind **Raw**.
 - **Pie chart:** the dashboard's spending breakdown, one SVG donut per currency,
-  each arc an `--income-graphic`-class tag colour with the period total in the
-  hole and the legend rows (label, amount, share) underneath. Hand-rolled
-  stroke-dasharray arcs; no charting dependency.
+  each arc the tag's own colour — brand green first for tags that have none —
+  with the period total in the hole and the legend rows (label, amount, share)
+  underneath. Hand-rolled stroke-dasharray arcs; no charting dependency.
 - **Cash-flow chart:** weekly income/expense bars with a net line, inline SVG.
 - **Account card:** icon tile, name, type and currency, status chips and a tinted
   balance block with the booked-movement count.
@@ -144,13 +166,14 @@ not shift.
   `info`, `neutral`); `meta` and `mono` variants cover uppercase and hashed data.
 - **Tag pill:** pill tinted with the tag's own colour — a 12 % background tint of
   it and a text colour mixed toward `--text` so contrast holds.
-- **Colour picker:** eight palette swatches from the design tokens, each a 30 px
-  rounded tile in a white tray, rendered as a radiogroup; the selection carries a
-  white check and an accent ring that stays visible on any colour. The last tile
-  is the free colour: a checkerboard with an eyedropper until it carries a colour
-  of its own, and the browser's colour picker behind it, so any `#rrggbb` value
-  stays reachable without a hex text field. A live preview pill shows the tag's
-  name in the chosen colour. Shared by the create form and the inline tag editor,
+- **Colour picker:** eight palette swatches — Flowly green and gold, then blue,
+  violet, emerald, amber, red and slate — each a 30 px rounded tile in a white
+  tray, rendered as a radiogroup; the selection carries a white check and an
+  accent ring that stays visible on any colour. The last tile is the free
+  colour: a checkerboard with an eyedropper until it carries a colour of its
+  own, and the browser's colour picker behind it, so any `#rrggbb` value stays
+  reachable without a hex text field. A live preview pill shows the tag's name
+  in the chosen colour. Shared by the create form and the inline tag editor,
   which give the control its own row.
 - **File field:** a bordered row with the field name, a secondary "Choose file"
   button and the selected file name. The native `<input type="file">` is hidden
@@ -161,11 +184,11 @@ not shift.
   pills plus a `+N` counter) and opens a popup with a search field, a scrollable
   checklist and `Clear` / `Done` actions. Used wherever tags are chosen, so a
   vault with hundreds of tags never inflates a table row or a form.
-- **Buttons:** primary teal (36 px, radius 10), secondary white with a hairline,
-  soft-red for destructive actions and session locking, soft-emerald for
-  "updated" confirmations.
+- **Buttons:** primary brand green (36 px, radius 10), secondary white with a
+  hairline, soft-red for destructive actions and session locking, soft-emerald
+  for "updated" confirmations.
 - **Inputs:** 36 px, `#f8fafc` with a hairline on white cards and white on tinted
-  panels, teal focus ring with a soft halo.
+  panels, brand-green focus ring with a soft halo.
 - **Banner:** inline feedback for errors, confirmations, warnings and loading.
 
 ## Mapping to implemented features
@@ -195,6 +218,8 @@ account identity (Flowly has no accounts or users), the interface theme switch
 (the design ships one light theme), transfer/top-up actions, filtered exports,
 the ledger checksum chip and the mockups' illustrative node identifiers.
 
-The vault lock screen uses the same language: centered card, lock badge,
-passphrase field, the no-recovery warning, and a tinted facts row with the vault
-state.
+The vault lock screen uses the same language: centered card over a wash that
+carries a hint of the brand green and gold, the lockup, the passphrase field,
+the no-recovery warning, and a tinted facts row with the vault state. It is the
+one screen that gets the gradient as atmosphere; everywhere else the colour is
+functional.

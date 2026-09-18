@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="apps/web/public/logo.svg" alt="Flowly — your money, your device, your keys" width="340">
+<img src="apps/web/public/logo.svg" alt="Flowly" width="340">
 
 # 💸 Flowly
 
@@ -195,8 +195,10 @@ away. Writes carry the revision they read, so two browsers can never overwrite
 each other silently: a stale write gets `409 revision_conflict`.
 
 The browser UI follows the repository's own design system (*Sovereign Ledger*:
-slate canvas, white cards with a hairline outline, a tinted sidebar, teal
-accents) with one sidebar and six sections: **Dashboard**, **Accounts**,
+slate canvas, white cards with a hairline outline, a tinted sidebar) and the
+Flowly brand palette — deep green `#0b3d2e`, medium green `#1e6f4e`, gold
+`#d4af37` — for the mark, the product's own actions and the default tag colour.
+It has one sidebar and six sections: **Dashboard**, **Accounts**,
 **Transactions**, **Tags**, **Rules** and **Settings**. The top bar carries the
 section title, the vault state, the local clock and the session controls, and
 every section opens with a summary card carrying its status facts and actions.
@@ -212,9 +214,10 @@ password-encrypted complete archive. Import is additive for a CSV merge and
 replaces the vault for a complete archive, after an explicit confirmation and an
 encrypted safety snapshot. Deleting an account or a tag asks for a cascade and
 tells you how many records are affected.
-The product mark (SVG logo, favicon and iOS icon) ships in `apps/web/public` and
-is documented in [docs/DESIGN.md](docs/DESIGN.md), along with the tokens and the
-mapping to what actually ships.
+The product mark — a white keyhole in a squircle filled with the brand gradient,
+next to the rounded `Flowly` wordmark — ships as SVG (plus the iOS icon) in
+`apps/web/public` and is documented in [docs/DESIGN.md](docs/DESIGN.md), along
+with the tokens and the mapping to what actually ships.
 
 You can drive the whole lifecycle against a running server with
 `node tooling/scripts/vault-smoke.mjs create` and then

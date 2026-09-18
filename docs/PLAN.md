@@ -306,7 +306,10 @@ panels carry nested controls, and the dashboard charts cash flow per week and
 spending by tag as a pie chart per currency. Only implemented features are
 rendered, fonts use local stacks so the app never needs a CDN, and
 `docs/DESIGN.md` records the tokens, the brand assets shipped from
-`apps/web/public` and the mapping.
+`apps/web/public` and the mapping. The Flowly lockup — a white keyhole in a
+squircle filled with the brand gradient, deep green `#0b3d2e` → medium green
+`#1e6f4e` → gold `#d4af37` — carries the product's own actions, the sidebar tile
+and the progress bars; everything else stays a semantic colour.
 
 The two UIs follow one product design specification but are implemented with
 their platform-native toolkit:
@@ -1334,6 +1337,21 @@ Status: **complete** (2026-09-16), decision in `docs/adr/0022`.
 - Make **Export data** in the top bar a deep link into the Settings export block,
   and replace the tag colour picker with the token palette plus one free colour
   from the browser's own picker.
+
+#### Task `rebrand-to-the-flowly-lockup`
+
+Status: **complete** (2026-09-18), decision in `docs/adr/0023`.
+
+- Replaced the three-leaf mark with the uploaded Flowly lockup: a white keyhole
+  knocked out of a squircle filled with the brand gradient, next to the rounded
+  wordmark traced as outlines.
+- Re-tokened the interface to the brand palette — deep green `#0b3d2e`, medium
+  green `#1e6f4e`, gold `#d4af37` — so primary actions, the sidebar tile, the
+  progress bar, the focus halo and the default tag colour are Flowly's own
+  colours instead of the mockups' teal.
+- Re-cut `logo.svg`, `logo-mark.svg`, `logo-mark-mono.svg`, `favicon.svg` and
+  the 180 px iOS icon from the new artwork, with the tile's knockout painted
+  through a mask so no seam or halo survives from the trace.
 
 ### Phase 6 - Enable Banking for Server
 

@@ -2,9 +2,10 @@
  * Flowly UI — "Sovereign Ledger" design system, second revision.
  *
  * The palette, shapes and layout come from the desktop mockups in `ui/*`
- * (dashboard, ledger, accounts, rules, vault, settings). `docs/DESIGN.md`
- * reproduces the tokens that matter, so the codebase stays self-contained and
- * this file never reads from the untracked `ui/` folder.
+ * (dashboard, ledger, accounts, rules, vault, settings) and from the Flowly
+ * brand lockup (deep green → medium green → gold, the `--brand-*` tokens).
+ * `docs/DESIGN.md` reproduces the tokens that matter, so the codebase stays
+ * self-contained and this file never reads from the untracked `ui/` folder.
  *
  * Fonts use local stacks instead of a CDN so the app keeps working on a private
  * network with no Internet access. Where a token is one step darker than the
@@ -31,13 +32,21 @@
   --text-muted: #64748b;
   --text-faint: #94a3b8;
 
+  /* Brand — the lockup in `apps/web/public`: deep green → medium green → gold */
+  --brand-deep: #0b3d2e;
+  --brand: #1e6f4e;
+  --brand-gold: #d4af37;
+  --brand-gradient: linear-gradient(120deg, #0b3d2e 0%, #1e6f4e 55%, #d4af37 100%);
+  --brand-shadow: rgba(11, 61, 46, 0.26);
+  --brand-ring: rgba(30, 111, 78, 0.18);
+
   /* Accents */
-  --primary: #0f766e;
-  --primary-hover: #115e59;
-  --primary-soft: #ccfbf1;
-  --primary-ink: #0f766e;
-  --primary-soft-border: rgba(13, 148, 136, 0.24);
-  --accent: #0d9488;
+  --primary: #1e6f4e;
+  --primary-hover: #17593f;
+  --primary-soft: #e3f1e8;
+  --primary-ink: #17593f;
+  --primary-soft-border: rgba(30, 111, 78, 0.24);
+  --accent: #0b3d2e;
   --income: #047857;
   --income-graphic: #10b981;
   --income-soft: #d1fae5;
@@ -196,8 +205,9 @@ h3 {
   color: var(--text);
 }
 
-/* The mockups' sidebar tile: a teal gradient square with the mark knocked out
-   in white. The mark itself stays the Flowly leaves. */
+/* The sidebar tile: the brand gradient on the same squircle as
+   `logo-mark.svg`, with the keyhole knocked out in white. The tile is drawn in
+   CSS so it follows the tokens; the keyhole comes from `logo-mark-mono.svg`. */
 .brand-tile {
   display: inline-flex;
   align-items: center;
@@ -205,14 +215,15 @@ h3 {
   width: 34px;
   height: 34px;
   border-radius: 11px;
-  background: linear-gradient(140deg, #2dd4bf 0%, #0d9488 65%, #0f766e 100%);
-  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.28);
+  background: var(--brand-gradient);
+  box-shadow: 0 2px 6px var(--brand-shadow);
   flex: 0 0 auto;
 }
 
 .brand-tile img {
-  width: 22px;
-  height: 22px;
+  /* The keyhole keeps the share of the tile it has in `logo-mark.svg`. */
+  width: auto;
+  height: 20px;
   display: block;
 }
 
@@ -665,7 +676,7 @@ button {
   border-color: var(--primary);
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.24);
+  box-shadow: 0 2px 8px var(--brand-shadow);
 }
 
 .btn.primary:hover:not(:disabled) {
@@ -770,7 +781,7 @@ textarea:focus-visible {
   outline: none;
   background-color: var(--surface);
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.16);
+  box-shadow: 0 0 0 3px var(--brand-ring);
 }
 
 .btn:focus-visible,
@@ -781,7 +792,7 @@ textarea:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 1px var(--accent),
-    0 0 0 3px rgba(13, 148, 136, 0.18);
+    0 0 0 3px var(--brand-ring);
 }
 
 input[type="checkbox"] {
@@ -960,7 +971,7 @@ input[type="checkbox"] {
   outline: none;
   box-shadow:
     0 0 0 1px var(--accent),
-    0 0 0 3px rgba(13, 148, 136, 0.18);
+    0 0 0 3px var(--brand-ring);
 }
 
 .file-name {
@@ -1945,7 +1956,9 @@ button.tag-pill:hover {
 
 .bar-fill {
   height: 100%;
-  background: var(--accent);
+  /* The one place the interface chrome carries the full brand gradient: a
+     progress bar reads as "flow", and it is never behind text. */
+  background: var(--brand-gradient);
   border-radius: var(--radius-pill);
 }
 
@@ -1957,7 +1970,8 @@ button.tag-pill:hover {
   place-items: center;
   padding: 2rem;
   background:
-    radial-gradient(1000px 520px at 50% -10%, rgba(13, 148, 136, 0.1), transparent), var(--canvas);
+    radial-gradient(760px 420px at 18% -12%, rgba(30, 111, 78, 0.12), transparent),
+    radial-gradient(680px 380px at 92% 4%, rgba(212, 175, 55, 0.12), transparent), var(--canvas);
 }
 
 .unlock-card {

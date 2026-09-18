@@ -11,7 +11,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 /** Slice colours for tags that have no colour of their own. */
 const SPENDING_COLOURS = [
-  "#0d9488",
+  "#1e6f4e",
   "#3b82f6",
   "#f59e0b",
   "#8b5cf6",

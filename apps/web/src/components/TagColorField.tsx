@@ -9,8 +9,8 @@ import { tagPillStyle } from "./ui.js";
  * allows it.
  */
 export const TAG_COLORS: Array<{ value: string; label: string }> = [
-  { value: "#0f766e", label: "Teal" },
-  { value: "#0d9488", label: "Mint" },
+  { value: "#1e6f4e", label: "Flowly green" },
+  { value: "#d4af37", label: "Gold" },
   { value: "#1d4ed8", label: "Blue" },
   { value: "#7c3aed", label: "Violet" },
   { value: "#047857", label: "Emerald" },
