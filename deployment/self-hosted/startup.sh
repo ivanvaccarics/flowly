@@ -424,8 +424,25 @@ fi
 # The Compose project directory is the repository root, which is where Compose
 # looks for `.env`; the root compose.yaml only includes the stack definition in
 # this folder.
-log "Starting the stack (docker compose up -d)"
-(cd "$REPO_ROOT" && docker compose up -d)
+#
+# `--no-build` when this run is not allowed to compile: without it Compose would
+# build the image itself when none is on disk, which is exactly what a host that
+# only pulls must not start doing. It still pulls a missing image, which is what
+# we want.
+up_args="-d"
+if [ "$build" = "pull" ] || [ "$build" = "never" ]; then
+  up_args="-d --no-build"
+fi
+
+log "Starting the stack (docker compose up $up_args)"
+if ! (cd "$REPO_ROOT" && docker compose up $up_args); then
+  if [ "$build" = "pull" ] || [ "$build" = "never" ]; then
+    log "WARNING: the stack did not start. Compose was not allowed to build here, so"
+    log "         if the image is missing: wait for the image workflow to publish this"
+    log "         commit, or run this script again without --pull-only."
+  fi
+  exit 1
+fi
 
 # After the container has been recreated: until then the old image is still in
 # use, so its layers could not be freed anyway.

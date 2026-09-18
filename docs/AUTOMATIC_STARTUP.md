@@ -145,7 +145,7 @@ Flags:
 | Flag | Effect |
 | --- | --- |
 | `--compose-only` | Start the stack and stop; do not touch Tailscale |
-| `--pull-only` | Pull the published image if it matches this checkout, and never compile here |
+| `--pull-only` | Pull the published image if it matches this checkout; never compile here, and start the stack with `--no-build` so Compose cannot do it either |
 | `--build` | Rebuild the `flowly-server:local` image, whatever the source stamp says |
 | `--no-build` | Never rebuild: start the image that is already there |
 | `--prune` | Also clear the local build cache, on top of the image layers a new image replaced |
@@ -218,9 +218,11 @@ git pull
 behind, asks the registry for the image of that commit, finds it — the CI job
 computed the same stamp from the same sources — and starts the stack. Nothing is
 compiled, nothing is carried around by hand. `--pull-only` is the important part
-on a slow host: if the registry does not have that commit yet, because you pulled
-before the workflow finished, the script starts the previous image and says so
-instead of quietly starting a thirty-minute compile.
+on a slow host: it also hands Compose `--no-build`, so a missing image cannot
+sneak a build in behind the script's back; if the registry does not have that
+commit yet, because you pulled before the workflow finished, the script starts
+the previous image and says so instead of quietly starting a thirty-minute
+compile.
 
 Two details worth knowing:
 
