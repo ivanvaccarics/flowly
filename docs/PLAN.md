@@ -1388,12 +1388,13 @@ Status: **complete** (2026-09-20), decision in `docs/adr/0024`.
 
 Status: **complete** (2026-09-20).
 
-- The rules builder edits as well as creates: **Edit** on a tile loads the
-  rule's name, combinator, conditions and tags, and saving replaces them through
-  the existing `PUT /api/tagging-rules/:id`, keeping the id, the revision, the
-  on/off state and the rule's place in the order. **New rule** hands the builder
-  back to an empty form, and deleting the rule being edited drops the edit with
-  it, so the form can never save into a record that is gone.
+- Rules are edited in a dialog: **Edit** on a tile opens the rule's name,
+  combinator, conditions and tags over the page, and saving replaces them
+  through the existing `PUT /api/tagging-rules/:id`, keeping the id, the
+  revision, the on/off state and the rule's place in the order. The **New rule**
+  card keeps its own draft and is never reused as the editor; Escape, the X and
+  **Cancel** close the dialog without writing, and deleting the rule the dialog
+  holds closes it, so the dialog can never save into a record that is gone.
 - The dashboard's recent transactions page on the server, ten rows at a time,
   with the window (`Showing 11–20 of 42 transactions`) and **Previous**/**Next**.
   The header chip counts every match, as the ledger's does, and the pager stays

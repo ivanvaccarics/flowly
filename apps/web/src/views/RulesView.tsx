@@ -1,121 +1,98 @@
 import { useRef, useState } from "react";
 import type { Tag, TaggingRule } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
+import { Modal } from "../components/Modal.js";
+import {
+  RuleFields,
+  conditionsOf,
+  draftFromRule,
+  emptyDraft,
+  type RuleDraft,
+} from "../components/RuleFields.js";
 import { Icon } from "../components/icons.js";
 import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
-import { CURRENCIES } from "../lib/money.js";
-import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
-
-/** Local builder shape: the contract narrows operators per field. */
-interface Condition {
-  field: "userNote" | "description" | "payee" | "amountMinor" | "accountId";
-  operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
-  value: string | number;
-  currency?: string;
-}
-
-const FIELDS: Array<Condition["field"]> = [
-  "userNote",
-  "description",
-  "payee",
-  "amountMinor",
-  "accountId",
-];
-
-const OPERATORS_BY_FIELD: Record<Condition["field"], Array<Condition["operator"]>> = {
-  userNote: ["contains"],
-  description: ["contains"],
-  payee: ["is", "contains"],
-  amountMinor: ["greaterThan", "lessThan", "equals"],
-  accountId: ["is"],
-};
-
-const EMPTY_CONDITION: Condition = { field: "userNote", operator: "contains", value: "" };
 
 export function RulesView({ csrf }: { csrf: string }) {
   const rules = useCollection<TaggingRule>("tagging-rules", csrf, true);
   const tags = useCollection<Tag>("tags", csrf, true);
-  const formRef = useRef<HTMLFormElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
-  /** The rule the builder is editing; absent means it is building a new one. */
-  const [editing, setEditing] = useState<TaggingRule | undefined>(undefined);
-  const [name, setName] = useState("");
-  const [combinator, setCombinator] = useState<"and" | "or">("and");
-  const [conditions, setConditions] = useState<Condition[]>([{ ...EMPTY_CONDITION }]);
-  const [tagIds, setTagIds] = useState<string[]>([]);
+  /** The create card has a draft of its own that no edit ever touches. */
+  const [draft, setDraft] = useState<RuleDraft>(emptyDraft);
+  /** The rule open in the edit dialog, with the draft being changed there. */
+  const [editor, setEditor] = useState<{ rule: TaggingRule; draft: RuleDraft } | undefined>(
+    undefined,
+  );
+  const openerRef = useRef<HTMLElement | null>(null);
   const [report, setReport] = useState<string | undefined>(undefined);
   const [actionError, setActionError] = useState<string | undefined>(undefined);
+  const [editorError, setEditorError] = useState<string | undefined>(undefined);
 
-  function updateCondition(index: number, next: Condition) {
-    setConditions((current) =>
-      current.map((condition, position) => (position === index ? next : condition)),
-    );
-  }
-
-  /** Loads a rule into the builder: fixing a mistake is an edit, not a rebuild. */
-  function startEdit(rule: TaggingRule) {
-    setEditing(rule);
-    setName(rule.name);
-    setCombinator(rule.combinator);
-    setConditions(rule.conditions as unknown as Condition[]);
-    setTagIds([...rule.tagIds]);
+  function openEditor(rule: TaggingRule, opener: HTMLElement | null) {
+    // Kept so the dialog can hand focus back where the user left it.
+    openerRef.current = opener;
+    setEditor({ rule, draft: draftFromRule(rule) });
+    setEditorError(undefined);
+    rules.clearError();
     setActionError(undefined);
     setReport(undefined);
-    formRef.current?.scrollIntoView?.({ block: "start" });
-    nameRef.current?.focus();
   }
 
-  function stopEditing() {
-    setEditing(undefined);
-    setName("");
-    setCombinator("and");
-    setConditions([{ ...EMPTY_CONDITION }]);
-    setTagIds([]);
+  function closeEditor() {
+    setEditor(undefined);
+    setEditorError(undefined);
+    openerRef.current?.focus?.();
+    openerRef.current = null;
   }
 
-  async function submit(event: React.FormEvent) {
+  async function create(event: React.FormEvent) {
     event.preventDefault();
     setActionError(undefined);
     setReport(undefined);
-    if (tagIds.length === 0) {
+    if (draft.tagIds.length === 0) {
       setActionError("Pick at least one tag to apply.");
       return;
     }
     const now = new Date().toISOString();
-    if (editing) {
-      const saved = await rules.update({
-        // The id, the revision, the on/off state and the createdAt are the
-        // stored rule's: editing replaces its conditions, never its identity.
-        ...editing,
-        name,
-        combinator,
-        conditions: conditions as unknown as TaggingRule["conditions"],
-        tagIds: tagIds as TaggingRule["tagIds"],
-        updatedAt: now,
-      });
-      if (saved) {
-        setReport(`Updated "${editing.name}".`);
-        stopEditing();
-      }
-      return;
-    }
     const created = await rules.create({
       formatVersion: 1,
       revision: 1,
       id: crypto.randomUUID(),
-      name,
+      name: draft.name,
       enabled: true,
-      combinator,
-      conditions: conditions as unknown as TaggingRule["conditions"],
-      tagIds,
+      combinator: draft.combinator,
+      conditions: conditionsOf(draft),
+      tagIds: draft.tagIds,
       createdAt: now,
       updatedAt: now,
     });
     if (created) {
-      setReport(`Created "${name}".`);
-      stopEditing();
+      setReport(`Created "${draft.name}".`);
+      setDraft(emptyDraft());
+    }
+  }
+
+  async function saveEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editor) return;
+    setEditorError(undefined);
+    if (editor.draft.tagIds.length === 0) {
+      setEditorError("Pick at least one tag to apply.");
+      return;
+    }
+    const saved = await rules.update({
+      // The id, the revision, the on/off state and the createdAt are the stored
+      // rule's: editing replaces its conditions, never its identity.
+      ...editor.rule,
+      name: editor.draft.name,
+      combinator: editor.draft.combinator,
+      conditions: conditionsOf(editor.draft),
+      tagIds: editor.draft.tagIds as TaggingRule["tagIds"],
+      updatedAt: new Date().toISOString(),
+    });
+    if (saved) {
+      setReport(`Updated "${editor.rule.name}".`);
+      closeEditor();
     }
   }
 
@@ -152,187 +129,21 @@ export function RulesView({ csrf }: { csrf: string }) {
 
       <div className="dash">
         <div className="dash-main">
-          <form className="card" ref={formRef} onSubmit={submit}>
+          {/* Named so the card stays a landmark of its own next to the dialog. */}
+          <form className="card" aria-label="New rule" onSubmit={create}>
             <header>
               <div>
-                <h2>{editing ? "Edit rule" : "New rule"}</h2>
-                <span className="sub">
-                  {editing
-                    ? "Saving replaces the conditions of this rule and keeps its id, its state and its place in the order"
-                    : "Deterministic matching, evaluated in memory"}
-                </span>
+                <h2>New rule</h2>
+                <span className="sub">Deterministic matching, evaluated in memory</span>
               </div>
             </header>
-            <div className="fieldset framed">
-              <label>
-                Rule name
-                <input
-                  ref={nameRef}
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Match
-                <select
-                  value={combinator}
-                  onChange={(event) => setCombinator(event.target.value as "and" | "or")}
-                >
-                  <option value="and">all conditions (AND)</option>
-                  <option value="or">any condition (OR)</option>
-                </select>
-              </label>
-            </div>
-
-            {conditions.map((condition, index) => (
-              <fieldset key={index} className="condition">
-                <legend>Condition {index + 1}</legend>
-                <label>
-                  Field
-                  <select
-                    aria-label={`Field ${index + 1}`}
-                    value={condition.field}
-                    onChange={(event) => {
-                      const field = event.target.value as Condition["field"];
-                      const operator = OPERATORS_BY_FIELD[field][0] as Condition["operator"];
-                      updateCondition(index, {
-                        field,
-                        operator,
-                        value: field === "amountMinor" ? 0 : "",
-                        ...(field === "amountMinor" ? { currency: "EUR" } : {}),
-                      });
-                    }}
-                  >
-                    {FIELDS.map((field) => (
-                      <option key={field} value={field}>
-                        {field}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Operator
-                  <select
-                    aria-label={`Operator ${index + 1}`}
-                    value={condition.operator}
-                    onChange={(event) =>
-                      updateCondition(index, {
-                        ...condition,
-                        operator: event.target.value as Condition["operator"],
-                      })
-                    }
-                  >
-                    {OPERATORS_BY_FIELD[condition.field].map((operator) => (
-                      <option key={operator} value={operator}>
-                        {operator}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Value
-                  <input
-                    aria-label={`Value ${index + 1}`}
-                    value={String(condition.value)}
-                    onChange={(event) =>
-                      updateCondition(index, {
-                        ...condition,
-                        value:
-                          condition.field === "amountMinor"
-                            ? Number(event.target.value)
-                            : event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                {condition.field === "amountMinor" ? (
-                  <label>
-                    Currency
-                    <select
-                      aria-label={`Currency ${index + 1}`}
-                      value={condition.currency ?? "EUR"}
-                      onChange={(event) =>
-                        updateCondition(index, { ...condition, currency: event.target.value })
-                      }
-                    >
-                      {CURRENCIES.map((code) => (
-                        <option key={code} value={code}>
-                          {code}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                {conditions.length > 1 ? (
-                  <button
-                    type="button"
-                    className="btn small danger"
-                    onClick={() =>
-                      setConditions((current) => current.filter((_, i) => i !== index))
-                    }
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </fieldset>
-            ))}
-
-            <div className="actions" style={{ display: "flex", gap: "0.5rem" }}>
-              <button
-                type="button"
-                className="btn small"
-                onClick={() =>
-                  setConditions((current) => [
-                    ...current,
-                    { ...EMPTY_CONDITION, field: "payee", operator: "is" },
-                  ])
-                }
-              >
-                <Icon name="plus" size={14} />
-                Add condition
-              </button>
-            </div>
-
-            <fieldset className="fieldset">
-              <legend>Tags to apply</legend>
-              {tags.items.length === 0 ? (
-                <span className="sub">Create tags first.</span>
-              ) : (
-                tags.items.map((tag) => (
-                  <label key={tag.id} className="checkline">
-                    <input
-                      type="checkbox"
-                      checked={tagIds.includes(tag.id)}
-                      onChange={(event) =>
-                        setTagIds((current) =>
-                          event.target.checked
-                            ? [...current, tag.id]
-                            : current.filter((id) => id !== tag.id),
-                        )
-                      }
-                    />
-                    <span
-                      className="swatch"
-                      style={{ background: tag.color ?? DEFAULT_TAG_COLOR }}
-                    />
-                    {tag.name}
-                  </label>
-                ))
-              )}
-            </fieldset>
+            <RuleFields draft={draft} tags={tags.items} onChange={setDraft} />
 
             <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
               <button type="submit" className="btn primary">
                 <Icon name="check" size={16} />
-                {editing ? "Save changes" : "Save rule"}
+                Save rule
               </button>
-              {editing ? (
-                <button type="button" className="btn" onClick={stopEditing}>
-                  <Icon name="plus" size={14} />
-                  New rule
-                </button>
-              ) : null}
             </div>
           </form>
         </div>
@@ -386,7 +197,7 @@ export function RulesView({ csrf }: { csrf: string }) {
                         type="button"
                         className="btn small"
                         aria-label={`Edit rule ${rule.name}`}
-                        onClick={() => startEdit(rule)}
+                        onClick={(event) => openEditor(rule, event.currentTarget)}
                       >
                         <Icon name="edit" size={14} />
                         Edit
@@ -395,9 +206,9 @@ export function RulesView({ csrf }: { csrf: string }) {
                         type="button"
                         className="btn small danger"
                         onClick={() => {
-                          // Deleting the rule the builder is holding would leave
-                          // the form saving into a record that no longer exists.
-                          if (editing?.id === rule.id) stopEditing();
+                          // Deleting the rule the dialog is holding would leave
+                          // it saving into a record that no longer exists.
+                          if (editor?.rule.id === rule.id) closeEditor();
                           void rules.remove(rule.id, rule.revision);
                         }}
                       >
@@ -415,10 +226,38 @@ export function RulesView({ csrf }: { csrf: string }) {
         </aside>
       </div>
 
-      {report ? <Banner tone="ok">{report}</Banner> : null}
-      {(rules.error ?? actionError) ? (
-        <Banner tone="error">{rules.error ?? actionError}</Banner>
+      {editor ? (
+        <Modal title={`Edit rule ${editor.rule.name}`} onClose={closeEditor}>
+          <form className="stack" onSubmit={saveEdit}>
+            <p className="muted">
+              Saving replaces the conditions of this rule and keeps its id, its on/off state and its
+              place in the order. The card behind keeps building a new one.
+            </p>
+            <RuleFields
+              draft={editor.draft}
+              tags={tags.items}
+              onChange={(next) => setEditor({ rule: editor.rule, draft: next })}
+            />
+            {(editorError ?? rules.error) ? (
+              <Banner tone="error">{editorError ?? rules.error}</Banner>
+            ) : null}
+            <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
+              <button type="submit" className="btn primary">
+                <Icon name="check" size={16} />
+                Save changes
+              </button>
+              <button type="button" className="btn" onClick={closeEditor}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
       ) : null}
+
+      {report ? <Banner tone="ok">{report}</Banner> : null}
+      {actionError ? <Banner tone="error">{actionError}</Banner> : null}
+      {/* While the dialog is open its own banner carries the failure. */}
+      {!editor && rules.error ? <Banner tone="error">{rules.error}</Banner> : null}
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RulesView } from "./RulesView.js";
 
@@ -57,6 +57,9 @@ function mockApi(): Call[] {
         method,
         ...(body?.entity ? { entity: body.entity as Record<string, unknown> } : {}),
       });
+      if (path === "/api/tagging-rules" && method === "POST") {
+        return json({ entity: { ...rule, ...(body?.entity ?? {}) } }, 201);
+      }
       if (path === "/api/tagging-rules") return json({ items: [rule] });
       if (path === "/api/tags") return json({ items: [tag] });
       if (path === `/api/tagging-rules/${RULE_ID}` && method === "PUT") {
@@ -74,27 +77,38 @@ afterEach(() => {
 });
 
 describe("rules view", () => {
-  it("edits an existing rule in the builder instead of rebuilding it", async () => {
+  it("edits an existing rule in a dialog and leaves the create card alone", async () => {
     const calls = mockApi();
     render(<RulesView csrf="csrf-token" />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "New rule" })).toBeTruthy());
+    const card = screen.getByRole("form", { name: "New rule" });
+    // The card is already holding a draft of its own.
+    fireEvent.change(within(card).getByLabelText("Rule name"), {
+      target: { value: "Rent rule" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Edit rule Coffee rule" }));
 
-    // The builder adopts the stored rule: name, combinator, condition and tags.
-    expect(screen.getByRole("heading", { name: "Edit rule" })).toBeTruthy();
-    const nameField = screen.getByLabelText("Rule name") as HTMLInputElement;
+    // The dialog adopts the stored rule: name, combinator, condition and tags.
+    const dialog = screen.getByRole("dialog", { name: "Edit rule Coffee rule" });
+    const nameField = within(dialog).getByLabelText("Rule name") as HTMLInputElement;
     expect(nameField.value).toBe("Coffee rule");
-    expect((screen.getByLabelText("Value 1") as HTMLInputElement).value).toBe("Bar Centrale");
-    expect((screen.getByLabelText("Field 1") as HTMLSelectElement).value).toBe("payee");
-    expect((screen.getByRole("checkbox", { name: "Coffee" }) as HTMLInputElement).checked).toBe(
-      true,
+    expect((within(dialog).getByLabelText("Value 1") as HTMLInputElement).value).toBe(
+      "Bar Centrale",
     );
+    expect((within(dialog).getByLabelText("Field 1") as HTMLSelectElement).value).toBe("payee");
+    expect(
+      (within(dialog).getByRole("checkbox", { name: "Coffee" }) as HTMLInputElement).checked,
+    ).toBe(true);
+    // Editing is not the create card: its draft and its heading never change.
+    expect((within(card).getByLabelText("Rule name") as HTMLInputElement).value).toBe("Rent rule");
+    expect(within(card).getByRole("heading", { name: "New rule" })).toBeTruthy();
 
     fireEvent.change(nameField, { target: { value: "Coffee and bars" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save changes" }));
 
-    await waitFor(() => expect(screen.getByText('Updated "Coffee rule".')).toBeTruthy());
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText('Updated "Coffee rule".')).toBeTruthy();
     const saved = calls.find((call) => call.method === "PUT");
     expect(saved?.path).toBe(`/api/tagging-rules/${RULE_ID}`);
     // The identity and the state come from the stored rule, not from the form.
@@ -109,24 +123,57 @@ describe("rules view", () => {
       tagIds: [TAG_ID],
     });
 
-    // Saving leaves the builder ready for the next rule.
-    expect(screen.getByRole("heading", { name: "New rule" })).toBeTruthy();
-    expect((screen.getByLabelText("Rule name") as HTMLInputElement).value).toBe("");
+    // The card behind kept its own draft, untouched by the edit.
+    expect((within(card).getByLabelText("Rule name") as HTMLInputElement).value).toBe("Rent rule");
   });
 
-  it("goes back to a new rule from the edit form", async () => {
-    mockApi();
+  it("closes the edit dialog without touching the card", async () => {
+    const calls = mockApi();
     render(<RulesView csrf="csrf-token" />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "New rule" })).toBeTruthy());
+    const card = screen.getByRole("form", { name: "New rule" });
+    fireEvent.change(within(card).getByLabelText("Rule name"), {
+      target: { value: "Rent rule" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Edit rule Coffee rule" }));
-    expect(screen.getByRole("heading", { name: "Edit rule" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Edit rule Coffee rule" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "New rule" }));
-    expect(screen.getByRole("heading", { name: "New rule" })).toBeTruthy();
-    expect((screen.getByLabelText("Rule name") as HTMLInputElement).value).toBe("");
-    expect((screen.getByRole("checkbox", { name: "Coffee" }) as HTMLInputElement).checked).toBe(
-      false,
+    // Escape closes it: neither route writes anything.
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect((within(card).getByLabelText("Rule name") as HTMLInputElement).value).toBe("Rent rule");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit rule Coffee rule" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "Edit rule Coffee rule" })).getByRole("button", {
+        name: "Cancel",
+      }),
     );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect((within(card).getByLabelText("Rule name") as HTMLInputElement).value).toBe("Rent rule");
+    // Closing is not saving: nothing was written on either route.
+    expect(calls.filter((call) => call.method !== "GET")).toEqual([]);
+  });
+
+  it("still creates a rule from the card", async () => {
+    const calls = mockApi();
+    render(<RulesView csrf="csrf-token" />);
+    const card = await screen.findByRole("form", { name: "New rule" });
+
+    fireEvent.change(within(card).getByLabelText("Rule name"), { target: { value: "Bars" } });
+    fireEvent.click(within(card).getByRole("checkbox", { name: "Coffee" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Save rule" }));
+
+    await waitFor(() => expect(screen.getByText('Created "Bars".')).toBeTruthy());
+    const posted = calls.find((call) => call.method === "POST");
+    expect(posted?.path).toBe("/api/tagging-rules");
+    expect(posted?.entity).toMatchObject({
+      name: "Bars",
+      combinator: "and",
+      enabled: true,
+      tagIds: [TAG_ID],
+    });
+    expect((within(card).getByLabelText("Rule name") as HTMLInputElement).value).toBe("");
   });
 });

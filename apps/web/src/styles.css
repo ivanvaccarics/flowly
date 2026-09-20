@@ -432,6 +432,32 @@ h3 {
   flex-wrap: wrap;
 }
 
+/* Editing a rule opens over the page, so the create card keeps its own draft. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(1rem, 6vh, 4rem) 1rem 2rem;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.modal {
+  width: min(760px, 100%);
+  box-shadow: var(--shadow-3);
+}
+
+.modal:focus {
+  outline: none;
+}
+
+.modal > header {
+  align-items: center;
+}
+
 .view-header-inline {
   display: flex;
   align-items: baseline;

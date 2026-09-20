@@ -68,8 +68,9 @@ OR over your note, the payee, the imported description, the amount or the
 account — "notes contain rent", "payee is ACME, or amount is over 1000" — and
 assign one or more tags. Rules run on new transactions and imports; you can also
 apply them to what you already have, with a preview of exactly what will change.
-Edit a rule whenever the matching turns out wrong: **Edit** loads it back into
-the same builder, and saving keeps its id, its on/off state and its place in the
+Edit a rule whenever the matching turns out wrong: **Edit** opens it in a dialog
+over the page, so the **New rule** card you may already be writing keeps its own
+draft, and saving keeps the rule's id, its on/off state and its place in the
 order. Rules only add tags, and deleting a rule never takes a tag away.
 
 ### 🌍 Multi-currency, honestly
@@ -210,7 +211,8 @@ section title, the vault state, the local clock and the session controls, and
 every section opens with a summary card carrying its status facts and actions.
 Accounts are endpoint cards with their real balances and a ribbon of booked
 totals, rules are tiles with an on/off switch that reopen in the builder for
-editing, and the ledger's filters include quick tag pills. The ledger pages
+editing — each one opens in a dialog, so the card building a new rule is never
+taken over — and the ledger's filters include quick tag pills. The ledger pages
 through its matching rows on the server — 25 per page by default, 50 or 100
 from the selector — and always says which window it is showing, so a vault with
 thousands of movements is never silently truncated; the dashboard's recent

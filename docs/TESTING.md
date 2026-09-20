@@ -131,8 +131,9 @@ you should see.
 | Do this | Expect |
 | --- | --- |
 | Create an AND rule: note contains "espresso" → tag Coffee | New transactions with that note receive the tag automatically |
-| Press **Edit** on that rule, change the note it matches and save | The builder opens with the rule's name, conditions and tags; saving replaces them, keeps the rule's id and on/off state, and the tile shows the new expression |
-| Press **Edit**, then **New rule** | The builder comes back empty and the stored rule is unchanged |
+| Start a second rule in the **New rule** card, leave it half written, then press **Edit** on the first one | A dialog opens over the page with the rule's name, conditions and tags; the card behind keeps the half-written rule exactly as it was |
+| Change the note the rule matches in the dialog and press **Save changes** | The dialog closes, the tile shows the new expression, and the rule keeps its id and on/off state |
+| Press **Edit**, then close the dialog with **Cancel**, the X or `Esc` | Nothing is written and the **New rule** card is still holding its own draft |
 | Create an OR rule with two conditions | One matching condition is enough |
 | Create an amount rule ("amount less than -5000 EUR") | It only matches transactions in EUR; USD transactions are ignored |
 | Pause a rule, then add a matching transaction | No tag is added |
