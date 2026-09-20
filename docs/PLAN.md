@@ -1381,6 +1381,25 @@ Status: **complete** (2026-09-20), decision in `docs/adr/0024`.
   **Previous**/**Next**. Filter changes and a newly recorded transaction return
   to page 1; a page that empties folds back to the last page that has rows.
 
+#### Task `edit-rules-and-page-the-dashboard`
+
+Status: **complete** (2026-09-20).
+
+- The rules builder edits as well as creates: **Edit** on a tile loads the
+  rule's name, combinator, conditions and tags, and saving replaces them through
+  the existing `PUT /api/tagging-rules/:id`, keeping the id, the revision, the
+  on/off state and the rule's place in the order. **Cancel** returns the builder
+  to a new rule, and deleting the rule being edited drops the edit with it, so
+  the form can never save into a record that is gone.
+- The dashboard's recent transactions page on the server, ten rows at a time,
+  with the window (`Showing 11–20 of 42 transactions`) and **Previous**/**Next**.
+  The header chip counts every match, as the ledger's does, and the pager stays
+  out of the way when everything fits on one page.
+- The dashboard no longer repeats the shell's vault status: the **Local vault
+  status** card was showing the vault id, the last unlock and the encryption
+  state that the sidebar and the top bar already carry, in the middle of a
+  financial summary.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`

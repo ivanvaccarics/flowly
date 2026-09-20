@@ -21,6 +21,7 @@ export type IconName =
   | "refresh"
   | "link"
   | "eye"
+  | "edit"
   | "clock"
   | "eyedropper";
 
@@ -46,6 +47,7 @@ const PATHS: Record<IconName, string> = {
   refresh: "M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4",
   link: "M10.5 13.5a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7l-1 1M13.5 10.5a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1-1",
   eye: "M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+  edit: "M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5zM15 5l4 4",
   clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5V12l3 2",
   eyedropper: "M16.5 3.5a3 3 0 0 1 4 4L18 10l-4-4zM13 8l3 3-8.5 8.5L3 21l1.5-4.5z",
 };

@@ -68,7 +68,9 @@ OR over your note, the payee, the imported description, the amount or the
 account — "notes contain rent", "payee is ACME, or amount is over 1000" — and
 assign one or more tags. Rules run on new transactions and imports; you can also
 apply them to what you already have, with a preview of exactly what will change.
-Rules only add tags, and deleting a rule never takes a tag away.
+Edit a rule whenever the matching turns out wrong: **Edit** loads it back into
+the same builder, and saving keeps its id, its on/off state and its place in the
+order. Rules only add tags, and deleting a rule never takes a tag away.
 
 ### 🌍 Multi-currency, honestly
 Every amount is stored as an **integer in minor units** — no floating-point
@@ -77,9 +79,10 @@ to blend unlike currencies into one fake number without a real exchange rate.
 
 ### 📊 A dashboard worth opening
 Balances per account, net cash flow, income vs. expenses, a pie chart of
-spending by tag and the latest movements — all computed on your self-hosted
-server, without an Internet dependency. Totals always carry their currency, and
-only booked transactions move a balance.
+spending by tag and the latest movements, ten at a time, with **Previous** and
+**Next** when the vault has more — all computed on your self-hosted server,
+without an Internet dependency. Totals always carry their currency, and only
+booked transactions move a balance.
 
 ### 🔎 Search that actually finds it
 Filter by date range, account, tag, amount, currency, status or source — and
@@ -206,12 +209,14 @@ It has one sidebar and six sections: **Dashboard**, **Accounts**,
 section title, the vault state, the local clock and the session controls, and
 every section opens with a summary card carrying its status facts and actions.
 Accounts are endpoint cards with their real balances and a ribbon of booked
-totals, rules are tiles with an on/off switch, and the ledger's filters include
-quick tag pills. The ledger pages through its matching rows on the server — 25
-per page by default, 50 or 100 from the selector — and always says which window
-it is showing, so a vault with thousands of movements is never silently
-truncated. The dashboard charts weekly cash flow and draws spending by tag
-as a pie chart per currency, so no chart ever blends currencies. Accounts can be
+totals, rules are tiles with an on/off switch that reopen in the builder for
+editing, and the ledger's filters include quick tag pills. The ledger pages
+through its matching rows on the server — 25 per page by default, 50 or 100
+from the selector — and always says which window it is showing, so a vault with
+thousands of movements is never silently truncated; the dashboard's recent
+transactions do the same ten rows at a time. The dashboard charts weekly cash
+flow and draws spending by tag as a pie chart per currency, so no chart ever
+blends currencies. Accounts can be
 archived and restored, tags can be renamed and recoloured in place, and Settings
 holds the passphrase change plus export and import, after the Enable Banking
 connection. Export comes in three shapes: the single transaction CSV, a plain ZIP

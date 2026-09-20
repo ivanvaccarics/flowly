@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Tag, TaggingRule } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
@@ -37,6 +37,10 @@ const EMPTY_CONDITION: Condition = { field: "userNote", operator: "contains", va
 export function RulesView({ csrf }: { csrf: string }) {
   const rules = useCollection<TaggingRule>("tagging-rules", csrf, true);
   const tags = useCollection<Tag>("tags", csrf, true);
+  const formRef = useRef<HTMLFormElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  /** The rule the builder is editing; absent means it is building a new one. */
+  const [editing, setEditing] = useState<TaggingRule | undefined>(undefined);
   const [name, setName] = useState("");
   const [combinator, setCombinator] = useState<"and" | "or">("and");
   const [conditions, setConditions] = useState<Condition[]>([{ ...EMPTY_CONDITION }]);
@@ -50,6 +54,27 @@ export function RulesView({ csrf }: { csrf: string }) {
     );
   }
 
+  /** Loads a rule into the builder: fixing a mistake is an edit, not a rebuild. */
+  function startEdit(rule: TaggingRule) {
+    setEditing(rule);
+    setName(rule.name);
+    setCombinator(rule.combinator);
+    setConditions(rule.conditions as unknown as Condition[]);
+    setTagIds([...rule.tagIds]);
+    setActionError(undefined);
+    setReport(undefined);
+    formRef.current?.scrollIntoView?.({ block: "start" });
+    nameRef.current?.focus();
+  }
+
+  function stopEditing() {
+    setEditing(undefined);
+    setName("");
+    setCombinator("and");
+    setConditions([{ ...EMPTY_CONDITION }]);
+    setTagIds([]);
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setActionError(undefined);
@@ -59,6 +84,23 @@ export function RulesView({ csrf }: { csrf: string }) {
       return;
     }
     const now = new Date().toISOString();
+    if (editing) {
+      const saved = await rules.update({
+        // The id, the revision, the on/off state and the createdAt are the
+        // stored rule's: editing replaces its conditions, never its identity.
+        ...editing,
+        name,
+        combinator,
+        conditions: conditions as unknown as TaggingRule["conditions"],
+        tagIds: tagIds as TaggingRule["tagIds"],
+        updatedAt: now,
+      });
+      if (saved) {
+        setReport(`Updated "${editing.name}".`);
+        stopEditing();
+      }
+      return;
+    }
     const created = await rules.create({
       formatVersion: 1,
       revision: 1,
@@ -72,9 +114,8 @@ export function RulesView({ csrf }: { csrf: string }) {
       updatedAt: now,
     });
     if (created) {
-      setName("");
-      setConditions([{ ...EMPTY_CONDITION }]);
-      setTagIds([]);
+      setReport(`Created "${name}".`);
+      stopEditing();
     }
   }
 
@@ -111,17 +152,26 @@ export function RulesView({ csrf }: { csrf: string }) {
 
       <div className="dash">
         <div className="dash-main">
-          <form className="card" onSubmit={submit}>
+          <form className="card" ref={formRef} onSubmit={submit}>
             <header>
               <div>
-                <h2>New rule</h2>
-                <span className="sub">Deterministic matching, evaluated in memory</span>
+                <h2>{editing ? "Edit rule" : "New rule"}</h2>
+                <span className="sub">
+                  {editing
+                    ? "Saving replaces the conditions of this rule and keeps its id, its state and its place in the order"
+                    : "Deterministic matching, evaluated in memory"}
+                </span>
               </div>
             </header>
             <div className="fieldset framed">
               <label>
                 Rule name
-                <input value={name} onChange={(event) => setName(event.target.value)} required />
+                <input
+                  ref={nameRef}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  required
+                />
               </label>
               <label>
                 Match
@@ -272,11 +322,16 @@ export function RulesView({ csrf }: { csrf: string }) {
               )}
             </fieldset>
 
-            <div>
+            <div className="cell-actions" style={{ justifyContent: "flex-start" }}>
               <button type="submit" className="btn primary">
                 <Icon name="check" size={16} />
-                Save rule
+                {editing ? "Save changes" : "Save rule"}
               </button>
+              {editing ? (
+                <button type="button" className="btn" onClick={stopEditing}>
+                  Cancel
+                </button>
+              ) : null}
             </div>
           </form>
         </div>
@@ -328,8 +383,22 @@ export function RulesView({ csrf }: { csrf: string }) {
                       ))}
                       <button
                         type="button"
+                        className="btn small"
+                        aria-label={`Edit rule ${rule.name}`}
+                        onClick={() => startEdit(rule)}
+                      >
+                        <Icon name="edit" size={14} />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
                         className="btn small danger"
-                        onClick={() => void rules.remove(rule.id, rule.revision)}
+                        onClick={() => {
+                          // Deleting the rule the builder is holding would leave
+                          // the form saving into a record that no longer exists.
+                          if (editing?.id === rule.id) stopEditing();
+                          void rules.remove(rule.id, rule.revision);
+                        }}
                       >
                         <Icon name="trash" size={14} />
                         Delete

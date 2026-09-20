@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Account, Dashboard, Tag, Transaction, VaultStatus } from "@flowly/web-contracts";
+import type { Account, Dashboard, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
 import { Banner, Chip, Empty, Money, PageHeader, tagPillStyle } from "../components/ui.js";
@@ -8,6 +8,9 @@ import { describeError } from "../hooks/use-workspace.js";
 import { formatDecimal, formatMinorToAmount } from "../lib/money.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** The dashboard reads the ledger ten rows at a time; the ledger itself pages 25. */
+const RECENT_PAGE_SIZE = 10;
 
 /** Slice colours for tags that have no colour of their own. */
 const SPENDING_COLOURS = [
@@ -59,8 +62,6 @@ function delta(
 }
 
 export interface DashboardViewProps {
-  vaultId: string | null;
-  status: VaultStatus | undefined;
   csrf: string;
   onNewTransaction: () => void;
   onSeeAllTransactions: () => void;
@@ -69,8 +70,6 @@ export interface DashboardViewProps {
 }
 
 export function DashboardView({
-  vaultId,
-  status,
   csrf,
   onNewTransaction,
   onSeeAllTransactions,
@@ -85,24 +84,24 @@ export function DashboardView({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [recent, setRecent] = useState<Transaction[]>([]);
+  const [recentTotal, setRecentTotal] = useState(0);
+  const [recentPage, setRecentPage] = useState(1);
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [current, earlier, accountList, tagList, transactions] = await Promise.all([
+      const [current, earlier, accountList, tagList] = await Promise.all([
         api.dashboard({ from, to }),
         api.dashboard(shiftRange(from, to)),
         api.list<Account>("accounts"),
         api.list<Tag>("tags"),
-        api.searchTransactions({ limit: 5 }),
       ]);
       setDashboard(current);
       setPrevious(earlier);
       setAccounts(accountList.items);
       setTags(tagList.items);
-      setRecent(transactions.items);
       setError(undefined);
     } catch (cause) {
       setError(describeError(cause));
@@ -111,15 +110,47 @@ export function DashboardView({
     }
   }, [from, to]);
 
+  // The recent card pages on the server like the ledger does, so a busy vault
+  // is browsed here instead of being cut off at the first screenful.
+  const loadRecent = useCallback(async () => {
+    try {
+      const response = await api.searchTransactions({
+        limit: RECENT_PAGE_SIZE,
+        offset: (recentPage - 1) * RECENT_PAGE_SIZE,
+      });
+      // The page can empty under the user: fold back to the last one with rows.
+      if (response.items.length === 0 && response.total > 0 && recentPage > 1) {
+        setRecentPage(Math.max(1, Math.ceil(response.total / RECENT_PAGE_SIZE)));
+        return;
+      }
+      setRecent(response.items);
+      setRecentTotal(response.total);
+      setError(undefined);
+    } catch (cause) {
+      setError(describeError(cause));
+    }
+  }, [recentPage]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void loadRecent();
+  }, [loadRecent]);
+
+  const reload = useCallback(async () => {
+    await Promise.all([load(), loadRecent()]);
+  }, [load, loadRecent]);
 
   const tagById = useMemo(() => new Map(tags.map((tag) => [tag.id, tag])), [tags]);
   const accountById = useMemo(
     () => new Map(accounts.map((account) => [account.id, account])),
     [accounts],
   );
+  const recentPageCount = Math.max(1, Math.ceil(recentTotal / RECENT_PAGE_SIZE));
+  const recentFirstRow = recentTotal === 0 ? 0 : (recentPage - 1) * RECENT_PAGE_SIZE + 1;
+  const recentLastRow = (recentPage - 1) * RECENT_PAGE_SIZE + recent.length;
 
   const spendingTotal =
     dashboard?.spendingByTag.reduce((total, entry) => total + entry.spentMinor, 0) ?? 0;
@@ -345,7 +376,7 @@ export function DashboardView({
             <header>
               <h2>Recent transactions</h2>
               <div className="cell-actions">
-                <Chip tone="neutral">{recent.length} records</Chip>
+                <Chip tone="neutral">{recentTotal} records</Chip>
                 <button type="button" className="btn small" onClick={() => onSeeAllTransactions()}>
                   See all →
                 </button>
@@ -440,11 +471,39 @@ export function DashboardView({
             ) : (
               <Empty>No transactions yet. Record the first one.</Empty>
             )}
+            {recentTotal > RECENT_PAGE_SIZE ? (
+              <div className="pager">
+                <p className="pager-summary" role="status">
+                  {`Showing ${recentFirstRow}–${recentLastRow} of ${recentTotal} transactions`}
+                </p>
+                <div className="cell-actions">
+                  <button
+                    type="button"
+                    className="btn small"
+                    disabled={recentPage <= 1}
+                    onClick={() => setRecentPage(Math.max(1, recentPage - 1))}
+                  >
+                    Previous
+                  </button>
+                  <span className="chip mono neutral">
+                    Page {recentPage} / {recentPageCount}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn small"
+                    disabled={recentPage >= recentPageCount}
+                    onClick={() => setRecentPage(Math.min(recentPageCount, recentPage + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <aside className="dash-side">
-          <BankingSyncCard csrf={csrf} onOpenSettings={onOpenSettings} onSynced={load} />
+          <BankingSyncCard csrf={csrf} onOpenSettings={onOpenSettings} onSynced={reload} />
           <div className="card">
             <header>
               <div>
@@ -517,31 +576,6 @@ export function DashboardView({
             ) : (
               <Empty>No accounts yet.</Empty>
             )}
-          </div>
-
-          <div className="card">
-            <header>
-              <h2>Local vault status</h2>
-              <Chip tone="income" icon="shield">
-                offline safe
-              </Chip>
-            </header>
-            <p className="muted">
-              Encrypted at rest with AES-256-GCM. No cloud connection is active and the data stays
-              inside this server's vault folder.
-            </p>
-            <dl className="facts" style={{ gridTemplateColumns: "1fr 1fr" }}>
-              <div>
-                <dt>Vault id</dt>
-                <dd title={vaultId ?? ""}>{vaultId ? vaultId.slice(0, 13) : "—"}</dd>
-              </div>
-              <div>
-                <dt>Last unlocked</dt>
-                <dd>
-                  {status?.lastUnlockedAt ? new Date(status.lastUnlockedAt).toLocaleString() : "—"}
-                </dd>
-              </div>
-            </dl>
           </div>
         </aside>
       </div>

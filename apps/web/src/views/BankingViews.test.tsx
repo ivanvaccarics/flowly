@@ -4,17 +4,6 @@ import { SettingsView } from "./SettingsView.js";
 import { BankCallbackView } from "./BankCallbackView.js";
 import { DashboardView } from "./DashboardView.js";
 
-const unlockedStatus = {
-  state: "unlocked" as const,
-  vaultExists: true,
-  vaultId: "018f2c1e-6d5b-7c3a-9f2e-7c4d5e6f7081",
-  vaultFormatVersion: 1,
-  exportFormatVersion: 1,
-  storageEngine: "sqlcipher" as const,
-  schemaVersion: 5,
-  lastUnlockedAt: "2026-09-01T08:00:00.000Z",
-};
-
 const emptyDashboard = {
   range: { from: "2026-09-01", to: "2026-09-30" },
   generatedAt: "2026-09-30T18:00:00.000Z",
@@ -817,8 +806,6 @@ describe("Enable Banking on the dashboard", () => {
     });
     render(
       <DashboardView
-        vaultId={unlockedStatus.vaultId}
-        status={unlockedStatus}
         csrf="csrf"
         onNewTransaction={() => undefined}
         onSeeAllTransactions={() => undefined}
@@ -851,8 +838,6 @@ describe("Enable Banking on the dashboard", () => {
     });
     render(
       <DashboardView
-        vaultId={unlockedStatus.vaultId}
-        status={unlockedStatus}
         csrf="csrf"
         onNewTransaction={() => undefined}
         onSeeAllTransactions={() => undefined}
@@ -883,8 +868,6 @@ describe("Enable Banking on the dashboard", () => {
     const opened = vi.fn();
     render(
       <DashboardView
-        vaultId={null}
-        status={unlockedStatus}
         csrf="csrf"
         onNewTransaction={() => undefined}
         onSeeAllTransactions={() => undefined}

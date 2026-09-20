@@ -165,8 +165,6 @@ export function AppShell({
           {error ? <Banner tone="error">{error}</Banner> : null}
           {view === "dashboard" ? (
             <DashboardView
-              vaultId={vaultId}
-              status={status}
               csrf={csrf}
               onNewTransaction={() => setView("transactions")}
               onSeeAllTransactions={() => setView("transactions")}

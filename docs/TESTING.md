@@ -131,6 +131,8 @@ you should see.
 | Do this | Expect |
 | --- | --- |
 | Create an AND rule: note contains "espresso" → tag Coffee | New transactions with that note receive the tag automatically |
+| Press **Edit** on that rule, change the note it matches and save | The builder opens with the rule's name, conditions and tags; saving replaces them, keeps the rule's id and on/off state, and the tile shows the new expression |
+| Press **Edit**, then **Cancel** | The builder comes back empty and the stored rule is unchanged |
 | Create an OR rule with two conditions | One matching condition is enough |
 | Create an amount rule ("amount less than -5000 EUR") | It only matches transactions in EUR; USD transactions are ignored |
 | Pause a rule, then add a matching transaction | No tag is added |
@@ -146,6 +148,8 @@ you should see.
 | Look at the spending pie chart and its legend rows | Each currency gets its own pie, sized by booked outflows per tag, with the period total in the middle and one legend row per tag |
 | Press **Export data** in the dashboard header | Settings opens with the export block already in view and focused |
 | Look at the **Bank sync** card | Without a connected bank it offers **Connect to Enable Banking**; with one it shows the last sync, the paired accounts and a **Sync now** button |
+| Look at the **Recent transactions** card with more than ten movements in the vault | Ten rows plus `Showing 1–10 of N transactions` and **Previous**/**Next**; the header chip counts every match, and **See all** opens the full ledger |
+| Look at the dashboard side column | The card is the bank sync, the spending breakdown and the accounts summary: the vault status lives in the shell's sidebar and top bar, not on the dashboard |
 
 ### Bank connection (Enable Banking)
 
