@@ -19,6 +19,12 @@ const DEFAULT_RETRIES = 2;
 const RETRY_BASE_MS = 250;
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
 const MAX_TRANSACTION_PAGES = 40;
+/**
+ * The bank refused the read because the consent used up the accesses it grants
+ * per day (RTS art. 10). Waiting cannot help: the counter resets at the bank's
+ * own midnight, so a retry only spends quota that is already gone.
+ */
+const ASPSP_RATE_LIMIT_CODE = "ASPSP_RATE_LIMIT_EXCEEDED";
 
 /** PSU context forwarded to the ASPSP when the bank requires it. */
 export interface PsuHeaders {
@@ -46,16 +52,25 @@ export class EnableBankingError extends Error {
   readonly status: number;
   readonly code?: string;
   readonly detail?: unknown;
+  /** Delay the provider asked for, in milliseconds, when it sent `Retry-After`. */
+  readonly retryAfterMs?: number;
 
   constructor(
     message: string,
-    options: { status: number; code?: string; detail?: unknown; cause?: unknown },
+    options: {
+      status: number;
+      code?: string;
+      detail?: unknown;
+      retryAfterMs?: number;
+      cause?: unknown;
+    },
   ) {
     super(message, options.cause === undefined ? undefined : { cause: options.cause });
     this.name = "EnableBankingError";
     this.status = options.status;
     if (options.code !== undefined) this.code = options.code;
     if (options.detail !== undefined) this.detail = options.detail;
+    if (options.retryAfterMs !== undefined) this.retryAfterMs = options.retryAfterMs;
   }
 
   /** True when the stored session cannot be used any more. */
@@ -68,6 +83,15 @@ export class EnableBankingError extends Error {
       this.code === "SESSION_DOES_NOT_EXIST" ||
       this.code === "WRONG_SESSION_STATUS"
     );
+  }
+
+  /**
+   * True when the ASPSP itself ran out of the daily accesses the consent
+   * allows. Unlike a transient `429`, this is not worth retrying and the caller
+   * has to stop reading that account for the rest of the bank's day.
+   */
+  get rateLimited(): boolean {
+    return this.code === ASPSP_RATE_LIMIT_CODE;
   }
 }
 
@@ -230,6 +254,9 @@ export class EnableBankingClient {
           return (text === "" ? undefined : JSON.parse(text)) as T;
         }
         const error = await toError(response);
+        // The ASPSP daily cap is not transient: retrying spends the quota
+        // without any chance of a different answer.
+        if (error.rateLimited) throw error;
         if (!RETRYABLE_STATUS.has(response.status) || attempt === this.retries) throw error;
         lastError = error;
       } catch (cause) {
@@ -252,12 +279,24 @@ async function toError(response: Response): Promise<EnableBankingError> {
   } catch {
     // A non-JSON error body still carries the status code.
   }
+  const retryAfterMs = retryAfterFrom(response.headers.get("retry-after"));
   return new EnableBankingError(
     parsed.message ?? `Enable Banking responded with ${response.status}`,
     {
       status: response.status,
       ...(parsed.error === undefined ? {} : { code: parsed.error }),
       ...(parsed.detail === undefined ? {} : { detail: parsed.detail }),
+      ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
     },
   );
+}
+
+/** `Retry-After` is delta-seconds or an HTTP date; anything else is ignored. */
+function retryAfterFrom(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value.trim());
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1000);
+  const at = Date.parse(value);
+  if (Number.isFinite(at)) return Math.max(0, at - Date.now());
+  return undefined;
 }

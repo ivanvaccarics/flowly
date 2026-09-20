@@ -3,6 +3,9 @@
 Status: Accepted (2026-09-15)
 
 Supersedes [ADR 0018](0018-bank-balance-reconciliation.md).
+The refresh cadence listed below is amended by
+[ADR 0025](0025-the-bank-access-budget-is-a-constraint.md): the balance is
+still the bank's figure, but refreshing on unlock is off by default.
 
 ## Context
 

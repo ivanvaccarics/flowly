@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../api/client.js";
+import { api, type BankLinkSummary } from "../api/client.js";
 import { useBanking } from "../hooks/use-banking.js";
 import { Icon } from "./icons.js";
 import { Chip } from "./ui.js";
@@ -37,15 +37,20 @@ export function BankingSyncCard({
   );
   const syncState = status?.sync;
   const lastReport = syncState?.lastReport;
+  const blockedUntil = nextBlockedUntil(links);
 
   async function sync() {
     const result = await banking.run(() => api.syncBanking(csrf));
     if (!result) return;
     const { report } = result;
     setMessage(
-      report.failed > 0
-        ? `Sync finished with issues: ${report.created} new, ${report.updated} updated, ${report.failed} failed.`
-        : `Sync finished: ${report.created} new, ${report.updated} updated, ${report.unchanged} unchanged.`,
+      report.rateLimited
+        ? "The bank refused the read: its daily access limit is reached, so nothing new was imported."
+        : report.blocked > 0
+          ? "One linked bank is still inside its daily access cooldown, so Flowly skipped it."
+          : report.failed > 0
+            ? `Sync finished with issues: ${report.created} new, ${report.updated} updated, ${report.failed} failed.`
+            : `Sync finished: ${report.created} new, ${report.updated} updated, ${report.unchanged} unchanged.`,
     );
     onSynced?.();
   }
@@ -86,7 +91,15 @@ export function BankingSyncCard({
               </span>
             </p>
           ) : null}
-          {lastReport && lastReport.errors.length > 0 ? (
+          {blockedUntil ? (
+            <p className="banner error" role="alert">
+              <Icon name="alert" size={16} />
+              <span>
+                The bank refused the read: its daily access limit is reached. Flowly will try again
+                after {formatStamp(blockedUntil)}.
+              </span>
+            </p>
+          ) : lastReport && lastReport.errors.length > 0 ? (
             <p className="muted">
               {lastReport.failed} failed · {lastReport.skipped} skipped rows.{" "}
               {lastReport.errors[0]?.message}
@@ -130,4 +143,13 @@ export function BankingSyncCard({
 
 function formatStamp(value: string): string {
   return new Date(value).toISOString().replace("T", " ").slice(0, 16);
+}
+
+/** The first instant at which a linked bank stops refusing reads for the day. */
+function nextBlockedUntil(links: BankLinkSummary[]): string | undefined {
+  const now = Date.now();
+  return links
+    .flatMap((link) => (link.syncBlockedUntil ? [link.syncBlockedUntil] : []))
+    .filter((value) => Date.parse(value) > now)
+    .sort((left, right) => Date.parse(left) - Date.parse(right))[0];
 }

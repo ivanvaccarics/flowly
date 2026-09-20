@@ -768,6 +768,12 @@ function ConnectionSettings({
             />
             Refresh my banks every time I unlock the vault
           </label>
+          <p className="muted">
+            Off by default. Banks grant only a few unattended reads per day and per account, so a
+            vault that unlocks often can spend the whole day's budget; when that happens Flowly
+            stops asking and waits before it tries again. <strong>Sync now</strong> on the dashboard
+            pulls the same data on demand.
+          </p>
         </div>
       </details>
 
@@ -804,7 +810,7 @@ function ConnectionForm({
   const [environment, setEnvironment] = useState<"SANDBOX" | "PRODUCTION">("SANDBOX");
   const [psuType, setPsuType] = useState<"personal" | "business">("personal");
   const [country, setCountry] = useState("IT");
-  const [autoSync, setAutoSync] = useState(true);
+  const [autoSync, setAutoSync] = useState(false);
 
   return (
     <div className="stack">

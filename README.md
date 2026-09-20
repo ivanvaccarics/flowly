@@ -93,10 +93,13 @@ encrypted vault. Search your bank by name or BIC, authorize the consent at the
 bank — Flowly comes back on its own — and tell Flowly for each shared account
 whether to create a new account or pair an existing one. For a linked account
 the balance Flowly shows everywhere is the one your bank reports. Banks refresh
-when you unlock the vault, and the dashboard has a **Sync now** button for a
-manual pull. Pending rows reconcile into booked ones in place, your notes and
-tags are never overwritten, every raw provider response is kept per account, and
-the vault stays the canonical ledger. Every row imported from a bank carries a
+when you press **Sync now** on the dashboard, or on every unlock if you switch
+that on in Settings — it is off by default, because a consent only grants a
+handful of unattended reads a day. When the bank refuses one, Flowly stops asking
+and says when it will try again. Pending rows reconcile into booked ones in
+place, your notes and tags are never overwritten, every raw provider response is
+kept per account, and the vault stays the canonical ledger. Every row imported
+from a bank carries a
 **Raw** button in the ledger: it shows the fields Flowly stored next to the ones
 the bank sent, as tables rather than a JSON blob.
 
@@ -279,7 +282,8 @@ deployment: HTTPS with a local certificate authority, upgrade and rollback
 documentation, an SBOM and license inventory, and a threat model. Phase 6 then
 connects the server to Enable Banking: bank consent with per-account linking, raw
 provider payloads stored per account, reconciliation by provider id, and refresh
-on unlock or on demand. The app is still pre-release: an independent
+on demand or on unlock when the setting asks for it. The app is still
+pre-release: an independent
 cryptographic review and a full assistive-technology audit remain open.
 
 | | Milestone | Status |

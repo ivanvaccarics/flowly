@@ -1,6 +1,8 @@
 import { systemClock, type Clock } from "../domain/clock.js";
 import {
   BANK_INITIAL_SYNC_DAYS,
+  BANK_RATE_LIMIT_COOLDOWN_MS,
+  BANK_RATE_LIMIT_MAX_COOLDOWN_MS,
   BANK_SYNC_OVERLAP_DAYS,
   type BankAccountLink,
   type BankConnection,
@@ -35,6 +37,10 @@ export interface SyncReport {
   unchanged: number;
   skipped: number;
   failed: number;
+  /** Links skipped because the bank's daily access cap is still in force. */
+  blocked: number;
+  /** Set when the bank refused a read for its daily cap during this run. */
+  rateLimited: boolean;
   errors: SyncErrorEntry[];
   reconnectRequired: string[];
 }
@@ -104,6 +110,8 @@ export class BankSyncService {
       unchanged: 0,
       skipped: 0,
       failed: 0,
+      blocked: 0,
+      rateLimited: false,
       errors: [],
       reconnectRequired: [],
     };
@@ -121,7 +129,14 @@ export class BankSyncService {
 
     for (const link of links) {
       report.links += 1;
-      await this.syncLink(link, client, report, options.psu);
+      if (await this.skipBlocked(link, report)) continue;
+      const refused = await this.syncLink(link, client, report, options.psu);
+      // The cap belongs to the consent: reading the accounts and the links that
+      // come after this one only spends more of a budget that is already empty.
+      if (refused) {
+        report.rateLimited = true;
+        break;
+      }
     }
 
     report.finishedAt = this.clock.nowIso();
@@ -133,19 +148,19 @@ export class BankSyncService {
     client: EnableBankingClient,
     report: SyncReport,
     psu: PsuHeaders | undefined,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const accounts = (await this.vault.bankAccounts.list({ refA: link.id })).filter(
       (account) => account.status === "mapped" && account.accountId !== undefined,
     );
     if (accounts.length === 0) {
-      return;
+      return false;
     }
     if (link.status !== "authorized") {
       report.reconnectRequired.push(link.id);
       report.failed += 1;
       report.errors.push({ linkId: link.id, message: reconnectMessage(link.status) });
       await this.finishLink(link, reconnectMessage(link.status));
-      return;
+      return false;
     }
     const validUntil = link.accessValidUntil ? Date.parse(link.accessValidUntil) : Number.NaN;
     if (Number.isFinite(validUntil) && validUntil < Date.now()) {
@@ -153,7 +168,7 @@ export class BankSyncService {
       report.reconnectRequired.push(link.id);
       report.failed += 1;
       report.errors.push({ linkId: link.id, message: "consent expired" });
-      return;
+      return false;
     }
 
     try {
@@ -168,7 +183,7 @@ export class BankSyncService {
           report.reconnectRequired.push(link.id);
           report.failed += 1;
           report.errors.push({ linkId: link.id, message: `session ${status}` });
-          return;
+          return false;
         }
         await this.storePayload(link, {
           kind: "session",
@@ -177,17 +192,21 @@ export class BankSyncService {
         });
       }
     } catch (error) {
+      if (error instanceof EnableBankingError && error.rateLimited) {
+        await this.refuse(link, error, report);
+        return true;
+      }
       if (error instanceof EnableBankingError && error.needsReconnect) {
         await this.markExpired(link, reconnectMessage(undefined));
         report.reconnectRequired.push(link.id);
         report.failed += 1;
         report.errors.push({ linkId: link.id, message: error.message });
-        return;
+        return false;
       }
       report.failed += 1;
       report.errors.push({ linkId: link.id, message: describe(error) });
       await this.finishLink(link, describe(error));
-      return;
+      return false;
     }
 
     let lastError: string | undefined;
@@ -196,6 +215,10 @@ export class BankSyncService {
       try {
         await this.syncAccount(link, account, client, report, psu);
       } catch (error) {
+        if (error instanceof EnableBankingError && error.rateLimited) {
+          await this.refuse(link, error, report);
+          return true;
+        }
         report.failed += 1;
         lastError = describe(error);
         report.errors.push({
@@ -208,11 +231,12 @@ export class BankSyncService {
           await this.markExpired(link, reconnectMessage(undefined));
           report.reconnectRequired.push(link.id);
           await this.finishLink(link, reconnectMessage(undefined), true);
-          return;
+          return false;
         }
       }
     }
     await this.finishLink(link, lastError);
+    return false;
   }
 
   private async syncAccount(
@@ -249,6 +273,9 @@ export class BankSyncService {
       });
       balance = pickBalance(balances);
     } catch (error) {
+      // An exhausted daily budget stops the account there: reading the
+      // transactions next would only spend more of it.
+      if (error instanceof EnableBankingError && error.rateLimited) throw error;
       report.errors.push({
         linkId: link.id,
         providerAccountUid: account.providerAccountUid,
@@ -450,9 +477,70 @@ export class BankSyncService {
     if (!current) return;
     const next: BankLink = { ...current };
     if (!keepTimestamp) next.lastSyncedAt = this.clock.nowIso();
-    if (error === undefined) delete next.lastSyncError;
-    else next.lastSyncError = error.slice(0, 300);
+    if (error === undefined) {
+      delete next.lastSyncError;
+      // The bank answered again, so the daily cap is behind us: the next hit
+      // starts the cooldown over instead of inheriting the old escalation.
+      delete next.syncBlockedUntil;
+      delete next.syncRateLimitStreak;
+    } else next.lastSyncError = error.slice(0, 300);
     await this.vault.bankLinks.update(next, current.revision);
+  }
+
+  /**
+   * True when the link is still sitting out the bank's daily access cap, so the
+   * run reports it without asking the provider for anything.
+   */
+  private async skipBlocked(link: BankLink, report: SyncReport): Promise<boolean> {
+    const blockedUntil = link.syncBlockedUntil;
+    if (!blockedUntil || Date.parse(blockedUntil) <= this.clock.now().getTime()) return false;
+    report.blocked += 1;
+    const message = rateLimitMessage(blockedUntil);
+    report.errors.push({ linkId: link.id, message });
+    const current = await this.vault.bankLinks.get(link.id);
+    if (current && current.lastSyncError !== message) {
+      await this.vault.bankLinks.update({ ...current, lastSyncError: message }, current.revision);
+    }
+    return true;
+  }
+
+  /** Records the refusal, stops the account loop and arms the cooldown. */
+  private async refuse(
+    link: BankLink,
+    error: EnableBankingError,
+    report: SyncReport,
+  ): Promise<void> {
+    const until = await this.blockLink(link, error);
+    report.failed += 1;
+    report.errors.push({ linkId: link.id, message: rateLimitMessage(until) });
+  }
+
+  /**
+   * Arms the cooldown on the link. The bank's counter resets at its own
+   * midnight, which Flowly cannot observe, so the wait doubles on every hit
+   * that finds the previous one was not enough.
+   */
+  private async blockLink(link: BankLink, error: EnableBankingError): Promise<string> {
+    const now = this.clock.now().getTime();
+    const streak = (link.syncRateLimitStreak ?? 0) + 1;
+    const cooldown = Math.min(
+      BANK_RATE_LIMIT_COOLDOWN_MS * 2 ** (streak - 1),
+      BANK_RATE_LIMIT_MAX_COOLDOWN_MS,
+    );
+    const until = new Date(now + Math.max(cooldown, error.retryAfterMs ?? 0)).toISOString();
+    const current = await this.vault.bankLinks.get(link.id);
+    if (current) {
+      await this.vault.bankLinks.update(
+        {
+          ...current,
+          syncBlockedUntil: until,
+          syncRateLimitStreak: streak,
+          lastSyncError: rateLimitMessage(until).slice(0, 300),
+        },
+        current.revision,
+      );
+    }
+    return until;
   }
 
   private async markExpired(link: BankLink, message: string): Promise<void> {
@@ -490,6 +578,14 @@ function reconnectMessage(status: string | undefined): string {
   if (status === "closed") return "The bank session was closed. Reconnect the bank to resume.";
   if (status === "pending") return "This bank still needs to be authorized.";
   return "This bank needs to be reconnected.";
+}
+
+/** What the user reads when the bank's per-day access cap is in the way. */
+function rateLimitMessage(blockedUntil: string): string {
+  return (
+    "The bank's daily access limit for this consent is reached (ASPSP_RATE_LIMIT_EXCEEDED). " +
+    `Flowly will try again after ${blockedUntil}.`
+  );
 }
 
 function describe(error: unknown): string {

@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { appState } from "../src/api/app.js";
 import type { SyncReport } from "../src/banking/sync.js";
+import { fixedClock, type Clock } from "../src/domain/clock.js";
 import { makeConfig, SAMPLE_TAG } from "./helpers/api.js";
 import {
   FakeBank,
+  TEST_NOW,
   connectBank,
   get,
   post,
@@ -13,9 +15,15 @@ import {
 } from "./helpers/banking.js";
 
 const openHarnesses: BankingHarness[] = [];
+const HOUR = 60 * 60_000;
 
-async function harness(bank: FakeBank): Promise<BankingHarness> {
-  const created = await startBankingHarness(makeConfig().config, bank);
+async function harness(bank: FakeBank, clock?: Clock): Promise<BankingHarness> {
+  const created = await startBankingHarness(
+    makeConfig().config,
+    bank,
+    "test passphrase",
+    clock ?? fixedClock(TEST_NOW),
+  );
   openHarnesses.push(created);
   return created;
 }
@@ -48,6 +56,7 @@ interface StatusBody {
     status: string;
     lastSyncedAt?: string;
     lastSyncError?: string;
+    syncBlockedUntil?: string;
     accounts: Array<{
       providerAccountUid: string;
       accountId?: string;
@@ -60,13 +69,29 @@ interface StatusBody {
   sync: { running: boolean; lastSyncAt?: string };
 }
 
-async function mappedHarness(bank = new FakeBank()): Promise<{
+/** A clock the test can move, so a cooldown can be walked through. */
+function movableClock(startIso: string): Clock & { set: (iso: string) => void } {
+  let current = new Date(startIso);
+  return {
+    now: () => new Date(current),
+    nowIso: () => current.toISOString(),
+    todayIso: () => current.toISOString().slice(0, 10),
+    set: (iso: string) => {
+      current = new Date(iso);
+    },
+  };
+}
+
+async function mappedHarness(
+  bank = new FakeBank(),
+  options: { clock?: Clock; autoSync?: boolean } = {},
+): Promise<{
   harness: BankingHarness;
   accountId: string;
   linkId: string;
 }> {
-  const created = await harness(bank);
-  const { linkId } = await connectBank(created);
+  const created = await harness(bank, options.clock);
+  const { linkId } = await connectBank(created, { autoSync: options.autoSync ?? true });
   const status = await get(created, "/api/banking/status");
   const uid = status.json<StatusBody>().links[0]?.accounts[0]?.providerAccountUid as string;
   const mapped = await post(created, `/api/banking/enable-banking/links/${linkId}/accounts`, {
@@ -82,6 +107,38 @@ async function mappedHarness(bank = new FakeBank()): Promise<{
     accountId: mapped.json<StatusBody["links"][number]>().accounts[0]!.accountId as string,
     linkId,
   };
+}
+
+/** Locks the vault and unlocks it again, as a browser returning would. */
+async function lockAndUnlock(session: BankingHarness): Promise<BankingHarness> {
+  await session.app.inject({
+    method: "POST",
+    url: "/api/vault/lock",
+    payload: { scope: "all" },
+    headers: { cookie: session.client.cookie, "x-flowly-csrf": session.client.csrf },
+  });
+  const unlocked = await session.app.inject({
+    method: "POST",
+    url: "/api/vault/unlock",
+    payload: { passphrase: "test passphrase" },
+  });
+  expect(unlocked.statusCode).toBe(200);
+  return {
+    ...session,
+    client: {
+      cookie: (unlocked.headers["set-cookie"] as string).split(";")[0] ?? "",
+      csrf: unlocked.json<{ csrfToken: string }>().csrfToken,
+    },
+  };
+}
+
+async function syncNow(session: BankingHarness): Promise<SyncReport> {
+  return (await post(session, "/api/banking/sync", {})).json<{ report: SyncReport }>().report;
+}
+
+async function linkSummary(session: BankingHarness): Promise<StatusBody["links"][number]> {
+  const status = await get(session, "/api/banking/status");
+  return status.json<StatusBody>().links[0]!;
 }
 
 describe("Enable Banking sync", () => {
@@ -346,23 +403,8 @@ describe("Enable Banking sync", () => {
 
   it("refreshes linked banks right after a vault unlock", async () => {
     const { harness: session } = await mappedHarness();
-    // Lock and unlock again: the connector refreshes in the background.
-    await session.app.inject({
-      method: "POST",
-      url: "/api/vault/lock",
-      payload: { scope: "all" },
-      headers: { cookie: session.client.cookie, "x-flowly-csrf": session.client.csrf },
-    });
-    const unlocked = await session.app.inject({
-      method: "POST",
-      url: "/api/vault/unlock",
-      payload: { passphrase: "test passphrase" },
-    });
-    expect(unlocked.statusCode).toBe(200);
-    const client = {
-      cookie: (unlocked.headers["set-cookie"] as string).split(";")[0] ?? "",
-      csrf: unlocked.json<{ csrfToken: string }>().csrfToken,
-    };
+    // Locking and unlocking again is what makes the connector refresh.
+    const client = (await lockAndUnlock(session)).client;
 
     let items: TransactionRow[] = [];
     for (let attempt = 0; attempt < 40 && items.length === 0; attempt += 1) {
@@ -373,5 +415,81 @@ describe("Enable Banking sync", () => {
     }
     expect(items).toHaveLength(1);
     expect(items[0]?.source).toBe("enable-banking");
+  });
+
+  it("leaves the banks alone on unlock until the setting asks for it", async () => {
+    const bank = new FakeBank();
+    const { harness: session } = await mappedHarness(bank, { autoSync: false });
+    const status = await get(session, "/api/banking/status");
+    expect(status.json<{ autoSync?: boolean }>().autoSync).toBe(false);
+
+    const before = bank.calls.length;
+    const reopened = await lockAndUnlock(session);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(bank.calls.slice(before)).toEqual([]);
+    expect(
+      (await get(reopened, "/api/transactions")).json<{ items: TransactionRow[] }>().items,
+    ).toHaveLength(0);
+  });
+
+  it("stops reading an account as soon as the bank refuses for the day", async () => {
+    const bank = new FakeBank();
+    const { harness: session } = await mappedHarness(bank);
+    bank.rateLimitUid = bank.accounts[0]?.uid as string;
+    bank.rateLimitOn = "getBalances";
+
+    const before = bank.calls.length;
+    const report = await syncNow(session);
+    expect(report.rateLimited).toBe(true);
+    expect(report.failed).toBe(1);
+    expect(report.created).toBe(0);
+    expect(report.errors[0]?.message).toContain("daily access limit");
+
+    // The refusal ends the account where it is: no transaction pages follow.
+    const calls = bank.calls.slice(before);
+    expect(calls.some((call) => call.startsWith("getBalances"))).toBe(true);
+    expect(calls.some((call) => call.startsWith("getTransactions"))).toBe(false);
+
+    const link = await linkSummary(session);
+    expect(link.status).toBe("authorized");
+    expect(Date.parse(link.syncBlockedUntil ?? "")).toBe(Date.parse(TEST_NOW) + 6 * HOUR);
+    expect(link.lastSyncError).toContain("daily access limit");
+  });
+
+  it("waits out the bank's daily cap, widens the cooldown and recovers", async () => {
+    const bank = new FakeBank();
+    const clock = movableClock(TEST_NOW);
+    const { harness: session } = await mappedHarness(bank, { clock });
+    bank.rateLimitUid = bank.accounts[0]?.uid as string;
+
+    const first = await syncNow(session);
+    expect(first.rateLimited).toBe(true);
+    const armed = await linkSummary(session);
+    const armedUntil = Date.parse(armed.syncBlockedUntil ?? "");
+    expect(armedUntil).toBe(Date.parse(TEST_NOW) + 6 * HOUR);
+
+    // Inside the cooldown the bank is not called at all.
+    const before = bank.calls.length;
+    const second = await syncNow(session);
+    expect(second.blocked).toBe(1);
+    expect(second.rateLimited).toBe(false);
+    expect(bank.calls.length).toBe(before);
+
+    // The wait runs out and the bank is still refusing: the next one doubles.
+    clock.set(new Date(armedUntil + 60_000).toISOString());
+    const third = await syncNow(session);
+    expect(third.rateLimited).toBe(true);
+    const widened = await linkSummary(session);
+    expect(Date.parse(widened.syncBlockedUntil ?? "") - clock.now().getTime()).toBe(12 * HOUR);
+
+    // The bank answers again: the block and the streak are gone.
+    bank.rateLimitUid = undefined;
+    clock.set(new Date(Date.parse(widened.syncBlockedUntil ?? "") + 60_000).toISOString());
+    const recovered = await syncNow(session);
+    expect(recovered.rateLimited).toBe(false);
+    expect(recovered.created).toBe(1);
+    const link = await linkSummary(session);
+    expect(link.syncBlockedUntil).toBeUndefined();
+    expect(link.lastSyncError).toBeUndefined();
   });
 });

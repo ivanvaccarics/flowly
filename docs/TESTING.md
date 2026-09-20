@@ -163,9 +163,10 @@ credentials Enable Banking returns.
 | Choose **Create a new account** for one and **Ignore** for another | The created account appears under Accounts with the bank as institution; the ignored one is never imported |
 | Press **Sync now** on the dashboard | Report with created/updated/unchanged counts; the imported rows appear in Transactions with source `enable-banking` |
 | Re-run the sync | Nothing is duplicated: the report says `0 new`, `1 unchanged` |
+| Press **Sync now** after the bank has refused a read for its daily cap | The dashboard says the bank's daily access limit is reached and when Flowly will try again; the report counts that bank as blocked and spends no further provider read |
 | Edit the note of an imported transaction, then sync again | The note and your tags survive; only provider fields are reconciled |
 | Unlink the bank from Settings | The link and its raw payloads disappear; every imported transaction stays |
-| Restart the server and unlock | Linked banks refresh in the background without blocking the unlock |
+| Restart the server and unlock | The unlock never waits for the bank. Linked banks refresh in the background only with **Refresh my banks every time I unlock the vault** switched on — off by default — otherwise press **Sync now** |
 
 ### Import and export
 

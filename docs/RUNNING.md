@@ -41,8 +41,8 @@ What works today (end of Phase 6):
 - transaction CSV export/import with preview, a plain ZIP with one CSV per
   table for taking your data elsewhere, plus the encrypted complete archive
 - Enable Banking: connect a bank from Settings, choose for each shared account
-  whether Flowly creates an account or pairs an existing one, refresh on unlock
-  and on demand from the dashboard
+  whether Flowly creates an account or pairs an existing one, refresh on demand
+  from the dashboard and, if you switch it on, on every unlock
 
 Useful commands:
 
@@ -127,7 +127,14 @@ flow anyway: it only needs the redirect URL, not a working callback host.
 
 After that:
 
-- unlocking the vault refreshes every linked bank in the background;
+- **Sync now** on the dashboard pulls every linked bank; unlocking the vault does
+  the same only when **Refresh my banks every time I unlock the vault** is on,
+  which it is not by default — a bank consent grants only a few unattended reads
+  a day, and a vault you unlock all day would spend them before lunch;
+- if the bank refuses a read because the consent ran out of accesses for the
+  day, Flowly stops there, says when it will try again (six hours, doubling on
+  every further refusal up to a day) and skips the bank until then instead of
+  asking again;
 - the dashboard shows the last sync and a **Sync now** button for a manual
   refresh;
 - the first sync of an account looks back 90 days, later syncs resume from the
@@ -146,9 +153,9 @@ other links and the same transactions.
 For an account paired with a bank, the balance Flowly shows **everywhere** — the
 dashboard, the Accounts cards and the totals — is the figure Enable Banking
 reported at the last sync, in the currency the bank sent. It refreshes when the
-vault unlocks, when you press **Sync now**, and on every later sync. A movement
-you add by hand to a linked account therefore does not move the balance until the
-bank reports it too.
+vault unlocks (when that setting is on), when you press **Sync now**, and on
+every later sync. A movement you add by hand to a linked account therefore does
+not move the balance until the bank reports it too.
 
 Accounts with no bank link use the figure the vault can compute for itself: the
 account's opening balance plus its booked movements. The bank card in Settings
@@ -294,6 +301,8 @@ Phase boundaries and dependencies are listed in `docs/PLAN.md` sections 17-18.
 | `bank_redirect_not_registered` | The callback URL in Settings is not one of the redirect URLs registered for the Enable Banking application. Copy one exactly. |
 | `bank_environment_mismatch` | The `.pem` belongs to a PRODUCTION application while the configuration says SANDBOX (or the other way round). Change the environment field. |
 | `bank_state_invalid` | The bank redirect was replayed, expired (15 minutes), deleted from Settings, or started in another browser session. The callback page says which: start the connection again, and press **Delete** on a request you no longer want. |
+| `ASPSP_RATE_LIMIT_EXCEEDED` while syncing | The bank's own cap on the reads a consent allows per day, not a network problem. Flowly stops asking, shows when it will try again (six hours, doubling per refusal up to a day) and skips the bank until then. Wait it out, or re-authorize the bank from Settings: an access with you present is authenticated and is not part of that budget. |
+| The dashboard says a bank is marked *limit reached* and **Sync now** imports nothing | The consent has already been refused today, so the run skips that bank on purpose. The ledger still holds everything the bank shared; the next attempt happens on its own after the time shown. |
 | The bank window says **Flowly has no pending request for this code** | The authorization was already completed, deleted, or started in another Flowly instance. Delete the pending request in Settings and connect once more. |
 | Flowly still shows an old interface after a rebuild | The shell itself is served `no-cache` now, so a normal reload is enough; before that fix, empty the browser cache or hard-reload. |
 | The browser says **Not secure** / warns about the certificate | That is Caddy's local CA, not a broken connection. Trust it once with `pnpm ca:export` and the command it prints (see [DEPLOYMENT.md](DEPLOYMENT.md#certificates)), or serve Flowly through `tailscale serve` and there is nothing to trust. |

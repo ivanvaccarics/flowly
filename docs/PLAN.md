@@ -820,18 +820,30 @@ The connector is written from the provider's documented API, inside the server:
 - Credentials live in the encrypted vault and never in the browser bundle or in
   a plain file on the server.
 - Requests carry explicit timeouts, retries with bounded backoff, pagination and
-  rate-limit handling.
+  rate-limit handling. The one exception is the bank's own cap on the number of
+  reads a consent allows per day (`ASPSP_RATE_LIMIT_EXCEEDED`): that is not
+  transient, so the client does not retry it, keeps the `Retry-After` the
+  provider sent and hands the refusal back to the sync.
 - A single sync runs at a time; concurrent requests join the run in progress.
 - Sandbox fixtures are sanitized and covered by tests; real transaction files
   are never committed.
 
 ### 12.5 Refresh behaviour
 
-- Unlocking the vault triggers a background refresh of every linked bank; the
+- Unlocking the vault can trigger a background refresh of every linked bank, but
+  only when the setting asks for it: it is **off by default**, because every
+  read spends the consent's daily access budget and banks grant only a few. The
   unlock response never waits for the provider, and failures are reported on the
   link instead of blocking the session.
+- A bank that refuses a read for its daily cap stops the run where it is — the
+  remaining accounts and links are not asked — and the link records the instant
+  Flowly will try again. The wait starts at six hours and doubles on every
+  further refusal up to a 24-hour ceiling; a link inside its wait is skipped
+  without touching the provider, and a sync that completes clears both the wait
+  and the escalation.
 - The dashboard shows the last sync, the sync in progress and a **Sync now**
-  button for a manual refresh, plus the connection state of every bank.
+  button for a manual refresh, plus the connection state of every bank and, when
+  the bank is refusing, when Flowly will try again.
 - The first sync of an account looks back 90 days; later syncs resume from the
   stored cursor with the seven-day overlap.
 - A bank whose consent expired or was revoked is marked `expired` and reported
@@ -1451,6 +1463,22 @@ them to.
 Met: an expired session is the only path back to the passphrase, the bank page
 opens in place, and the ledger matches the bank after one alignment.
 
+#### Task `respect-the-bank-access-budget`
+
+Status: **complete** (2026-09-20), decision in `docs/adr/0025`.
+
+- `ASPSP_RATE_LIMIT_EXCEEDED` is the bank's own cap on how many times a consent
+  may read an account in a day, not a transient throttle. The client no longer
+  retries it, keeps the `Retry-After` the provider sent, and the sync stops at
+  the account that hit it instead of spending the next account's budget too.
+- The link remembers when it may ask again (`syncBlockedUntil`, starting at six
+  hours and doubling per refusal up to 24). Later runs — including the refresh
+  on unlock — report the link as blocked without a provider request, and a sync
+  that completes clears both the wait and the escalation.
+- Refreshing on unlock is now off by default and the connection form no longer
+  ticks it; the dashboard says the bank is refusing and when Flowly will try
+  again, instead of printing the raw ASPSP code.
+
 ### Phase 8 - Flutter foundation
 
 #### Task `native-architecture-spike`
@@ -1650,6 +1678,7 @@ The first MVP is complete at the end of Phase 5 only when:
 | Rule evaluation slows large imports | In-memory evaluation over the imported batch, bounded condition counts per rule, and import performance fixtures |
 | Provider credentials leak from clients | Server-side connector with the key in the encrypted vault, a public-key fingerprint in the API, and a build-time frontend secret scan |
 | A bank changes or withdraws its consent | Stored consent validity, a session status check before every sync, and an `expired` link state that asks for reconnection |
+| A consent runs out of the reads a bank grants per day | Refresh on unlock off by default, one sync at a time, a run that stops at the first refusal, and a widening wait on the link before Flowly asks again |
 | Provider data and the local ledger drift apart | Provider ids plus versioned fingerprints, a seven-day reconciliation overlap, and raw payloads kept per account |
 | Existing prototype encourages unsafe patterns | Retired from the build and the tests; replaced by `apps/server/src/banking/` |
 

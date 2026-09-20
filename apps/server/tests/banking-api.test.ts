@@ -107,10 +107,25 @@ describe("Enable Banking API", () => {
       appName: "mytest-app",
       environment: "SANDBOX",
       redirectUrl: TEST_REDIRECT_URL,
-      autoSync: true,
+      // Refreshing on every unlock spends the bank's daily access budget, so a
+      // connection starts without it and the setting has to be asked for.
+      autoSync: false,
     });
     expect(body.connection?.keyFingerprint).toMatch(/^[0-9a-f]{32}$/);
     expect(status.body).not.toContain("PRIVATE KEY");
+
+    const enabled = await put(
+      { app, client } as BankingHarness,
+      "/api/banking/enable-banking/config",
+      {
+        appId: TEST_APP_ID,
+        redirectUrl: TEST_REDIRECT_URL,
+        environment: "SANDBOX",
+        country: "IT",
+        autoSync: true,
+      },
+    );
+    expect(enabled.json<ConnectionStatus>().connection).toMatchObject({ autoSync: true });
   });
 
   it("rejects credentials whose redirect URL is not registered", async () => {

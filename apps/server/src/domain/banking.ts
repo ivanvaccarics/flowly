@@ -25,6 +25,14 @@ export const BANK_CONSENT_TARGET_DAYS = 90;
 export const BANK_INITIAL_SYNC_DAYS = 90;
 /** Overlap re-read on every sync so pending-to-booked changes are reconciled. */
 export const BANK_SYNC_OVERLAP_DAYS = 7;
+/**
+ * How long a link waits after the bank refuses a read because the consent used
+ * up its daily accesses. The bank's counter resets at its own midnight, which
+ * Flowly cannot see, so the first hit buys six hours and every further hit
+ * doubles it up to the ceiling.
+ */
+export const BANK_RATE_LIMIT_COOLDOWN_MS = 6 * 60 * 60_000;
+export const BANK_RATE_LIMIT_MAX_COOLDOWN_MS = 24 * 60 * 60_000;
 
 const IBAN_PATTERN = /^[A-Z]{2}[0-9A-Z]{11,32}$/;
 const PRIVATE_KEY_PATTERN = /-----BEGIN (?:RSA )?PRIVATE KEY-----/;
@@ -160,6 +168,14 @@ export interface BankLink {
   providerAccountUids: string[];
   lastSyncedAt?: string;
   lastSyncError?: string;
+  /**
+   * While this instant is in the future the bank has already refused a read
+   * for the day: syncs skip the link instead of spending more of the consent's
+   * daily accesses.
+   */
+  syncBlockedUntil?: string;
+  /** Consecutive daily-cap hits, used to widen the next cooldown. */
+  syncRateLimitStreak?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -207,6 +223,17 @@ export function validateBankLink(link: BankLink): void {
   }
   if (link.lastSyncError !== undefined) {
     assertText(link.lastSyncError, "bankLink.lastSyncError", { max: 300, optional: true });
+  }
+  if (link.syncBlockedUntil !== undefined) {
+    assertIsoDateTime(link.syncBlockedUntil, "bankLink.syncBlockedUntil");
+  }
+  if (link.syncRateLimitStreak !== undefined) {
+    if (!Number.isSafeInteger(link.syncRateLimitStreak) || link.syncRateLimitStreak < 0) {
+      throw new DomainError(
+        "invalid-value",
+        "bankLink.syncRateLimitStreak must be a non-negative integer",
+      );
+    }
   }
   assertIsoDateTime(link.createdAt, "bankLink.createdAt");
   assertIsoDateTime(link.updatedAt, "bankLink.updatedAt");

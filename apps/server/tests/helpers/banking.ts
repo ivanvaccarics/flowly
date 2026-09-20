@@ -5,7 +5,7 @@ import {
   EnableBankingError,
   type EnableBankingClient,
 } from "../../src/banking/enable-banking-client.js";
-import { fixedClock } from "../../src/domain/clock.js";
+import { fixedClock, type Clock } from "../../src/domain/clock.js";
 import type { ServerConfig } from "../../src/config.js";
 import { cleanup } from "./test-utils.js";
 import type {
@@ -122,6 +122,9 @@ export interface FakeBankOptions {
   failSessionStatusOnce?: boolean;
 }
 
+/** The read on which the ASPSP starts refusing for its daily access cap. */
+export type RateLimitCall = "getAccount" | "getBalances" | "getTransactions";
+
 /**
  * In-memory stand-in for the Enable Banking API. Records every call so tests
  * can assert what was fetched, with when.
@@ -138,6 +141,11 @@ export class FakeBank {
   deletedSessions: string[] = [];
   startAuthorizationBody: Record<string, unknown> | undefined;
   error429Once = false;
+  /** Provider account uid the ASPSP refuses, and the read that first hits it. */
+  rateLimitUid: string | undefined;
+  rateLimitOn: RateLimitCall = "getTransactions";
+  /** `Retry-After` the refusal carries, when the test wants one. */
+  rateLimitRetryAfterMs?: number;
 
   constructor(options: FakeBankOptions = {}) {
     this.application = {
@@ -250,11 +258,13 @@ export class FakeBank {
     const account = this.accounts.find((candidate) => candidate.uid === accountUid);
     if (!account)
       throw new EnableBankingError("No account", { status: 404, code: "ACCOUNT_DOES_NOT_EXIST" });
+    this.refuseWhenRateLimited(accountUid, "getAccount");
     return account;
   }
 
   async getBalances(accountUid: string): Promise<EbBalance[]> {
     this.calls.push(`getBalances:${accountUid}`);
+    this.refuseWhenRateLimited(accountUid, "getBalances");
     return this.balances;
   }
 
@@ -263,10 +273,26 @@ export class FakeBank {
     params: { dateFrom?: string; dateTo?: string } = {},
   ): Promise<Array<{ transactions: EbTransaction[]; continuationKey?: string }>> {
     this.calls.push(`getTransactions:${accountUid}:${params.dateFrom ?? "*"}`);
+    this.refuseWhenRateLimited(accountUid, "getTransactions");
     return this.transactionPages.map((transactions, index) => ({
       transactions,
       ...(index < this.transactionPages.length - 1 ? { continuationKey: `page-${index + 1}` } : {}),
     }));
+  }
+
+  /** The ASPSP answer when the consent has spent the day's accesses. */
+  private refuseWhenRateLimited(accountUid: string, call: RateLimitCall): void {
+    if (this.rateLimitUid !== accountUid || this.rateLimitOn !== call) return;
+    throw new EnableBankingError(
+      "The access on the account has been exceeding the consented multiplicity per day",
+      {
+        status: 429,
+        code: "ASPSP_RATE_LIMIT_EXCEEDED",
+        ...(this.rateLimitRetryAfterMs === undefined
+          ? {}
+          : { retryAfterMs: this.rateLimitRetryAfterMs }),
+      },
+    );
   }
 }
 
@@ -288,13 +314,14 @@ export async function startBankingHarness(
   config: ServerConfig,
   bank = new FakeBank(),
   passphrase = "test passphrase",
+  clock: Clock = fixedClock(TEST_NOW),
 ): Promise<BankingHarness> {
   const app = buildApp({
     config,
     banking: {
       clientFor: () => bank.asClient(),
       sleep: async () => undefined,
-      clock: fixedClock(TEST_NOW),
+      clock,
     },
   });
   const response = await app.inject({
@@ -324,7 +351,7 @@ export async function startBankingHarness(
 /** Connects the fake app and returns the created link id. */
 export async function connectBank(
   harness: BankingHarness,
-  options: { aspspName?: string; aspspCountry?: string } = {},
+  options: { aspspName?: string; aspspCountry?: string; autoSync?: boolean } = {},
 ): Promise<{ linkId: string; state: string; url: string }> {
   const saved = await put(harness, "/api/banking/enable-banking/config", {
     appId: TEST_APP_ID,
@@ -333,7 +360,7 @@ export async function connectBank(
     environment: "SANDBOX",
     psuType: "personal",
     country: "IT",
-    autoSync: true,
+    autoSync: options.autoSync ?? true,
   });
   if (saved.statusCode !== 200) throw new Error(`config failed: ${saved.body}`);
   const started = await post(harness, "/api/banking/enable-banking/authorize", {

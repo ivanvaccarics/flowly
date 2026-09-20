@@ -487,7 +487,7 @@ mounted in a way that ignores ownership, so the script deliberately leaves
 `data/` alone there: chowning it would take the vault away from its owner without
 buying anything.
 | Enable Banking says the redirect URL is not allowed | The URL registered does not match the address in use | Register `https://<host>.<tailnet>.ts.net/enablebanking/auth_callback`; Settings warns when the two differ, and **Use the address I am using now** fills in the right one |
-| `ASPSP_RATE_LIMIT_EXCEEDED` while syncing | The bank's own limit on daily unattended reads | Nothing to do with the network: sync less often and retry the next day ([RUNNING.md](./RUNNING.md)) |
+| `ASPSP_RATE_LIMIT_EXCEEDED` while syncing | The bank's own limit on the reads a consent allows per day | Nothing to do with the network: Flowly stops asking and waits out a cooldown — six hours, doubling on every further refusal up to a day. Refreshing on unlock is off by default ([RUNNING.md](./RUNNING.md)) |
 
 ## 9. Related
 

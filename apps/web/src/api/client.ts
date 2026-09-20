@@ -70,6 +70,8 @@ export interface BankLinkSummary {
   accessValidUntil?: string;
   lastSyncedAt?: string;
   lastSyncError?: string;
+  /** While this instant is in the future the bank's daily access cap blocks the link. */
+  syncBlockedUntil?: string;
   /** Set while the bank authorization is pending, so it can be resumed. */
   authorizationUrl?: string;
   createdAt: string;
@@ -87,6 +89,10 @@ export interface BankingSyncReport {
   unchanged: number;
   skipped: number;
   failed: number;
+  /** Links skipped because the bank's daily access cap is still in force. */
+  blocked: number;
+  /** True when the bank refused a read for its daily cap during this run. */
+  rateLimited: boolean;
   errors: Array<{ linkId: string; accountId?: string; message: string }>;
   reconnectRequired: string[];
 }

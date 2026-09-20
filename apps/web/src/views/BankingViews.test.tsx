@@ -797,6 +797,8 @@ describe("Enable Banking on the dashboard", () => {
             unchanged: 0,
             skipped: 0,
             failed: 0,
+            blocked: 0,
+            rateLimited: false,
             errors: [],
             reconnectRequired: [],
           },
@@ -828,6 +830,40 @@ describe("Enable Banking on the dashboard", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /Sync now/ })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: /Sync now/ }));
     await waitFor(() => expect(screen.getByText(/Sync finished: 2 new, 1 updated/)).toBeTruthy());
+  });
+
+  it("says when the bank's daily access limit is in the way", async () => {
+    const blockedUntil = new Date(Date.now() + 6 * 60 * 60_000).toISOString();
+    mockFetch({
+      "/api/banking/status": () =>
+        json({
+          provider: "enable-banking",
+          configured: true,
+          connection: CONNECTION,
+          links: [{ ...LINK, syncBlockedUntil: blockedUntil }],
+          sync: { running: false },
+          autoSync: false,
+        }),
+      "/api/dashboard": () => json(emptyDashboard),
+      "/api/accounts": () => json({ items: [] }),
+      "/api/tags": () => json({ items: [] }),
+      "/api/transactions": () => json({ items: [], total: 0, limit: 5, offset: 0 }),
+    });
+    render(
+      <DashboardView
+        vaultId={unlockedStatus.vaultId}
+        status={unlockedStatus}
+        csrf="csrf"
+        onNewTransaction={() => undefined}
+        onSeeAllTransactions={() => undefined}
+        onExportData={() => undefined}
+        onOpenSettings={() => undefined}
+      />,
+    );
+
+    // The raw ASPSP code is replaced by the reason and the next attempt.
+    await waitFor(() => expect(screen.getByText(/its daily access limit is reached/)).toBeTruthy());
+    expect(screen.queryByText(/ASPSP_RATE_LIMIT_EXCEEDED/)).toBeNull();
   });
 
   it("points to Settings when no bank is connected", async () => {

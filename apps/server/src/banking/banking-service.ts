@@ -92,6 +92,8 @@ export interface BankLinkSummary {
   accessValidUntil?: string;
   lastSyncedAt?: string;
   lastSyncError?: string;
+  /** While this instant is in the future the bank's daily cap blocks the link. */
+  syncBlockedUntil?: string;
   /** Present while the link waits for the bank, so the flow survives a reload. */
   authorizationUrl?: string;
   createdAt: string;
@@ -269,7 +271,7 @@ export class BankingService {
       environment: input.environment ?? existing?.environment ?? "SANDBOX",
       psuType: input.psuType ?? existing?.psuType ?? "personal",
       country: (input.country ?? existing?.country ?? "IT").toUpperCase(),
-      autoSync: input.autoSync ?? existing?.autoSync ?? true,
+      autoSync: input.autoSync ?? existing?.autoSync ?? false,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
@@ -518,9 +520,15 @@ export class BankingService {
     );
     const sessionId = session.session_id ?? link.sessionId;
     const accessValidUntil = normalizeTimestamp(session.access?.valid_until);
+    // A fresh authorization is a fresh access budget at the bank: the cooldown
+    // the old session earned no longer describes this consent.
+    const renewed = { ...link };
+    delete renewed.syncBlockedUntil;
+    delete renewed.syncRateLimitStreak;
+    delete renewed.lastSyncError;
     const updated = await this.vault.bankLinks.update(
       {
-        ...link,
+        ...renewed,
         status: "authorized",
         providerAccountUids: accounts.map((account) => account.uid),
         // Single use: a replayed callback can no longer match this link.
@@ -882,6 +890,7 @@ export class BankingService {
       ...(link.accessValidUntil ? { accessValidUntil: link.accessValidUntil } : {}),
       ...(link.lastSyncedAt ? { lastSyncedAt: link.lastSyncedAt } : {}),
       ...(link.lastSyncError ? { lastSyncError: link.lastSyncError } : {}),
+      ...(link.syncBlockedUntil ? { syncBlockedUntil: link.syncBlockedUntil } : {}),
       ...(link.status === "pending" && link.authorizationUrl
         ? { authorizationUrl: link.authorizationUrl }
         : {}),
