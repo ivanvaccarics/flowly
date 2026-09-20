@@ -83,7 +83,11 @@ Balances per account, net cash flow, income vs. expenses, a pie chart of
 spending by tag and the latest movements, ten at a time, with **Previous** and
 **Next** when the vault has more — all computed on your self-hosted server,
 without an Internet dependency. Totals always carry their currency, and only
-booked transactions move a balance.
+booked transactions move a balance. The charts are meant to be touched: each
+week of the cash-flow chart lights up under the pointer or the arrow keys and
+reads out its income, expenses and net, and a slice of the spending pie
+highlights its legend row and shows that tag's share in the hole — click either
+one and the ledger opens filtered to exactly those rows.
 
 ### 🔎 Search that actually finds it
 Filter by date range, account, tag, amount, currency, status or source — and

@@ -147,6 +147,9 @@ you should see.
 | Look at the per-currency cards | Each currency has its own totals; nothing is converted or blended |
 | Look at any amount | Figures are written the Italian way — `1.234,56` — with the currency code after them, and the ledger's amount column lines up under its own header |
 | Look at the spending pie chart and its legend rows | Each currency gets its own pie, sized by booked outflows per tag, with the period total in the middle and one legend row per tag |
+| Point at a week of the cash-flow chart, then walk it with **←**/**→** | The week lights up with a vertical guide and a tooltip naming the dates, income, expenses and net; the other weeks dim; the arrow keys move the same readout without adding tab stops |
+| Hover a slice or a legend row of the spending pie | The slice thickens, the other slices dim, the legend row highlights and the hole reads the tag's name, amount, share and currency instead of the period total |
+| Click a cash-flow week, then a slice or legend row | The ledger opens filtered to that week's dates, or to that tag inside the dashboard's period, with the filters visible in the form and **Clear filters** at hand |
 | Press **Export data** in the dashboard header | Settings opens with the export block already in view and focused |
 | Look at the **Bank sync** card | Without a connected bank it offers **Connect to Enable Banking**; with one it shows the last sync, the paired accounts and a **Sync now** button |
 | Look at the **Recent transactions** card with more than ten movements in the vault | Ten rows plus `Showing 1–10 of N transactions` and **Previous**/**Next**; the header chip counts every match, and **See all** opens the full ledger |

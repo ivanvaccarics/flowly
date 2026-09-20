@@ -4,6 +4,7 @@ import { Icon, type IconName } from "./icons.js";
 import { Banner } from "./ui.js";
 import { AccountsView } from "../views/AccountsView.js";
 import { DashboardView } from "../views/DashboardView.js";
+import { ledgerSeedKey, type LedgerFilterSeed } from "../lib/ledger-filter.js";
 import { RulesView } from "../views/RulesView.js";
 import { SettingsView } from "../views/SettingsView.js";
 import { TagsView } from "../views/TagsView.js";
@@ -53,6 +54,8 @@ export function AppShell({
   onClearError,
 }: AppShellProps) {
   const [view, setView] = useState("dashboard");
+  /** Set when a dashboard chart sends the user to the ledger on a slice. */
+  const [ledgerSeed, setLedgerSeed] = useState<LedgerFilterSeed | undefined>(undefined);
   // Section anchors: a shortcut can open Settings straight at the block it is
   // about instead of the top of the page. Export is reached from the dashboard
   // hero and the navigation; the top bar keeps only the session controls.
@@ -91,7 +94,11 @@ export function AppShell({
                 key={item.key}
                 type="button"
                 aria-current={view === item.key ? "page" : undefined}
-                onClick={() => setView(item.key)}
+                onClick={() => {
+                  // Opening the ledger from the menu means all of it again.
+                  if (item.key === "transactions") setLedgerSeed(undefined);
+                  setView(item.key);
+                }}
               >
                 <Icon name={item.icon} size={18} />
                 {item.label}
@@ -166,14 +173,26 @@ export function AppShell({
           {view === "dashboard" ? (
             <DashboardView
               csrf={csrf}
-              onNewTransaction={() => setView("transactions")}
-              onSeeAllTransactions={() => setView("transactions")}
+              onNewTransaction={() => {
+                setLedgerSeed(undefined);
+                setView("transactions");
+              }}
+              onSeeAllTransactions={(options) => {
+                setLedgerSeed(options);
+                setView("transactions");
+              }}
               onExportData={openExport}
               onOpenSettings={() => setView("settings")}
             />
           ) : null}
           {view === "accounts" ? <AccountsView csrf={csrf} /> : null}
-          {view === "transactions" ? <TransactionsView csrf={csrf} /> : null}
+          {view === "transactions" ? (
+            <TransactionsView
+              key={ledgerSeedKey(ledgerSeed)}
+              csrf={csrf}
+              {...(ledgerSeed ? { seed: ledgerSeed } : {})}
+            />
+          ) : null}
           {view === "tags" ? <TagsView csrf={csrf} /> : null}
           {view === "rules" ? <RulesView csrf={csrf} /> : null}
           {view === "settings" ? (

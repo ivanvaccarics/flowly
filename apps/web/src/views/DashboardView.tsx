@@ -5,7 +5,8 @@ import { Icon } from "../components/icons.js";
 import { Banner, Chip, Empty, Money, PageHeader, tagPillStyle } from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { describeError } from "../hooks/use-workspace.js";
-import { formatDecimal, formatMinorToAmount } from "../lib/money.js";
+import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
+import { formatDecimal, formatMinorToAmount, formatMoney } from "../lib/money.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -64,7 +65,11 @@ function delta(
 export interface DashboardViewProps {
   csrf: string;
   onNewTransaction: () => void;
-  onSeeAllTransactions: () => void;
+  /**
+   * Opens the ledger. A chart point passes the filter it stands for, so the
+   * figures on the dashboard are one click away from the rows behind them.
+   */
+  onSeeAllTransactions: (seed?: LedgerFilterSeed) => void;
   onExportData: () => void;
   onOpenSettings: () => void;
 }
@@ -366,7 +371,11 @@ export function DashboardView({
               </div>
             </header>
             {primaryBuckets.length > 0 ? (
-              <CashFlowChart buckets={primaryBuckets} currency={primaryCurrency} />
+              <CashFlowChart
+                buckets={primaryBuckets}
+                currency={primaryCurrency}
+                onSelect={(bucket) => onSeeAllTransactions({ from: bucket.from, to: bucket.to })}
+              />
             ) : (
               <Empty>No booked transactions in this period.</Empty>
             )}
@@ -523,6 +532,7 @@ export function DashboardView({
                   totalMinor={group.totalMinor}
                   entries={group.entries}
                   colourOf={colourOf}
+                  onSelectTag={(tagId) => onSeeAllTransactions({ tagId, from, to })}
                 />
               ))
             ) : (
@@ -598,12 +608,15 @@ function SpendingPie({
   totalMinor,
   currency,
   colourOf,
+  onSelectTag,
 }: {
   entries: Array<{ tagId: string; tagName: string; currency: string; spentMinor: number }>;
   totalMinor: number;
   currency: string;
   colourOf: (tagId: string, index: number) => string;
+  onSelectTag?: (tagId: string) => void;
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const size = 168;
   const centre = size / 2;
   const radius = 66;
@@ -624,6 +637,8 @@ function SpendingPie({
     return slice;
   });
   const totalText = formatMinorToAmount(totalMinor, currency);
+  const active = activeIndex === undefined ? undefined : entries[activeIndex];
+  const shareOf = (minor: number) => (totalMinor > 0 ? (minor / totalMinor) * 100 : 0);
   const label = `Spending by tag in ${currency}: ${entries
     .map(
       (entry) =>
@@ -632,14 +647,14 @@ function SpendingPie({
     .join(", ")}`;
 
   return (
-    <div className="donut">
+    <div className={activeIndex === undefined ? "donut" : "donut has-active"}>
       <div className="donut-figure">
         <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
           <circle className="donut-track" cx={centre} cy={centre} r={radius} />
-          {slices.map((slice) => (
+          {slices.map((slice, index) => (
             <circle
               key={slice.key}
-              className="donut-slice"
+              className={activeIndex === index ? "donut-slice is-active" : "donut-slice"}
               cx={centre}
               cy={centre}
               r={radius}
@@ -647,30 +662,80 @@ function SpendingPie({
               strokeDasharray={slice.dash}
               strokeDashoffset={slice.offset}
               transform={`rotate(-90 ${centre} ${centre})`}
+              style={onSelectTag ? { cursor: "pointer" } : undefined}
+              onPointerEnter={() => setActiveIndex(index)}
+              onPointerLeave={() =>
+                setActiveIndex((current) => (current === index ? undefined : current))
+              }
+              onClick={() => onSelectTag?.(entries[index]?.tagId ?? "")}
             />
           ))}
         </svg>
         <div className="donut-center">
-          <span className="eyebrow" style={{ margin: 0 }}>
-            {currency}
-          </span>
-          <span className={totalText.length > 9 ? "total small" : "total"}>{totalText}</span>
-          <span className="sub">spent</span>
+          {active ? (
+            <>
+              <span className="eyebrow" style={{ margin: 0 }} title={active.tagName}>
+                {active.tagName}
+              </span>
+              <span className="total small">
+                {formatMinorToAmount(active.spentMinor, active.currency)}
+              </span>
+              <span className="sub">
+                {active.currency} · {formatDecimal(shareOf(active.spentMinor))}% of spending
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="eyebrow" style={{ margin: 0 }}>
+                {currency}
+              </span>
+              <span className={totalText.length > 9 ? "total small" : "total"}>{totalText}</span>
+              <span className="sub">spent</span>
+            </>
+          )}
         </div>
       </div>
       <ul className="legend-rows">
-        {entries.map((entry, index) => (
-          <li key={`${entry.tagId}-${entry.currency}`}>
-            <span className="legend-item">
-              <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
-              {entry.tagName}
-            </span>
-            <span className="mono">{formatMinorToAmount(entry.spentMinor, entry.currency)}</span>
-            <span className="muted mono">
-              {formatDecimal(totalMinor > 0 ? (entry.spentMinor / totalMinor) * 100 : 0)}%
-            </span>
-          </li>
-        ))}
+        {entries.map((entry, index) => {
+          const row = (
+            <>
+              <span className="legend-item">
+                <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
+                {entry.tagName}
+              </span>
+              <span className="mono">{formatMinorToAmount(entry.spentMinor, entry.currency)}</span>
+              <span className="muted mono">{formatDecimal(shareOf(entry.spentMinor))}%</span>
+            </>
+          );
+          const highlight = {
+            onPointerEnter: () => setActiveIndex(index),
+            onPointerLeave: () =>
+              setActiveIndex((current) => (current === index ? undefined : current)),
+            onFocus: () => setActiveIndex(index),
+            onBlur: () => setActiveIndex((current) => (current === index ? undefined : current)),
+          };
+          return (
+            <li
+              key={`${entry.tagId}-${entry.currency}`}
+              className={activeIndex === index ? "is-active" : undefined}
+            >
+              {onSelectTag ? (
+                <button
+                  type="button"
+                  className="legend-row"
+                  onClick={() => onSelectTag(entry.tagId)}
+                  {...highlight}
+                >
+                  {row}
+                </button>
+              ) : (
+                <div className="legend-row" {...highlight}>
+                  {row}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -679,6 +744,7 @@ function SpendingPie({
 function CashFlowChart({
   buckets,
   currency,
+  onSelect,
 }: {
   buckets: Array<{
     label: string;
@@ -688,7 +754,9 @@ function CashFlowChart({
     expensesMinor: number;
   }>;
   currency: string;
+  onSelect?: (bucket: { from: string; to: string }) => void;
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const width = 640;
   const height = 220;
   const padding = { top: 16, right: 12, bottom: 34, left: 12 };
@@ -709,9 +777,11 @@ function CashFlowChart({
     const y = scale(Math.abs(bucket.incomeMinor - bucket.expensesMinor));
     return `${x},${y}`;
   });
+  const centreOf = (index: number) => padding.left + slot * index + slot / 2;
+  const active = activeIndex === undefined ? undefined : buckets[activeIndex];
 
   return (
-    <div className="chart">
+    <figure className={activeIndex === undefined ? "chart" : "chart has-active"}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
@@ -727,10 +797,22 @@ function CashFlowChart({
             className="grid-line"
           />
         ))}
+        {activeIndex !== undefined ? (
+          <line
+            className="bucket-guide"
+            x1={centreOf(activeIndex)}
+            x2={centreOf(activeIndex)}
+            y1={padding.top}
+            y2={padding.top + chartHeight}
+          />
+        ) : null}
         {buckets.map((bucket, index) => {
           const centre = padding.left + slot * index + slot / 2;
           return (
-            <g key={`${bucket.from}-${index}`}>
+            <g
+              key={`${bucket.from}-${index}`}
+              className={activeIndex === index ? "bucket is-active" : "bucket"}
+            >
               <rect
                 x={centre - barWidth - 2}
                 y={padding.top + scale(bucket.incomeMinor)}
@@ -763,9 +845,128 @@ function CashFlowChart({
         <polyline points={netPoints.join(" ")} className="net-line" />
         {netPoints.map((point, index) => {
           const [x, y] = point.split(",");
-          return <circle key={index} cx={x} cy={y} r={3.5} className="net-dot" />;
+          return (
+            <circle
+              key={index}
+              cx={x}
+              cy={y}
+              r={activeIndex === index ? 5 : 3.5}
+              className={activeIndex === index ? "net-dot is-active" : "net-dot"}
+            />
+          );
         })}
       </svg>
+
+      {/* The hover and focus targets are HTML rather than SVG: they can be
+          named and reached with the keyboard, and the chart keeps its single
+          `role="img"` summary for assistive technology. */}
+      <div
+        className="chart-hits"
+        role="group"
+        aria-label={`Weekly income and expenses in ${currency}, one stop per week`}
+        style={{
+          paddingTop: `${(padding.top / width) * 100}%`,
+          paddingBottom: `${(padding.bottom / width) * 100}%`,
+          paddingLeft: `${(padding.left / width) * 100}%`,
+          paddingRight: `${(padding.right / width) * 100}%`,
+        }}
+      >
+        {buckets.map((bucket, index) => {
+          const net = bucket.incomeMinor - bucket.expensesMinor;
+          return (
+            <button
+              key={`${bucket.from}-${index}`}
+              type="button"
+              className={activeIndex === index ? "chart-hit is-active" : "chart-hit"}
+              // One tab stop: the arrows walk the weeks, as a chart should.
+              tabIndex={
+                activeIndex === index || (activeIndex === undefined && index === 0) ? 0 : -1
+              }
+              aria-label={`${bucket.label} (${bucket.from} to ${bucket.to}): income ${formatMoney(
+                bucket.incomeMinor,
+                currency,
+              )}, expenses ${formatMoney(
+                bucket.expensesMinor,
+                currency,
+              )}, net ${formatMoney(net, currency)}`}
+              onPointerEnter={() => setActiveIndex(index)}
+              onPointerLeave={() =>
+                setActiveIndex((current) => (current === index ? undefined : current))
+              }
+              onFocus={() => setActiveIndex(index)}
+              onBlur={() => setActiveIndex((current) => (current === index ? undefined : current))}
+              onClick={() => onSelect?.({ from: bucket.from, to: bucket.to })}
+              onKeyDown={(event) => {
+                const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+                if (step === 0) return;
+                event.preventDefault();
+                const next = Math.min(buckets.length - 1, Math.max(0, index + step));
+                setActiveIndex(next);
+                const hits = event.currentTarget.parentElement?.querySelectorAll("button");
+                hits?.[next]?.focus();
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {active ? (
+        <ChartTooltip
+          xPercent={(centreOf(activeIndex ?? 0) / width) * 100}
+          title={`${active.label} · ${active.from} → ${active.to}`}
+          rows={[
+            {
+              label: "Income",
+              value: formatMoney(active.incomeMinor, currency),
+              tone: "income",
+            },
+            {
+              label: "Expenses",
+              value: formatMoney(active.expensesMinor, currency),
+              tone: "expense",
+            },
+            {
+              label: "Net",
+              value: formatMoney(active.incomeMinor - active.expensesMinor, currency),
+              tone: "line",
+            },
+          ]}
+          hint="Click to open these rows"
+        />
+      ) : null}
+    </figure>
+  );
+}
+
+/** The bubble that follows the point under the pointer or the keyboard. */
+function ChartTooltip({
+  xPercent,
+  title,
+  rows,
+  hint,
+}: {
+  xPercent: number;
+  title: string;
+  rows: Array<{ label: string; value: string; tone?: string }>;
+  hint?: string;
+}) {
+  // Kept inside the chart: the first and last bucket would otherwise hang out.
+  const left = Math.min(88, Math.max(12, xPercent));
+  return (
+    <div className="chart-tooltip" style={{ left: `${left}%` }} role="presentation">
+      <strong>{title}</strong>
+      <dl>
+        {rows.map((row) => (
+          <div key={row.label}>
+            <dt>
+              <span className={`dot ${row.tone ?? ""}`} />
+              {row.label}
+            </dt>
+            <dd className="mono">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {hint ? <span className="hint">{hint}</span> : null}
     </div>
   );
 }

@@ -1678,6 +1678,11 @@ button.tag-pill:hover {
 
 /* ---------------------------------------------------------------- charts */
 
+.chart {
+  position: relative;
+  margin: 0;
+}
+
 .chart svg {
   width: 100%;
   height: auto;
@@ -1696,6 +1701,26 @@ button.tag-pill:hover {
   fill: var(--expense-graphic);
 }
 
+.bar,
+.axis-label,
+.axis-sub {
+  transition: opacity 0.15s ease;
+}
+
+/* The bucket under the pointer (or the keyboard) stays lit; the rest recedes. */
+.chart.has-active .bucket:not(.is-active) .bar,
+.chart.has-active .bucket:not(.is-active) .axis-label,
+.chart.has-active .bucket:not(.is-active) .axis-sub {
+  opacity: 0.3;
+}
+
+.bucket-guide {
+  stroke: var(--primary);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.55;
+}
+
 .net-line {
   fill: none;
   stroke: var(--primary);
@@ -1707,6 +1732,11 @@ button.tag-pill:hover {
   fill: var(--surface);
   stroke: var(--primary);
   stroke-width: 1.6;
+  transition: r 0.15s ease;
+}
+
+.net-dot.is-active {
+  fill: var(--primary);
 }
 
 .axis-label {
@@ -1725,6 +1755,84 @@ button.tag-pill:hover {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+/* A hover/focus layer in HTML over the SVG: the chart keeps its single
+   `role="img"` summary, while these buttons carry the per-point detail. */
+.chart-hits {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.chart-hit {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chart-hit:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  gap: 0.35rem;
+  min-width: 172px;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  transform: translate(-50%, -6px);
+  pointer-events: none;
+}
+
+.chart-tooltip strong {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.chart-tooltip dl {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.chart-tooltip dl > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.chart-tooltip dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.chart-tooltip dd {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.chart-tooltip .hint {
+  font-size: 0.6875rem;
+  color: var(--text-faint);
 }
 
 .legend-item {
@@ -1785,6 +1893,17 @@ button.tag-pill:hover {
 .donut-slice {
   fill: none;
   stroke-width: 20;
+  transition:
+    stroke-width 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.donut.has-active .donut-slice:not(.is-active) {
+  opacity: 0.3;
+}
+
+.donut-slice.is-active {
+  stroke-width: 26;
 }
 
 .donut-center {
@@ -1820,10 +1939,41 @@ button.tag-pill:hover {
 }
 
 .legend-rows li {
+  display: block;
+}
+
+.legend-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0.75rem;
   align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+button.legend-row {
+  cursor: pointer;
+}
+
+.legend-rows li.is-active .legend-row,
+.legend-row:hover {
+  background: var(--surface-low);
+  border-color: var(--border);
+}
+
+.legend-row:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .summary-row {
@@ -2100,6 +2250,17 @@ button.tag-pill:hover {
 @media (max-width: 1199px) {
   .dash {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar,
+  .axis-label,
+  .axis-sub,
+  .net-dot,
+  .donut-slice,
+  .legend-row {
+    transition: none;
   }
 }
 

@@ -67,6 +67,46 @@ afterEach(() => {
 });
 
 describe("transactions view", () => {
+  it("opens on the filters a dashboard chart sent", async () => {
+    const requested: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+          "http://localhost",
+        );
+        if (url.pathname === "/api/accounts") return json({ items: [account] });
+        if (url.pathname === "/api/tags") return json({ items: [tag] });
+        if (url.pathname === "/api/transactions") {
+          requested.push(url.search);
+          return json({ items: [], total: 0, limit: 25, offset: 0 });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    // What a spent pie slice or a cash-flow week hands over.
+    render(
+      <TransactionsView
+        csrf="csrf-token"
+        seed={{ tagId: TAG_ID, from: "2026-09-01", to: "2026-09-07" }}
+      />,
+    );
+
+    await waitFor(() => expect(requested.length).toBeGreaterThan(0));
+    expect(requested[0]).toContain(`tags=${TAG_ID}`);
+    expect(requested[0]).toContain("from=2026-09-01");
+    expect(requested[0]).toContain("to=2026-09-07");
+
+    // The filters are in the form, not hidden state: clearing them is a click.
+    await waitFor(() =>
+      expect((screen.getByLabelText("From") as HTMLInputElement).value).toBe("2026-09-01"),
+    );
+    expect((screen.getByLabelText("To") as HTMLInputElement).value).toBe("2026-09-07");
+    expect((screen.getByLabelText("Tag") as HTMLSelectElement).value).toBe(TAG_ID);
+  });
+
   it("shows the raw provider record behind a row as tables", async () => {
     vi.stubGlobal(
       "fetch",

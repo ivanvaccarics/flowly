@@ -1404,6 +1404,28 @@ Status: **complete** (2026-09-20).
   state that the sidebar and the top bar already carry, in the middle of a
   financial summary.
 
+#### Task `interactive-dashboard-charts`
+
+Status: **complete** (2026-09-21).
+
+- The cash-flow chart answers the pointer: the week under it lights up, a
+  vertical guide marks it and a tooltip names the dates, income, expenses and
+  net, while the other weeks dim. The same information is reachable with the
+  keyboard — one tab stop for the chart, then **←**/**→** walk the weeks — and
+  clicking a week opens the ledger filtered to that week.
+- The spending pie links its two halves: pointing at a slice or a legend row
+  thickens that slice, dims the others, highlights the row and replaces the
+  period total in the hole with the tag's name, amount, share and currency.
+  Clicking either opens the ledger filtered by that tag inside the dashboard's
+  period.
+- The chart's own summary stays the single `role="img"` a screen reader
+  announces; the per-point detail lives in named HTML controls over the drawing
+  (the weekly hit layer and the legend rows), never in focusable SVG children.
+- `LedgerFilterSeed` carries tag and date filters from a chart into the ledger,
+  which opens with them in its filter form. Opening the ledger from the sidebar
+  or the dashboard's **See all** clears the seed, so a filtered view is never
+  mistaken for the whole ledger.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`

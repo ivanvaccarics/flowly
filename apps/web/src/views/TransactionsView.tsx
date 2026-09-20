@@ -8,6 +8,7 @@ import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { parseAmountToMinor } from "../lib/money.js";
 import { formatMinorToAmount } from "../lib/money.js";
+import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
 import { RawTransactionPanel } from "../components/RawTransactionPanel.js";
 
 interface Filters {
@@ -25,11 +26,23 @@ const EMPTY_FILTERS: Filters = { accountId: "", from: "", to: "", tagId: "", sta
 const PAGE_SIZES = [25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 25;
 
-export function TransactionsView({ csrf }: { csrf: string }) {
+export function TransactionsView({
+  csrf,
+  seed,
+}: {
+  csrf: string;
+  /** Filters the ledger opens with, when a dashboard chart sent the user here. */
+  seed?: LedgerFilterSeed;
+}) {
   const accounts = useCollection<Account>("accounts", csrf, true);
   const tags = useCollection<Tag>("tags", csrf, true);
 
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<Filters>(() => ({
+    ...EMPTY_FILTERS,
+    tagId: seed?.tagId ?? "",
+    from: seed?.from ?? "",
+    to: seed?.to ?? "",
+  }));
 
   const [items, setItems] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
