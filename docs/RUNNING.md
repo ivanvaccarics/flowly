@@ -130,7 +130,9 @@ After that:
 - **Sync now** on the dashboard pulls every linked bank; unlocking the vault does
   the same only when **Refresh my banks every time I unlock the vault** is on,
   which it is not by default — a bank consent grants only a few unattended reads
-  a day, and a vault you unlock all day would spend them before lunch;
+  a day, and a vault you unlock all day would spend them before lunch. A
+  connection saved before that default changed is switched off once, on the
+  first read; switching it back on yourself is then kept;
 - if the bank refuses a read because the consent ran out of accesses for the
   day, Flowly stops there, says when it will try again (six hours, doubling on
   every further refusal up to a day) and skips the bank until then instead of

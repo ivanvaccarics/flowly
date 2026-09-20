@@ -835,6 +835,9 @@ The connector is written from the provider's documented API, inside the server:
   read spends the consent's daily access budget and banks grant only a few. The
   unlock response never waits for the provider, and failures are reported on the
   link instead of blocking the session.
+- A connection stored while that refresh was still the default holds a `true`
+  nobody chose; the first read turns it off and marks the record, and a
+  connection deliberately switched back on keeps its setting from then on.
 - A bank that refuses a read for its daily cap stops the run where it is — the
   remaining accounts and links are not asked — and the link records the instant
   Flowly will try again. The wait starts at six hours and doubles on every
@@ -1388,9 +1391,9 @@ Status: **complete** (2026-09-20).
 - The rules builder edits as well as creates: **Edit** on a tile loads the
   rule's name, combinator, conditions and tags, and saving replaces them through
   the existing `PUT /api/tagging-rules/:id`, keeping the id, the revision, the
-  on/off state and the rule's place in the order. **Cancel** returns the builder
-  to a new rule, and deleting the rule being edited drops the edit with it, so
-  the form can never save into a record that is gone.
+  on/off state and the rule's place in the order. **New rule** hands the builder
+  back to an empty form, and deleting the rule being edited drops the edit with
+  it, so the form can never save into a record that is gone.
 - The dashboard's recent transactions page on the server, ten rows at a time,
   with the window (`Showing 11–20 of 42 transactions`) and **Previous**/**Next**.
   The header chip counts every match, as the ledger's does, and the pager stays
@@ -1495,8 +1498,11 @@ Status: **complete** (2026-09-20), decision in `docs/adr/0025`.
   on unlock — report the link as blocked without a provider request, and a sync
   that completes clears both the wait and the escalation.
 - Refreshing on unlock is now off by default and the connection form no longer
-  ticks it; the dashboard says the bank is refusing and when Flowly will try
-  again, instead of printing the raw ASPSP code.
+  ticks it, including for a connection stored while it still was the default:
+  the first read turns that value off once and marks the record as decided, so a
+  user who switches it back on is obeyed from then on. The dashboard says the
+  bank is refusing and when Flowly will try again, instead of printing the raw
+  ASPSP code.
 
 ### Phase 8 - Flutter foundation
 

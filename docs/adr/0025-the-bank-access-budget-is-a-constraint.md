@@ -48,6 +48,12 @@ that cannot work, and it makes the next attempt land earlier rather than later.
   connection and the connection form no longer ticks it. Unlocking a vault is
   something a person does many times a day; a bank consent allows a handful of
   reads. **Sync now** on the dashboard still pulls on demand.
+- **A stored `true` nobody chose is corrected once.** Connections written while
+  refreshing on unlock was still the default carry `autoSync: true` with no
+  record of anyone deciding it, so the first read turns it off and writes
+  `autoSyncExplicit: true`. The flag is what a later deliberate "on" sets, and
+  once it is there Flowly never touches the setting again: the correction can
+  only ever fire on a record that predates it.
 - **The UI states the reason and the next attempt.** The raw ASPSP code is
   replaced by "the bank refused the read: its daily access limit is reached"
   plus the instant Flowly will try again, both in the link's error and on the
@@ -57,8 +63,9 @@ that cannot work, and it makes the next attempt land earlier rather than later.
 
 - A consented day can no longer be spent by accident. `SCHEMA_VERSION` stays at
   5 because the new fields are optional members of the record JSON, so an
-  existing vault opens without a migration and an existing link starts its
-  escalation at its first refusal.
+  existing vault opens without a migration: the connection is corrected the
+  first time it is read and an existing link starts its escalation at its first
+  refusal.
 - A user who wants fresh numbers on every unlock can still turn the setting on,
   and a bank that refuses will still be respected for the rest of the wait.
 - **Sync now** can answer "nothing was fetched" without an error, which is the

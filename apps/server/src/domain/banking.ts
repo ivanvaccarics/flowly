@@ -55,6 +55,12 @@ export interface BankConnection {
   country: string;
   /** Refresh provider data as soon as the vault is unlocked. */
   autoSync: boolean;
+  /**
+   * True once a client sent `autoSync` on purpose. Absent on a connection
+   * written while refreshing on unlock was still the default, which is how a
+   * stored `true` nobody asked for is recognised and turned off once.
+   */
+  autoSyncExplicit?: boolean;
   appName?: string;
   createdAt: string;
   updatedAt: string;
@@ -124,6 +130,12 @@ export function validateBankConnection(connection: BankConnection): void {
   }
   if (typeof connection.autoSync !== "boolean") {
     throw new DomainError("invalid-value", "bankConnection.autoSync must be a boolean");
+  }
+  if (
+    connection.autoSyncExplicit !== undefined &&
+    typeof connection.autoSyncExplicit !== "boolean"
+  ) {
+    throw new DomainError("invalid-value", "bankConnection.autoSyncExplicit must be a boolean");
   }
   if (connection.appName !== undefined) {
     assertText(connection.appName, "bankConnection.appName", { max: 120, optional: true });

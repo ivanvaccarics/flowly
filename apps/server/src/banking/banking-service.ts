@@ -226,8 +226,25 @@ export class BankingService {
     });
   }
 
+  /**
+   * The stored connection, with the one-time correction that a `true` nobody
+   * asked for is not a choice: refreshing on unlock became opt-in, so a record
+   * written while it was the default is turned off the first time it is read
+   * and marked — a connection deliberately switched back on keeps its setting.
+   */
   async connection(): Promise<BankConnection | undefined> {
-    return (await this.vault.bankConnections.list())[0];
+    const connection = (await this.vault.bankConnections.list())[0];
+    if (!connection || !connection.autoSync || connection.autoSyncExplicit) return connection;
+    try {
+      return await this.vault.bankConnections.update(
+        { ...connection, autoSync: false, autoSyncExplicit: true },
+        connection.revision,
+      );
+    } catch {
+      // A parallel request may have applied the same correction first; whatever
+      // is stored now is the answer either way.
+      return (await this.vault.bankConnections.list())[0] ?? connection;
+    }
   }
 
   async status(): Promise<BankingStatus> {
@@ -260,6 +277,9 @@ export class BankingService {
         "Choose the Enable Banking private key (.pem) to connect.",
       );
     }
+    // A client that sends `autoSync` has made the choice; one that omits it
+    // leaves whatever the stored record already said.
+    const autoSyncExplicit = input.autoSync === undefined ? existing?.autoSyncExplicit : true;
     const candidate: BankConnection = {
       formatVersion: 1,
       revision: existing?.revision ?? 1,
@@ -272,6 +292,7 @@ export class BankingService {
       psuType: input.psuType ?? existing?.psuType ?? "personal",
       country: (input.country ?? existing?.country ?? "IT").toUpperCase(),
       autoSync: input.autoSync ?? existing?.autoSync ?? false,
+      ...(autoSyncExplicit === undefined ? {} : { autoSyncExplicit }),
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };

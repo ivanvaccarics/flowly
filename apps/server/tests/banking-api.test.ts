@@ -128,6 +128,41 @@ describe("Enable Banking API", () => {
     expect(enabled.json<ConnectionStatus>().connection).toMatchObject({ autoSync: true });
   });
 
+  it("turns off a stored refresh-on-unlock nobody asked for", async () => {
+    const { app, client } = await harness();
+    const session = { app, client } as BankingHarness;
+    await connectBank(session);
+
+    // What a vault written while refreshing on unlock was still the default
+    // holds: `true`, and nothing recording that anybody chose it.
+    const vault = appState(app).vault();
+    const stored = (await vault!.bankConnections.list())[0]!;
+    const legacy = { ...stored, autoSync: true };
+    delete legacy.autoSyncExplicit;
+    await vault!.bankConnections.update(legacy, stored.revision);
+
+    const status = await get(session, "/api/banking/status");
+    expect(status.json<ConnectionStatus>().connection).toMatchObject({ autoSync: false });
+    // The correction is written once, not recomputed on every read.
+    expect((await vault!.bankConnections.list())[0]).toMatchObject({
+      autoSync: false,
+      autoSyncExplicit: true,
+    });
+
+    // Switching it back on is a choice, and it survives the next read.
+    const enabled = await put(session, "/api/banking/enable-banking/config", {
+      appId: TEST_APP_ID,
+      redirectUrl: TEST_REDIRECT_URL,
+      environment: "SANDBOX",
+      country: "IT",
+      psuType: "personal",
+      autoSync: true,
+    });
+    expect(enabled.json<ConnectionStatus>().connection).toMatchObject({ autoSync: true });
+    const reread = await get(session, "/api/banking/status");
+    expect(reread.json<ConnectionStatus>().connection).toMatchObject({ autoSync: true });
+  });
+
   it("rejects credentials whose redirect URL is not registered", async () => {
     const { app, client } = await harness();
     const response = await put(
