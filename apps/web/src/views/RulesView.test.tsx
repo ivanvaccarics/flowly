@@ -114,7 +114,7 @@ describe("rules view", () => {
     expect((screen.getByLabelText("Rule name") as HTMLInputElement).value).toBe("");
   });
 
-  it("can cancel an edit and go back to building a new rule", async () => {
+  it("goes back to a new rule from the edit form", async () => {
     mockApi();
     render(<RulesView csrf="csrf-token" />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "New rule" })).toBeTruthy());
@@ -122,7 +122,7 @@ describe("rules view", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit rule Coffee rule" }));
     expect(screen.getByRole("heading", { name: "Edit rule" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "New rule" }));
     expect(screen.getByRole("heading", { name: "New rule" })).toBeTruthy();
     expect((screen.getByLabelText("Rule name") as HTMLInputElement).value).toBe("");
     expect((screen.getByRole("checkbox", { name: "Coffee" }) as HTMLInputElement).checked).toBe(

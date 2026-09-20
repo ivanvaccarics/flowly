@@ -329,7 +329,8 @@ export function RulesView({ csrf }: { csrf: string }) {
               </button>
               {editing ? (
                 <button type="button" className="btn" onClick={stopEditing}>
-                  Cancel
+                  <Icon name="plus" size={14} />
+                  New rule
                 </button>
               ) : null}
             </div>
