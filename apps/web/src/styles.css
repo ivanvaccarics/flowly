@@ -1307,6 +1307,37 @@ td.cell-amount {
   text-align: right;
 }
 
+/* ----------------------------------------------------------------- pager */
+
+/* The ledger reads one window of rows at a time from the server (ADR 0024):
+   the range sits on the left, the controls on the right, and the rule above
+   separates them from the table without closing the card. */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.pager-summary {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* A row-shaped label: the shared `label` rule stacks and upper-cases, which is
+   right in a form and wrong next to a button. */
+.pager .pager-size {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

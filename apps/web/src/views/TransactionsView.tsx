@@ -21,6 +21,10 @@ interface Filters {
 
 const EMPTY_FILTERS: Filters = { accountId: "", from: "", to: "", tagId: "", status: "", q: "" };
 
+/** Row counts the ledger offers per page. The API accepts up to 500. */
+const PAGE_SIZES = [25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
+
 export function TransactionsView({ csrf }: { csrf: string }) {
   const accounts = useCollection<Account>("accounts", csrf, true);
   const tags = useCollection<Tag>("tags", csrf, true);
@@ -29,6 +33,8 @@ export function TransactionsView({ csrf }: { csrf: string }) {
 
   const [items, setItems] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
@@ -47,8 +53,23 @@ export function TransactionsView({ csrf }: { csrf: string }) {
 
   const account = accounts.items.find((candidate) => candidate.id === accountId);
   const currency = account?.defaultCurrency ?? "EUR";
+
+  // The ledger pages on the server: `offset` picks the window and `total` says
+  // how many rows the filter matches in the vault, not how many came back.
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const firstRow = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastRow = (page - 1) * pageSize + items.length;
+
+  // Every filter change starts a different result set, so it opens on its own
+  // first page instead of keeping a page number that may no longer exist.
+  const updateFilters = useCallback((next: Filters) => {
+    setFilters(next);
+    setPage(1);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
+    const offset = (page - 1) * pageSize;
     try {
       const response = await api.searchTransactions({
         ...(filters.accountId ? { accountId: filters.accountId } : {}),
@@ -57,16 +78,25 @@ export function TransactionsView({ csrf }: { csrf: string }) {
         ...(filters.tagId ? { tags: filters.tagId } : {}),
         ...(filters.status ? { status: filters.status } : {}),
         ...(filters.q ? { q: filters.q } : {}),
+        limit: pageSize,
+        offset,
       });
       setItems(response.items);
       setTotal(response.total);
+      // The page can empty under the user — the last row on it was deleted, or
+      // a write moved it out of the filter. Fold back to the last page that
+      // still has rows instead of showing an empty table with a non-zero total.
+      if (response.items.length === 0 && response.total > 0 && offset > 0) {
+        setPage(Math.max(1, Math.ceil(response.total / pageSize)));
+        return;
+      }
       setError(undefined);
     } catch (cause) {
       setError(describeError(cause));
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, page, pageSize]);
 
   useEffect(() => {
     void load();
@@ -109,7 +139,13 @@ export function TransactionsView({ csrf }: { csrf: string }) {
       setUserNote("");
       setSelectedTags([]);
       setStatus("booked");
-      await load();
+      // A new row is normally dated today, so it belongs at the top of the
+      // newest-first order: show it instead of leaving the user on page 5.
+      if (page === 1) {
+        await load();
+      } else {
+        setPage(1);
+      }
     } catch (cause) {
       setFormError(describeError(cause));
     }
@@ -261,7 +297,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
             <h2>Filters</h2>
             <span className="sub">Every control narrows the same server-side query</span>
           </div>
-          <button type="button" className="btn small" onClick={() => setFilters(EMPTY_FILTERS)}>
+          <button type="button" className="btn small" onClick={() => updateFilters(EMPTY_FILTERS)}>
             Reset filters
           </button>
         </header>
@@ -270,7 +306,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
             Search
             <input
               value={filters.q}
-              onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, q: event.target.value })}
               placeholder="payee, note, description"
             />
           </label>
@@ -278,7 +314,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
             Filter by account
             <select
               value={filters.accountId}
-              onChange={(event) => setFilters({ ...filters, accountId: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, accountId: event.target.value })}
             >
               <option value="">Any</option>
               {accounts.items.map((candidate) => (
@@ -292,7 +328,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
             Tag
             <select
               value={filters.tagId}
-              onChange={(event) => setFilters({ ...filters, tagId: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, tagId: event.target.value })}
             >
               <option value="">Any</option>
               {tags.items.map((tag) => (
@@ -306,7 +342,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
             Filter by status
             <select
               value={filters.status}
-              onChange={(event) => setFilters({ ...filters, status: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, status: event.target.value })}
             >
               <option value="">Any</option>
               <option value="booked">booked</option>
@@ -318,7 +354,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
             <input
               type="date"
               value={filters.from}
-              onChange={(event) => setFilters({ ...filters, from: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, from: event.target.value })}
             />
           </label>
           <label>
@@ -326,7 +362,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
             <input
               type="date"
               value={filters.to}
-              onChange={(event) => setFilters({ ...filters, to: event.target.value })}
+              onChange={(event) => updateFilters({ ...filters, to: event.target.value })}
             />
           </label>
         </fieldset>
@@ -343,7 +379,7 @@ export function TransactionsView({ csrf }: { csrf: string }) {
                 style={filters.tagId === tag.id ? undefined : tagPillStyle(tag.color)}
                 aria-pressed={filters.tagId === tag.id}
                 onClick={() =>
-                  setFilters({ ...filters, tagId: filters.tagId === tag.id ? "" : tag.id })
+                  updateFilters({ ...filters, tagId: filters.tagId === tag.id ? "" : tag.id })
                 }
               >
                 {tag.name}
@@ -545,7 +581,51 @@ export function TransactionsView({ csrf }: { csrf: string }) {
             </tbody>
           </table>
         </div>
-        {!loading && items.length === 0 ? <Empty>No transactions match.</Empty> : null}
+        <div className="pager">
+          <p className="pager-summary" role="status">
+            {total === 0
+              ? "No transactions to page through"
+              : `Showing ${firstRow}–${lastRow} of ${total} transactions`}
+          </p>
+          <div className="cell-actions">
+            <label className="pager-size">
+              Rows per page
+              <select
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+              >
+                {PAGE_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="btn small"
+              disabled={page <= 1}
+              onClick={() => setPage(Math.max(1, page - 1))}
+            >
+              Previous
+            </button>
+            <span className="chip mono neutral">
+              Page {page} / {pageCount}
+            </span>
+            <button
+              type="button"
+              className="btn small"
+              disabled={page >= pageCount}
+              onClick={() => setPage(Math.min(pageCount, page + 1))}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+        {!loading && total === 0 ? <Empty>No transactions match.</Empty> : null}
       </div>
     </section>
   );

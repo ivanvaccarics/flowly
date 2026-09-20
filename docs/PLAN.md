@@ -303,7 +303,10 @@ connection and then carries the passphrase change plus export and import. The
 shell's top bar carries the section title, the vault state and the session
 controls; cards are white with a hairline outline over a slate canvas, tinted
 panels carry nested controls, and the dashboard charts cash flow per week and
-spending by tag as a pie chart per currency. Only implemented features are
+spending by tag as a pie chart per currency. The transactions ledger reads its
+rows from the server one page at a time — 25 by default, with a page-size
+selector, the visible range and Previous/Next — so a vault with thousands of
+movements is browsable instead of truncated. Only implemented features are
 rendered, fonts use local stacks so the app never needs a CDN, and
 `docs/DESIGN.md` records the tokens, the brand assets shipped from
 `apps/web/public` and the mapping. The Flowly lockup — a white keyhole in a
@@ -1352,6 +1355,19 @@ Status: **complete** (2026-09-18), decision in `docs/adr/0023`.
 - Re-cut `logo.svg`, `logo-mark.svg`, `logo-mark-mono.svg`, `favicon.svg` and
   the 180 px iOS icon from the new artwork, with the tile's knockout painted
   through a mask so no seam or halo survives from the trace.
+
+#### Task `paginate-the-ledger`
+
+Status: **complete** (2026-09-20), decision in `docs/adr/0024`.
+
+- The transactions view asks for one window of rows (`limit`/`offset`) and reads
+  `total`, instead of rendering the server's default 100 rows and stopping
+  there: a vault with more matching movements is no longer silently truncated,
+  and the `{total} matching` chip above the table now agrees with what is shown.
+- 25 rows per page by default, with a **Rows per page** selector (25/50/100), a
+  `Showing 26–50 of 60 transactions` range, a `Page 2 / 3` indicator and
+  **Previous**/**Next**. Filter changes and a newly recorded transaction return
+  to page 1; a page that empties folds back to the last page that has rows.
 
 ### Phase 6 - Enable Banking for Server
 

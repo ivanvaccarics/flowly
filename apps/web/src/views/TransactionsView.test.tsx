@@ -51,6 +51,16 @@ function json(body: unknown): Response {
   });
 }
 
+/** A ledger big enough to need paging: one distinct payee per row. */
+function ledgerRows(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    ...transaction,
+    id: `018f2c1e-6d5b-7c3a-9f2e-6b3c4d5e6f${String(index + 1).padStart(2, "0")}`,
+    payee: `Payee ${index + 1}`,
+    bookingDate: `2026-09-${String((index % 28) + 1).padStart(2, "0")}`,
+  }));
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -277,5 +287,99 @@ describe("transactions view", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]?.body).toContain('"amountMinor":-1500');
     expect(calls[0]?.body).toContain('"payee":"Bar Centrale Roma"');
+  });
+
+  it("pages through the ledger on the server and starts over when the filters change", async () => {
+    const requests: string[] = [];
+    const rows = ledgerRows(60);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const parsed = new URL(raw, "http://localhost");
+        requests.push(`${parsed.pathname}${parsed.search}`);
+        if (parsed.pathname === "/api/accounts") return json({ items: [account] });
+        if (parsed.pathname === "/api/tags") return json({ items: [tag] });
+        if (parsed.pathname === "/api/transactions") {
+          const limit = Number(parsed.searchParams.get("limit") ?? 100);
+          const offset = Number(parsed.searchParams.get("offset") ?? 0);
+          return json({
+            items: rows.slice(offset, offset + limit),
+            total: rows.length,
+            limit,
+            offset,
+          });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Payee 1")).toBeTruthy());
+
+    // The first load asks for one window of rows, not for the whole vault.
+    expect(requests.some((url) => url.includes("limit=25") && url.includes("offset=0"))).toBe(true);
+    expect(screen.getByText("Showing 1–25 of 60 transactions")).toBeTruthy();
+    expect(screen.getByText("Page 1 / 3")).toBeTruthy();
+    expect(screen.queryByText("Payee 26")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() => expect(screen.getByText("Payee 26")).toBeTruthy());
+    expect(requests.some((url) => url.includes("offset=25"))).toBe(true);
+    expect(screen.getByText("Showing 26–50 of 60 transactions")).toBeTruthy();
+    expect(screen.getByText("Page 2 / 3")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+    await waitFor(() => expect(screen.getByText("Payee 1")).toBeTruthy());
+    expect(screen.getByText("Page 1 / 3")).toBeTruthy();
+
+    // A different query is a different result set: it opens on its own page 1.
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() => expect(screen.getByText("Payee 26")).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "espresso" } });
+    await waitFor(() =>
+      expect(requests.some((url) => url.includes("q=espresso") && url.includes("offset=0"))).toBe(
+        true,
+      ),
+    );
+    expect(screen.getByText("Page 1 / 3")).toBeTruthy();
+  });
+
+  it("folds back to the last page with rows when the current page empties", async () => {
+    const requests: string[] = [];
+    const rows = ledgerRows(26);
+    // 26 matches, then the one row on page 2 is deleted between the two reads.
+    let total = 26;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const parsed = new URL(raw, "http://localhost");
+        requests.push(`${parsed.pathname}${parsed.search}`);
+        if (parsed.pathname === "/api/accounts") return json({ items: [account] });
+        if (parsed.pathname === "/api/tags") return json({ items: [tag] });
+        if (parsed.pathname === "/api/transactions") {
+          const limit = Number(parsed.searchParams.get("limit") ?? 100);
+          const offset = Number(parsed.searchParams.get("offset") ?? 0);
+          if (offset > 0) {
+            total = 25;
+            return json({ items: [], total, limit, offset });
+          }
+          return json({ items: rows.slice(0, Math.min(limit, total)), total, limit, offset });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Payee 1")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() => expect(screen.getByText("Showing 1–25 of 25 transactions")).toBeTruthy());
+    expect(requests.some((url) => url.includes("offset=25"))).toBe(true);
+    expect(screen.getByText("Page 1 / 1")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Next" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

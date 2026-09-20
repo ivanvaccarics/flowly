@@ -204,7 +204,10 @@ section title, the vault state, the local clock and the session controls, and
 every section opens with a summary card carrying its status facts and actions.
 Accounts are endpoint cards with their real balances and a ribbon of booked
 totals, rules are tiles with an on/off switch, and the ledger's filters include
-quick tag pills. The dashboard charts weekly cash flow and draws spending by tag
+quick tag pills. The ledger pages through its matching rows on the server — 25
+per page by default, 50 or 100 from the selector — and always says which window
+it is showing, so a vault with thousands of movements is never silently
+truncated. The dashboard charts weekly cash flow and draws spending by tag
 as a pie chart per currency, so no chart ever blends currencies. Accounts can be
 archived and restored, tags can be renamed and recoloured in place, and Settings
 holds the passphrase change plus export and import, after the Enable Banking

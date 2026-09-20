@@ -151,6 +151,12 @@ not shift.
   stay on one line: the ledger scrolls sideways instead of pushing the actions
   under the row. The row's second line names where it came from (the bank's own
   description, or the source); a provider's raw row id lives only behind **Raw**.
+- **Pager:** the footer of the ledger — `Showing 26–50 of 60 transactions` on
+  the left, then **Rows per page** (25, 50, 100), **Previous**, the `Page 2 / 3`
+  chip and **Next** on the right, over a hairline that separates it from the last
+  row. The window comes from the server (`limit`/`offset`/`total`), so the range
+  and the page count are always the real ones; the buttons disable at the ends
+  instead of hiding (ADR 0024).
 - **Pie chart:** the dashboard's spending breakdown, one SVG donut per currency,
   each arc the tag's own colour — brand green first for tags that have none —
   with the period total in the hole and the legend rows (label, amount, share)

@@ -35,7 +35,8 @@ it already has one — most likely from an acceptance run. See
 What works today (end of Phase 6):
 
 - create, unlock, lock-this-session, lock-all and change-passphrase
-- accounts, transactions with notes and tags, and tag management
+- accounts, transactions with notes and tags (paged on the server, 25 rows per
+  page by default), and tag management
 - tagging rules with an explicit backfill over existing transactions
 - transaction CSV export/import with preview, a plain ZIP with one CSV per
   table for taking your data elsewhere, plus the encrypted complete archive
