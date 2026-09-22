@@ -1509,6 +1509,25 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0030`.
   edit the movement", and the test that covered the double-click now clicks once
   and asserts that the status chip still only toggles.
 
+#### Task `seed-a-demo-vault-and-capture-screenshots`
+
+Status: **complete** (2026-09-22), decision in `docs/adr/0031`.
+
+- `tooling/scripts/seed-demo.mjs` fills a throwaway vault with invented data:
+  four accounts (one archived), six tags, five rules (one paused), and about
+  three months of movements dated relative to the day it runs, including two
+  still-pending rows. It refuses a vault that already holds accounts, so it can
+  never write over real data.
+- `tooling/scripts/screenshots.mjs` unlocks that vault in a browser session and
+  captures the six sections at 1440×900 into `docs/images/`, driving headless
+  Chrome over the DevTools protocol with Node's own `WebSocket` — no new
+  dependency.
+- `README.md` gained a **What it looks like** section with the six images and
+  their captions, and `docs/RUNNING.md` holds the full recipe, including how to
+  point the scripts at another Chrome and how to stop the scratch server.
+- The README images are committed, and the demo data is regenerated rather than
+  hand-cropped, so a UI change ends with a `pnpm demo:screenshots` run.
+
 #### Task `restyle-the-rules-page-and-count-what-rules-cover`
 
 Status: **complete** (2026-09-22), decision in `docs/adr/0027`.

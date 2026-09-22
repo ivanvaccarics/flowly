@@ -49,6 +49,50 @@ vault, you export it and import it. That's it. 🔐
 
 ---
 
+## 🖼️ What it looks like
+
+Six sections, one design language: a tinted banner states what the section is
+about and the figures that matter, a headline names what the section is for, and
+every card says what it holds. Every number below comes from the vault — no
+placeholder data anywhere in the app.
+
+**Dashboard** — the period you are looking at, the metric row per currency,
+weekly cash flow and spending by tag.
+
+![Dashboard](docs/images/dashboard.png)
+
+**Accounts** — one card per account, each with its real balance per currency and
+its booked-movement count; archived accounts stay visible and can be restored.
+
+![Accounts](docs/images/accounts.png)
+
+**Transactions** — the ledger: server-side filters, tag pills, this month's
+income, expenses and net, and a row that opens for editing with one click.
+
+![Transactions](docs/images/transactions.png)
+
+**Tags** — the taxonomy that rules and filters work with, with a colour palette
+and inline rename.
+
+![Tags](docs/images/tags.png)
+
+**Rules** — the rule composer with live evaluation next to the engine's own
+coverage: how many transactions each rule and each applied tag covers.
+
+![Rules](docs/images/rules.png)
+
+**Settings** — the bank connection, the passphrase and the three portable export
+shapes, all against the local vault.
+
+![Settings](docs/images/settings.png)
+
+> 🧪 These images are generated from a throwaway vault full of invented data:
+> `pnpm demo:seed` fills it and `pnpm demo:screenshots` captures the six
+> sections — see
+> [docs/RUNNING.md](docs/RUNNING.md#regenerating-the-readme-screenshots).
+
+---
+
 ## ✨ What Flowly does
 
 ### 🏦 Accounts & transactions

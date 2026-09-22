@@ -287,6 +287,44 @@ fixtures rather than a parallel test suite.
 
 Phase boundaries and dependencies are listed in `docs/PLAN.md` sections 17-18.
 
+### Regenerating the README screenshots
+
+The screenshots in `README.md` come from a **scratch vault full of synthetic
+data**, never from a real one, and they are produced by two scripts so they can
+be regenerated after a UI change:
+
+```bash
+# 1. Build the app the server will serve, and start it on a throwaway vault.
+pnpm --filter @flowly/web-contracts build
+pnpm --filter @flowly/web build
+pnpm --filter @flowly/server build
+rm -rf /tmp/flowly-demo
+FLOWLY_VAULT_DIR=/tmp/flowly-demo/vault \
+FLOWLY_WEB_DIR="$PWD/apps/web/dist" \
+FLOWLY_LOG_LEVEL=warn node apps/server/dist/index.js &
+
+# 2. Fill the vault: accounts, tags, rules and about three months of movements.
+pnpm demo:seed -- http://127.0.0.1:8787 --create
+
+# 3. Capture the six sections into docs/images (1440x900, headless Chrome).
+pnpm demo:screenshots -- http://127.0.0.1:8787
+
+# 4. Stop the scratch server and delete the vault.
+kill %1 && rm -rf /tmp/flowly-demo
+```
+
+- `tooling/scripts/seed-demo.mjs` refuses to touch a vault that already holds
+  accounts, so it can never write over real data. Every value it creates is
+  invented; the passphrase is `FLOWLY_DEMO_PASSPHRASE` (default
+  `flowly demo passphrase 2026`) and only ever opens a scratch vault.
+- `tooling/scripts/screenshots.mjs` drives headless Chrome over the DevTools
+  protocol — Node's own `WebSocket` is the only dependency — and writes one PNG
+  per section into `docs/images/`. Pass `--chrome=/path/to/chrome` or set
+  `CHROME_PATH` if Chrome is not where the script looks.
+- The demo data is dated relative to the day it is seeded, so the dashboard's
+  period, the ledger's month and the rules' coverage stay sensible whenever the
+  screenshots are retaken.
+
 ## 7. Troubleshooting
 
 | Symptom | Fix |

@@ -23,6 +23,8 @@
     "release:report": "node tooling/scripts/release-report.mjs",
     "release:check": "node tooling/scripts/release-report.mjs --check",
     "acceptance": "node tooling/scripts/acceptance.mjs",
+    "demo:seed": "node tooling/scripts/seed-demo.mjs",
+    "demo:screenshots": "node tooling/scripts/screenshots.mjs",
     "ca:export": "node tooling/scripts/local-ca.mjs",
     "ca:trust": "node tooling/scripts/local-ca.mjs --apply",
     "verify": "pnpm format:check && pnpm lint && pnpm check:frontend-secrets && pnpm typecheck && pnpm test",
