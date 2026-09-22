@@ -43,6 +43,15 @@ export interface TaggingRule {
   updatedAt: string;
 }
 
+/**
+ * The matching half of a rule, without its identity: what the engine runs and
+ * what the composer previews before anything is saved.
+ */
+export interface RuleConditionSet {
+  combinator: "and" | "or";
+  conditions: RuleCondition[];
+}
+
 export const OPERATORS_BY_FIELD: Readonly<
   Record<RuleConditionField, readonly RuleConditionOperator[]>
 > = {
@@ -67,23 +76,7 @@ export function validateTaggingRule(rule: TaggingRule): void {
   if (typeof rule.enabled !== "boolean") {
     throw new DomainError("invalid-tagging-rule", "rule.enabled must be a boolean");
   }
-  if (rule.combinator !== "and" && rule.combinator !== "or") {
-    throw new DomainError("invalid-tagging-rule", "rule.combinator must be and or or", {
-      combinator: rule.combinator,
-    });
-  }
-  if (!Array.isArray(rule.conditions) || rule.conditions.length === 0) {
-    throw new DomainError("invalid-tagging-rule", "a rule needs at least one condition");
-  }
-  if (rule.conditions.length > MAX_CONDITIONS_PER_RULE) {
-    throw new DomainError(
-      "invalid-tagging-rule",
-      `a rule accepts at most ${MAX_CONDITIONS_PER_RULE} conditions`,
-    );
-  }
-  for (const condition of rule.conditions) {
-    validateCondition(condition);
-  }
+  validateConditionSet(rule);
   if (!Array.isArray(rule.tagIds) || rule.tagIds.length === 0) {
     throw new DomainError("invalid-tagging-rule", "a rule must assign at least one tag");
   }
@@ -96,6 +89,27 @@ export function validateTaggingRule(rule: TaggingRule): void {
   assertUuidList(rule.tagIds, "rule.tagIds", MAX_TAGS_PER_RULE);
   assertIsoDateTime(rule.createdAt, "rule.createdAt");
   assertIsoDateTime(rule.updatedAt, "rule.updatedAt");
+}
+
+/** Validates the matching core on its own, so a draft can be checked unsaved. */
+export function validateConditionSet(core: RuleConditionSet): void {
+  if (core.combinator !== "and" && core.combinator !== "or") {
+    throw new DomainError("invalid-tagging-rule", "rule.combinator must be and or or", {
+      combinator: core.combinator,
+    });
+  }
+  if (!Array.isArray(core.conditions) || core.conditions.length === 0) {
+    throw new DomainError("invalid-tagging-rule", "a rule needs at least one condition");
+  }
+  if (core.conditions.length > MAX_CONDITIONS_PER_RULE) {
+    throw new DomainError(
+      "invalid-tagging-rule",
+      `a rule accepts at most ${MAX_CONDITIONS_PER_RULE} conditions`,
+    );
+  }
+  for (const condition of core.conditions) {
+    validateCondition(condition);
+  }
 }
 
 function validateCondition(condition: RuleCondition): void {
@@ -157,8 +171,21 @@ export interface RuleTarget {
 
 export function ruleMatches(rule: TaggingRule, target: RuleTarget | Transaction): boolean {
   if (!rule.enabled) return false;
-  const matches = rule.conditions.map((condition) => conditionMatches(condition, target));
-  return rule.combinator === "and" ? matches.every(Boolean) : matches.some(Boolean);
+  return conditionSetMatches(rule, target);
+}
+
+/**
+ * Matches conditions with no rule identity involved. The engine and the
+ * composer's preview share this, so a preview can never disagree with what
+ * saving the rule would do.
+ */
+export function conditionSetMatches(
+  core: { combinator: "and" | "or"; conditions: readonly RuleCondition[] },
+  target: RuleTarget | Transaction,
+): boolean {
+  if (core.conditions.length === 0) return false;
+  const matches = core.conditions.map((condition) => conditionMatches(condition, target));
+  return core.combinator === "and" ? matches.every(Boolean) : matches.some(Boolean);
 }
 
 function conditionMatches(condition: RuleCondition, target: RuleTarget | Transaction): boolean {

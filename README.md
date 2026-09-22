@@ -69,7 +69,9 @@ account — "notes contain rent", "payee is ACME, or amount is over 1000" — an
 assign one or more tags. Amounts are written as decimals in their own currency,
 like "-5.10 EUR", never as a count of cents. Rules run on new transactions and
 imports; you can also apply them to what you already have, with a preview of
-exactly what will change.
+exactly what will change. The page measures itself: while you type, Flowly says
+how many of your most recent movements the rule would match, and the overview
+counts what the saved rules cover, tag by tag.
 Edit a rule whenever the matching turns out wrong: **Edit** opens it in a dialog
 over the page, so the **New rule** card you may already be writing keeps its own
 draft, and saving keeps the rule's id, its on/off state and its place in the

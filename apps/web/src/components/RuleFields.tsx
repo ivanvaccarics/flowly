@@ -1,5 +1,6 @@
 import type { Tag, TaggingRule } from "@flowly/web-contracts";
 import { Icon } from "./icons.js";
+import { Chip, tagPillStyle } from "./ui.js";
 import { CURRENCIES, minorUnitsFor } from "../lib/money.js";
 import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
 
@@ -119,37 +120,57 @@ export function RuleFields({
     });
   }
 
+  function toggleTag(tagId: string) {
+    onChange({
+      ...draft,
+      tagIds: draft.tagIds.includes(tagId)
+        ? draft.tagIds.filter((id) => id !== tagId)
+        : [...draft.tagIds, tagId],
+    });
+  }
+
   return (
-    <>
-      <div className="fieldset framed">
+    <div className="rule-fields">
+      <div className="rule-fields-head">
         <label>
           Rule name
           <input
             value={draft.name}
             onChange={(event) => onChange({ ...draft, name: event.target.value })}
+            placeholder="Rent and utilities"
             required
           />
         </label>
         <label>
-          Match
+          Condition logic
           <select
             value={draft.combinator}
             onChange={(event) =>
               onChange({ ...draft, combinator: event.target.value as "and" | "or" })
             }
           >
-            <option value="and">all conditions (AND)</option>
-            <option value="or">any condition (OR)</option>
+            <option value="and">AND (all)</option>
+            <option value="or">OR (any)</option>
           </select>
         </label>
       </div>
 
-      {draft.conditions.map((condition, index) => (
-        <fieldset key={index} className="condition">
-          <legend>Condition {index + 1}</legend>
-          <label>
-            Field
+      <section className="condition-set">
+        <header className="condition-set-head">
+          <span className="eyebrow">Conditions</span>
+          <span className="condition-hint">
+            <Chip tone="info">{draft.conditions.length} active</Chip>
+            Pattern matching: case-insensitive
+          </span>
+        </header>
+
+        {draft.conditions.map((condition, index) => (
+          <div className="condition-row" key={index}>
+            <span className="condition-index" aria-hidden="true">
+              {index + 1}
+            </span>
             <select
+              className="condition-field"
               aria-label={`Field ${index + 1}`}
               value={condition.field}
               onChange={(event) => {
@@ -169,10 +190,8 @@ export function RuleFields({
                 </option>
               ))}
             </select>
-          </label>
-          <label>
-            Operator
             <select
+              className="condition-operator"
               aria-label={`Operator ${index + 1}`}
               value={condition.operator}
               onChange={(event) =>
@@ -188,10 +207,8 @@ export function RuleFields({
                 </option>
               ))}
             </select>
-          </label>
-          <label>
-            Value
             <input
+              className="condition-value"
               aria-label={`Value ${index + 1}`}
               value={condition.value}
               inputMode={condition.field === "amount" ? "decimal" : undefined}
@@ -200,11 +217,9 @@ export function RuleFields({
                 updateCondition(index, { ...condition, value: event.target.value })
               }
             />
-          </label>
-          {condition.field === "amount" ? (
-            <label>
-              Currency
+            {condition.field === "amount" ? (
               <select
+                className="condition-currency"
                 aria-label={`Currency ${index + 1}`}
                 value={condition.currency ?? DEFAULT_CURRENCY}
                 onChange={(event) =>
@@ -217,29 +232,30 @@ export function RuleFields({
                   </option>
                 ))}
               </select>
-            </label>
-          ) : null}
-          {draft.conditions.length > 1 ? (
-            <button
-              type="button"
-              className="btn small danger"
-              onClick={() =>
-                onChange({
-                  ...draft,
-                  conditions: draft.conditions.filter((_, position) => position !== index),
-                })
-              }
-            >
-              Remove
-            </button>
-          ) : null}
-        </fieldset>
-      ))}
+            ) : null}
+            {draft.conditions.length > 1 ? (
+              <button
+                type="button"
+                className="condition-remove"
+                aria-label={`Remove condition ${index + 1}`}
+                onClick={() =>
+                  onChange({
+                    ...draft,
+                    conditions: draft.conditions.filter((_, position) => position !== index),
+                  })
+                }
+              >
+                <Icon name="close" size={14} />
+              </button>
+            ) : (
+              <span className="condition-remove placeholder" aria-hidden="true" />
+            )}
+          </div>
+        ))}
 
-      <div className="actions" style={{ display: "flex", gap: "0.5rem" }}>
         <button
           type="button"
-          className="btn small"
+          className="condition-add"
           onClick={() =>
             onChange({
               ...draft,
@@ -253,33 +269,33 @@ export function RuleFields({
           <Icon name="plus" size={14} />
           Add condition
         </button>
-      </div>
+      </section>
 
-      <fieldset className="fieldset">
-        <legend>Tags to apply</legend>
+      <section className="rule-tags">
+        <span className="eyebrow">Tags to apply automatically</span>
         {tags.length === 0 ? (
-          <span className="sub">Create tags first.</span>
+          <span className="sub">Create tags first — rules only apply tags that exist.</span>
         ) : (
-          tags.map((tag) => (
-            <label key={tag.id} className="checkline">
-              <input
-                type="checkbox"
-                checked={draft.tagIds.includes(tag.id)}
-                onChange={(event) =>
-                  onChange({
-                    ...draft,
-                    tagIds: event.target.checked
-                      ? [...draft.tagIds, tag.id]
-                      : draft.tagIds.filter((id) => id !== tag.id),
-                  })
-                }
-              />
-              <span className="swatch" style={{ background: tag.color ?? DEFAULT_TAG_COLOR }} />
-              {tag.name}
-            </label>
-          ))
+          <div className="tag-toggles">
+            {tags.map((tag) => {
+              const selected = draft.tagIds.includes(tag.id);
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  className={selected ? "tag-pill active" : "tag-pill"}
+                  style={selected ? undefined : tagPillStyle(tag.color)}
+                  aria-pressed={selected}
+                  onClick={() => toggleTag(tag.id)}
+                >
+                  <span className="swatch" style={{ background: tag.color ?? DEFAULT_TAG_COLOR }} />
+                  {tag.name}
+                </button>
+              );
+            })}
+          </div>
         )}
-      </fieldset>
-    </>
+      </section>
+    </div>
   );
 }

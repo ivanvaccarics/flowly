@@ -1,4 +1,4 @@
-import type { Dashboard, Transaction, VaultStatus } from "@flowly/web-contracts";
+import type { Dashboard, TaggingRule, Transaction, VaultStatus } from "@flowly/web-contracts";
 
 function queryString(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams();
@@ -24,6 +24,22 @@ export class ApiError extends Error {
 
 export interface Session {
   csrf: string;
+}
+
+/** What the stored rules cover, as the engine reads them right now. */
+export interface TaggingRuleStats {
+  /** Transactions the engine looked at. */
+  evaluated: number;
+  /** Transactions matched by at least one enabled rule. */
+  matched: number;
+  byRule: Array<{ ruleId: string; matches: number }>;
+  byTag: Array<{ tagId: string; transactions: number }>;
+}
+
+/** What an unsaved condition set would cover on the most recent transactions. */
+export interface TaggingRulePreview {
+  evaluated: number;
+  matched: number;
 }
 
 export interface BankingConnectionPublic {
@@ -294,6 +310,16 @@ export const api = {
       method: "POST",
       csrf,
       body: scope,
+    }),
+  ruleStats: () => request<TaggingRuleStats>("/api/tagging-rules/stats"),
+  previewRule: (
+    csrf: string,
+    core: { combinator: "and" | "or"; conditions: TaggingRule["conditions"] },
+  ) =>
+    request<TaggingRulePreview>("/api/tagging-rules/preview", {
+      method: "POST",
+      csrf,
+      body: core,
     }),
   exportCsv: async () => {
     const response = await fetch("/api/export/transactions.csv", { credentials: "same-origin" });

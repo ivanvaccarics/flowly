@@ -2245,6 +2245,381 @@ button.legend-row {
   flex-wrap: wrap;
 }
 
+/* ------------------------------------------------------------ rules page */
+
+/* The engine strip the Rules page opens with: violet, because it describes the
+   engine rather than warning about anything. */
+.engine-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--info-soft-border);
+  border-radius: var(--radius-lg);
+  background: var(--info-soft);
+}
+
+.engine-banner-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.engine-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.engine-banner-main .sub {
+  display: block;
+  max-width: 78ch;
+  color: var(--text-secondary);
+}
+
+.engine-banner-side {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.engine-figure {
+  display: grid;
+  gap: 0.1rem;
+  justify-items: end;
+  text-align: right;
+}
+
+.engine-figure strong {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile.info {
+  background: var(--surface);
+  border: 1px solid var(--info-soft-border);
+  color: var(--info);
+}
+
+.rules-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 0 0.25rem;
+}
+
+.rules-intro .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.4rem;
+}
+
+.rules-intro h2 {
+  font-size: 1.75rem;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  max-width: 34ch;
+}
+
+.rules-intro .lead {
+  margin: 0.5rem 0 0;
+  max-width: 68ch;
+  color: var(--text-secondary);
+}
+
+.card > header .eyebrow {
+  margin: 0 0 0.3rem;
+}
+
+/* The composer ------------------------------------------------------------ */
+
+.rule-fields {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.rule-fields-head {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(170px, 1fr);
+  gap: 1rem;
+}
+
+.condition-set {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.condition-set-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.condition-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.condition-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.condition-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-low);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.condition-field {
+  flex: 1 1 150px;
+  min-width: 130px;
+}
+
+.condition-operator {
+  flex: 0 1 140px;
+  min-width: 118px;
+}
+
+.condition-value {
+  flex: 2 1 170px;
+  min-width: 130px;
+}
+
+.condition-currency {
+  flex: 0 0 92px;
+}
+
+.condition-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.condition-remove:hover {
+  background: var(--expense-soft);
+  color: var(--expense);
+}
+
+/* Keeps the last row's controls lined up when there is nothing to remove. */
+.condition-remove.placeholder {
+  visibility: hidden;
+}
+
+.condition-add {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.condition-add:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
+
+.rule-tags {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.tag-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag-toggles .tag-pill {
+  margin: 0;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.tag-toggles .tag-pill.active {
+  border-color: transparent;
+}
+
+.tag-toggles .tag-pill:hover {
+  filter: brightness(0.97);
+}
+
+.preview-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--primary-soft-border);
+  border-radius: 12px;
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  font-size: 0.8125rem;
+}
+
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+/* The overview ------------------------------------------------------------ */
+
+.coverage {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.coverage-figure {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.coverage-figure strong {
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.coverage-share {
+  display: grid;
+  gap: 0.1rem;
+  text-align: right;
+}
+
+.coverage-share strong {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--income);
+  font-variant-numeric: tabular-nums;
+}
+
+.coverage-bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.coverage-segment {
+  display: block;
+  height: 100%;
+}
+
+.coverage-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.coverage-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.coverage-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+}
+
+.coverage-cards article {
+  display: grid;
+  gap: 0.15rem;
+  align-content: start;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-low);
+}
+
+.coverage-cards article strong {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The registry ------------------------------------------------------------ */
+
+.rule-row {
+  cursor: pointer;
+}
+
+.rule-row code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
 /* ------------------------------------------------------------ responsive */
 
 @media (max-width: 1199px) {

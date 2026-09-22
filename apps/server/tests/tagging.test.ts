@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TaggingRuleService } from "../src/application/tagging-rule-service.js";
 import { createAccount } from "../src/domain/account.js";
+import { DomainError } from "../src/domain/errors.js";
 import { createTag } from "../src/domain/tag.js";
 import { createTransaction } from "../src/domain/transaction.js";
 import type { TaggingRule } from "../src/domain/tagging-rule.js";
@@ -178,5 +179,104 @@ describe("tagging rules in the vault", () => {
     await vault.lock();
     await expect(vault.taggingRules.list()).rejects.toThrow(VaultLockedError);
     cleanup(dir);
+  });
+
+  it("reports what the stored rules cover and what a draft would cover", async () => {
+    const { vault, dir, service } = await setupVault();
+    try {
+      await vault.taggingRules.create(coffeeRule());
+      await vault.taggingRules.create(
+        coffeeRule({
+          id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7082",
+          name: "Rent",
+          conditions: [
+            { field: "amount", operator: "lessThan", value: "-500.00", currency: "EUR" },
+          ],
+          tagIds: [RENT_TAG],
+        }),
+      );
+      // A paused rule is reported, and reports zero: it never matches.
+      await vault.taggingRules.create(
+        coffeeRule({
+          id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7083",
+          name: "Paused",
+          enabled: false,
+        }),
+      );
+
+      const rows: Array<{ id: string; bookingDate: string; amountMinor: number; note: string }> = [
+        {
+          id: "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f71",
+          bookingDate: "2026-09-03",
+          amountMinor: -1230,
+          note: "espresso with Luca",
+        },
+        {
+          id: "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f72",
+          bookingDate: "2026-09-10",
+          amountMinor: -800,
+          note: "another espresso",
+        },
+        {
+          id: "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f73",
+          bookingDate: "2026-10-01",
+          amountMinor: -95000,
+          note: "october rent",
+        },
+        {
+          id: "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f74",
+          bookingDate: "2026-10-05",
+          amountMinor: -4000,
+          note: "groceries",
+        },
+      ];
+      for (const row of rows) {
+        await vault.transactions.create(
+          createTransaction(
+            {
+              accountId: ACCOUNT_ID,
+              bookingDate: row.bookingDate,
+              amountMinor: row.amountMinor,
+              currency: "EUR",
+              userNote: row.note,
+            },
+            { id: row.id, now: NOW },
+          ),
+        );
+      }
+
+      const stats = await service.stats();
+      expect(stats.evaluated).toBe(4);
+      expect(stats.matched).toBe(3);
+      expect(stats.byRule).toEqual([
+        { ruleId: coffeeRule().id, matches: 2 },
+        { ruleId: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7082", matches: 1 },
+        { ruleId: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7083", matches: 0 },
+      ]);
+      // Tags count matched transactions, most covered first.
+      expect(stats.byTag).toEqual([
+        { tagId: COFFEE_TAG, transactions: 2 },
+        { tagId: RENT_TAG, transactions: 1 },
+      ]);
+
+      // The preview evaluates the draft against the newest rows first.
+      const espresso = {
+        combinator: "and" as const,
+        conditions: [
+          { field: "userNote" as const, operator: "contains" as const, value: "espresso" },
+        ],
+      };
+      expect(await service.preview(espresso)).toEqual({ evaluated: 4, matched: 2 });
+      expect(await service.preview(espresso, 2)).toEqual({ evaluated: 2, matched: 0 });
+      await expect(
+        service.preview({
+          combinator: "and",
+          conditions: [{ field: "userNote", operator: "contains", value: "" }],
+        }),
+      ).rejects.toThrow(DomainError);
+    } finally {
+      await vault.lock();
+      cleanup(dir);
+    }
   });
 });

@@ -92,6 +92,77 @@ describe("core finance API", () => {
     }
   });
 
+  it("reports rule coverage and previews a draft without writing anything", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    try {
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/accounts",
+        payload: { entity: SAMPLE_ACCOUNT },
+      });
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/tags",
+        payload: { entity: SAMPLE_TAG },
+      });
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/transactions",
+        payload: { entity: sampleTransaction({ userNote: "espresso with Luca" }) },
+      });
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/tagging-rules",
+        payload: { entity: sampleRule() },
+      });
+
+      const stats = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/tagging-rules/stats",
+      });
+      expect(stats.statusCode).toBe(200);
+      expect(stats.json()).toEqual({
+        evaluated: 1,
+        matched: 1,
+        byRule: [{ ruleId: sampleRule().id, matches: 1 }],
+        byTag: [{ tagId: SAMPLE_TAG.id, transactions: 1 }],
+      });
+
+      const preview = await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/tagging-rules/preview",
+        payload: {
+          combinator: "and",
+          conditions: [{ field: "userNote", operator: "contains", value: "espresso" }],
+        },
+      });
+      expect(preview.statusCode).toBe(200);
+      expect(preview.json()).toEqual({ evaluated: 1, matched: 1 });
+
+      // A preview never writes: the transaction is still untagged in the vault.
+      const transactions = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/transactions",
+      });
+      expect(transactions.json<{ items: Array<{ tagIds: string[] }> }>().items[0]?.tagIds).toEqual(
+        [],
+      );
+
+      const rejected = await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/tagging-rules/preview",
+        payload: {
+          combinator: "and",
+          conditions: [{ field: "userNote", operator: "contains", value: "" }],
+        },
+      });
+      expect(rejected.statusCode).toBe(400);
+    } finally {
+      await harness.close();
+    }
+  });
+
   it("refuses to drop data without an explicit cascade", async () => {
     const { config } = makeConfig();
     const harness = await startHarness(config);

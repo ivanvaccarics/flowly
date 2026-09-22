@@ -21,6 +21,7 @@ import type { ServerConfig } from "../config.js";
 import { VaultCorruptError, VaultKeyError } from "../crypto/errors.js";
 import { DomainError } from "../domain/errors.js";
 import { generateId } from "../domain/ids.js";
+import type { RuleCondition } from "../domain/tagging-rule.js";
 import { isIsoDate } from "../domain/values.js";
 import { ArchiveIntegrityError, ArchivePasswordError, ImportError } from "../portability/errors.js";
 import { AttemptLimiter, SessionStore, type Session } from "../session/session-store.js";
@@ -488,6 +489,29 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     if (typeof body["fromDate"] === "string") scope.fromDate = body["fromDate"];
     if (typeof body["toDate"] === "string") scope.toDate = body["toDate"];
     return new TaggingRuleService(context.vault).backfill(scope);
+  });
+
+  // What the stored rules cover right now, and what an unsaved draft would
+  // cover: both read the vault, neither writes to it.
+  app.get("/api/tagging-rules/stats", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    return new TaggingRuleService(context.vault).stats();
+  });
+
+  app.post("/api/tagging-rules/preview", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    const body = (request.body ?? {}) as { combinator?: unknown; conditions?: unknown };
+    const conditions = Array.isArray(body.conditions) ? (body.conditions as RuleCondition[]) : [];
+    if (body.combinator !== "and" && body.combinator !== "or") {
+      reply.code(400);
+      return { error: "combinator_required" };
+    }
+    return new TaggingRuleService(context.vault).preview({
+      combinator: body.combinator,
+      conditions,
+    });
   });
 
   // --- export ---------------------------------------------------------------

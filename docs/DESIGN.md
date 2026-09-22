@@ -139,6 +139,18 @@ not shift.
   optional card heading (`h2`), a lead paragraph, right-aligned status chips and
   actions, and an optional **ribbon** of key figures. Rules uses the violet
   `hero info` variant for engine-level information.
+- **Engine banner:** the violet strip Rules opens with, above its own headline:
+  an icon tile, the engine's name and a zero-knowledge chip, what the matching
+  reads, and — on the right — the evaluated-transaction figure with the chip for
+  how many rules are active. It is informational, never a warning.
+- **Coverage bar:** the overview's stacked bar, one segment per tag the rules
+  apply, each in the tag's own colour and sized by how many transactions that tag
+  covers, with a legend of `#Tag (n)` rows underneath. The numbers come from the
+  same read as the match counts, so the bar can never disagree with the registry.
+- **Condition row:** one line of the composer — a numbered badge, the field, the
+  operator, the value (with the currency for an amount), and the remove control,
+  wrapping on narrow screens. The badge keeps the row's order readable when the
+  conditions are several.
 - **Metric card:** eyebrow with an icon tile, a large tabular value, and a delta
   or context chip. The focal card of the row (for example net flow) uses the blue
   `metric lead` variant.
@@ -210,7 +222,7 @@ Only shipping functionality is on screen; every figure comes from the API.
 | Accounts | Hero with the account and currency counts and a ribbon of booked balances per currency, create form, and one card per account with its real balance per currency and booked-movement count, archive, restore an archived account, and cascade delete |
 | Transactions | Hero naming the ledger, record form (notes, tag picker, status), server-side filters (text, account, tag, status, date range), quick tag-filter pills tinted with each tag's colour, and a table that opens a row for inline editing of **payee, amount, note and tags** on a **double-click** of one of those cells or on the row's **Edit** button, with the caret landing in the clicked cell; a status chip that switches booked ↔ pending, the source shown as an offline-AES chip, a **Raw** toggle per row that opens the provider record behind it (the stored fields and the bank's own fields side by side, flattened one per row, with the exact JSON one click away), and delete |
 | Tags | Hero with the tag count, create with a palette colour or a free colour from the browser picker, **inline rename and recolour** of an existing tag, and cascade delete |
-| Rules | Violet engine banner with the rule counts and the backfill action, a **New rule** card holding the condition builder (AND/OR, per-field operators, amount currency) and the tag selection, and a side column of rule tiles with an on/off switch, the matched expression, edit and delete. **Edit** opens the same fields in a dialog over the page and saving replaces that rule's conditions while keeping its id, state and order; the card behind keeps its own draft, untouched by the edit |
+| Rules | Violet engine banner (icon tile, engine name, zero-knowledge chip, what the engine reads, the evaluated-transaction figure and the active-rule chip), then the section headline with the **New rule** shortcut. The **composer** holds the condition builder (rule name and AND/OR logic side by side, numbered condition rows with per-field operators and the amount currency, a dashed **Add condition**, and the tags as toggle pills) over a footer with **Reset**, **Simulate on 100 tx** and **Save rule**; a **live evaluation** line under the form reports what the draft currently matches, read from the server without saving anything. The **overview** column carries automation metrics — total matches, the share of the ledger covered, a stacked bar and legend per tag the rules apply, the rule count and the engine's on/off state — and the **registry** is a full-width table of every rule (name and state, the matched expression, its tags, its match count, an on/off switch, edit and delete) with All/Active filters, an enable/disable-all action and the backfill button. **Edit** opens the same composer fields in a dialog over the page and saving replaces that rule's conditions while keeping its id, state and order; the composer behind keeps its own draft, untouched by the edit, and a click anywhere on a registry row opens the same dialog |
 | Settings | Hero with the cipher and zero-cloud chips, then Enable Banking first, split into three cards: the application (facts plus a callback-URL block that compares itself with the address in use, with the rest of the settings and the disconnect action behind disclosures), the guided bank picker (country and account type with **Load available banks** under them, the search, the sandbox credentials), and the linked banks with their status, per-account mapping, the balance the bank reports with the type it came from, Sync now and Unlink. The picker and the pending-authorization panel take turns: while a consent waits, the card shows only the panel — approve in the bank window, or **Delete** the request — and the picker returns the moment the connection lands. A **Next** banner on the first card always names the action left to take. The passphrase change and the paired export and import option cards (transaction CSV, every table as a plain ZIP, complete encrypted archive, CSV preview and merge, archive replacement) follow |
 
 The mockup's global search field is **deliberately left out of the top bar**:

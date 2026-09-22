@@ -137,6 +137,10 @@ you should see.
 | Press **Edit**, then close the dialog with **Cancel**, the X or `Esc` | Nothing is written and the **New rule** card is still holding its own draft |
 | Create an OR rule with two conditions | One matching condition is enough |
 | Create an amount rule ("amount less than -5.10 EUR") | It only matches transactions in EUR; USD transactions are ignored, and the amount is read as 5.10 in that currency, not as a count of cents |
+| Type a rule in the composer and stop | The **Live evaluation** line reports how many of the most recent transactions the draft matches, without saving anything; **Simulate on 100 tx** repeats the read on demand and **Reset** empties the composer |
+| Look at the overview column next to the composer | **Total matches** and the covered percentage count the transactions at least one active rule matches, the bar and its legend break that coverage down per tag, and the registry's **Matches** column agrees with them |
+| Filter the registry to **Active**, then press **Enable all** / **Disable all** | Paused rules disappear from the filtered table; the header action flips every rule and the overview follows |
+| Click a rule row (not its switch or its buttons) | The edit dialog opens for that rule; the row's own switch still only pauses it |
 | Pause a rule, then add a matching transaction | No tag is added |
 | Press **Apply rules to existing transactions** | A report shows how many transactions were evaluated and tagged; running it again reports zero changes |
 

@@ -432,6 +432,11 @@ Rules run when a transaction is created manually, merged from CSV, or imported
 from Enable Banking (Phase 6). Editing an existing transaction does not re-run
 rules. An explicit backfill
 action applies rules to existing transactions and is idempotent.
+`GET /api/tagging-rules/stats` counts what the stored rules cover across the
+whole ledger — per rule, per applied tag and in total — and
+`POST /api/tagging-rules/preview` runs the same evaluation for an unsaved
+condition set over the most recent transactions. Both only read the vault, so
+the editor can say what a rule would do before it is saved.
 
 Rules only add tags. They never remove tags or modify other fields, and Flowly
 does not track which rule added which tag: editing or deleting a rule leaves
@@ -1468,6 +1473,31 @@ Status: **complete** (2026-09-22).
   note; **Cancel** returns the row to its read-only cells.
 - The table card names the shortcut, so the gesture is discoverable rather than
   hidden.
+
+#### Task `restyle-the-rules-page-and-count-what-rules-cover`
+
+Status: **complete** (2026-09-22), decision in `docs/adr/0027`.
+
+- The Rules page follows the redrawn mockup: a violet engine banner with the
+  engine's name, a zero-knowledge chip and the evaluated-transaction figure, the
+  section headline and its **New rule** shortcut, a two-column body with the
+  composer on the left and automation metrics on the right, and a full-width
+  registry table of every rule below them.
+- The composer is the same condition builder in the new dress: rule name and
+  AND/OR logic side by side, numbered condition rows with per-field operators
+  and the amount currency, a dashed **Add condition**, tags as toggle pills, and
+  a footer with **Reset**, **Simulate on 100 tx** and **Save rule**.
+- The overview is measured, not decorative. The engine counts, for every
+  transaction in the vault, which stored rules match: **Total matches**, the
+  share of the ledger covered, a stacked bar and legend per applied tag, the rule
+  count and the engine's on/off state all come from that read.
+- **Live evaluation** reads the same count for the unsaved draft, over the most
+  recent transactions, shortly after typing stops; a draft the server would
+  refuse is never sent, and the explicit **Simulate on 100 tx** button repeats
+  the read and reports the errors.
+- The registry keeps every action it had (pause, resume, edit, delete, backfill)
+  in the new table, adds All/Active filters and an enable/disable-all action, and
+  opens a rule's editor from anywhere on its row.
 
 ### Phase 6 - Enable Banking for Server
 
