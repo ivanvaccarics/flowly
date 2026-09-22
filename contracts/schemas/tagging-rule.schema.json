@@ -47,7 +47,7 @@
       "required": ["field", "operator", "value"],
       "properties": {
         "field": {
-          "enum": ["userNote", "description", "payee", "amountMinor", "accountId"]
+          "enum": ["userNote", "description", "payee", "amount", "amountMinor", "accountId"]
         },
         "operator": {
           "enum": ["contains", "is", "greaterThan", "lessThan", "equals"]
@@ -78,6 +78,16 @@
           }
         },
         {
+          "properties": {
+            "field": { "const": "amount" },
+            "operator": { "enum": ["greaterThan", "lessThan", "equals"] },
+            "value": { "type": "number" },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+          },
+          "required": ["currency"]
+        },
+        {
+          "description": "Legacy amount field in minor units, kept for backward compatibility.",
           "properties": {
             "field": { "const": "amountMinor" },
             "operator": { "enum": ["greaterThan", "lessThan", "equals"] },

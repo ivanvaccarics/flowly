@@ -1,4 +1,5 @@
 import { DomainError } from "./errors.js";
+import { currencyInfo } from "./money.js";
 import type { Transaction } from "./transaction.js";
 import {
   assertIsoDateTime,
@@ -13,7 +14,13 @@ export const MAX_CONDITIONS_PER_RULE = 25;
 export const MAX_TAGS_PER_RULE = 25;
 export const RULE_NAME_MAX = 80;
 
-export type RuleConditionField = "userNote" | "description" | "payee" | "amountMinor" | "accountId";
+export type RuleConditionField =
+  | "userNote"
+  | "description"
+  | "payee"
+  | "amount"
+  | "amountMinor"
+  | "accountId";
 export type RuleConditionOperator = "contains" | "is" | "greaterThan" | "lessThan" | "equals";
 
 export interface RuleCondition {
@@ -42,6 +49,7 @@ export const OPERATORS_BY_FIELD: Readonly<
   userNote: ["contains"],
   description: ["contains"],
   payee: ["is", "contains"],
+  amount: ["greaterThan", "lessThan", "equals"],
   amountMinor: ["greaterThan", "lessThan", "equals"],
   accountId: ["is"],
 };
@@ -107,15 +115,23 @@ function validateCondition(condition: RuleCondition): void {
       { field: condition.field, operator: condition.operator },
     );
   }
-  const expectsNumber = condition.field === "amountMinor";
+  const expectsNumber = condition.field === "amount" || condition.field === "amountMinor";
   if (expectsNumber) {
-    if (typeof condition.value !== "number" || !Number.isSafeInteger(condition.value)) {
-      throw new DomainError("invalid-tagging-rule", "amount conditions need an integer value", {
+    if (typeof condition.value !== "number" || !Number.isFinite(condition.value)) {
+      throw new DomainError("invalid-tagging-rule", "amount conditions need a numeric value", {
         value: condition.value,
       });
     }
     if (!condition.currency) {
       throw new DomainError("invalid-tagging-rule", "amount conditions need a currency", {});
+    }
+    if (condition.field === "amount") {
+      toMinorAmount(condition.value, condition.currency);
+    }
+    if (condition.field === "amountMinor" && !Number.isSafeInteger(condition.value)) {
+      throw new DomainError("invalid-tagging-rule", "legacy amountMinor conditions need an integer", {
+        value: condition.value,
+      });
     }
   } else if (typeof condition.value !== "string" || condition.value.trim() === "") {
     throw new DomainError("invalid-tagging-rule", "text conditions need a non-empty value", {
@@ -169,9 +185,35 @@ function conditionMatches(condition: RuleCondition, target: RuleTarget | Transac
       if (condition.operator === "lessThan") return target.amountMinor < value;
       return target.amountMinor === value;
     }
+    case "amount": {
+      if (condition.currency !== target.currency) return false;
+      const value = toMinorAmount(condition.value as number, condition.currency);
+      if (condition.operator === "greaterThan") return target.amountMinor > value;
+      if (condition.operator === "lessThan") return target.amountMinor < value;
+      return target.amountMinor === value;
+    }
     default:
       return false;
   }
+}
+
+function toMinorAmount(value: number, currency: string): number {
+  const { minorUnits } = currencyInfo(currency);
+  const scale = 10 ** minorUnits;
+  const scaled = value * scale;
+  const rounded = Math.round(scaled);
+  if (!Number.isSafeInteger(rounded)) {
+    throw new DomainError("invalid-tagging-rule", "amount value is out of range", { value, currency });
+  }
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(scaled));
+  if (Math.abs(scaled - rounded) > tolerance) {
+    throw new DomainError(
+      "invalid-tagging-rule",
+      `${currency} amount supports at most ${minorUnits} decimals`,
+      { value, currency, minorUnits },
+    );
+  }
+  return rounded;
 }
 
 function textMatches(

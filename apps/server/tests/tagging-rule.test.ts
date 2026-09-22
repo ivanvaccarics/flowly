@@ -102,17 +102,24 @@ describe("tagging rule invariants", () => {
     expect(() =>
       validateTaggingRule({
         ...base,
-        conditions: [{ field: "amountMinor", operator: "greaterThan", value: 1000 }],
+        conditions: [{ field: "amount", operator: "greaterThan", value: 10.5 }],
       }),
     ).toThrow(/currency/i);
     expect(() =>
       validateTaggingRule({
         ...base,
-        conditions: [
-          { field: "amountMinor", operator: "greaterThan", value: 1000, currency: "EUR" },
-        ],
+        conditions: [{ field: "amount", operator: "greaterThan", value: 10.5, currency: "EUR" }],
       }),
     ).not.toThrow();
+  });
+
+  it("matches decimal amount rules against minor-unit transactions", () => {
+    const rule = {
+      ...base,
+      conditions: [{ field: "amount", operator: "equals", value: -5.1, currency: "EUR" }],
+    } satisfies TaggingRule;
+    expect(ruleMatches(rule, { accountId: base.id, amountMinor: -510, currency: "EUR" })).toBe(true);
+    expect(ruleMatches(rule, { accountId: base.id, amountMinor: -500, currency: "EUR" })).toBe(false);
   });
 
   it("rejects operators that do not belong to the field", () => {

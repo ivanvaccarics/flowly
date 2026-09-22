@@ -112,7 +112,7 @@ describe("tagging rules in the vault", () => {
           id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7082",
           name: "Rent",
           conditions: [
-            { field: "amountMinor", operator: "lessThan", value: -50000, currency: "EUR" },
+            { field: "amount", operator: "lessThan", value: -500, currency: "EUR" },
           ],
           tagIds: [RENT_TAG],
         }),

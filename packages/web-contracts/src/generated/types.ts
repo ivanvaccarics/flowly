@@ -105,12 +105,12 @@ export interface Tag {
 }
 
 export type Condition = {
-  field: "userNote" | "description" | "payee" | "amountMinor" | "accountId";
+  field: "userNote" | "description" | "payee" | "amount" | "amountMinor" | "accountId";
   operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
   value: string | number;
   currency?: string;
 } & Condition1 & {
-    field: "userNote" | "description" | "payee" | "amountMinor" | "accountId";
+    field: "userNote" | "description" | "payee" | "amount" | "amountMinor" | "accountId";
     operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
     value: string | number;
     currency?: string;
@@ -132,6 +132,13 @@ export type Condition1 =
       field?: "payee";
       operator?: "is" | "contains";
       value?: string;
+      [k: string]: unknown;
+    }
+  | {
+      field?: "amount";
+      operator?: "greaterThan" | "lessThan" | "equals";
+      value?: number;
+      currency: string;
       [k: string]: unknown;
     }
   | {

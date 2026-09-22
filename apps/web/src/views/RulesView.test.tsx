@@ -176,4 +176,28 @@ describe("rules view", () => {
     });
     expect((within(card).getByLabelText("Rule name") as HTMLInputElement).value).toBe("");
   });
+
+  it("accepts decimal amount typing and submits amount in major units", async () => {
+    const calls = mockApi();
+    render(<RulesView csrf="csrf-token" />);
+    const card = await screen.findByRole("form", { name: "New rule" });
+    fireEvent.change(within(card).getByLabelText("Rule name"), { target: { value: "Fees" } });
+    fireEvent.click(within(card).getByRole("checkbox", { name: "Coffee" }));
+    fireEvent.change(within(card).getByLabelText("Field 1"), { target: { value: "amount" } });
+
+    const value = within(card).getByLabelText("Value 1") as HTMLInputElement;
+    fireEvent.change(value, { target: { value: "-5." } });
+    expect(value.value).toBe("-5.");
+    fireEvent.change(value, { target: { value: "-5.1" } });
+
+    fireEvent.click(within(card).getByRole("button", { name: "Save rule" }));
+    await waitFor(() => expect(screen.getByText('Created "Fees".')).toBeTruthy());
+
+    const posted = calls.find((call) => call.method === "POST");
+    expect(posted?.entity).toMatchObject({
+      name: "Fees",
+      conditions: [{ field: "amount", operator: "greaterThan", value: -5.1, currency: "EUR" }],
+      tagIds: [TAG_ID],
+    });
+  });
 });

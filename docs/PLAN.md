@@ -413,10 +413,10 @@ Supported condition fields and operators:
 - `userNote contains`, `description contains` — Unicode-normalized,
   case-insensitive substring match
 - `payee is`, `payee contains` — normalized equality or substring match
-- `amountMinor greater than`, `less than`, `equals` — signed minor units, where
-  inflows are positive and outflows are negative; each amount condition carries
-  a currency and matches only transactions in that currency, with no implicit
-  conversion
+- `amount greater than`, `less than`, `equals` — signed decimal currency units
+  entered by the user (for example `-5.1`), converted to each currency's minor
+  units for matching; each amount condition carries a currency and matches only
+  transactions in that currency, with no implicit conversion
 - `accountId is` — exact account identifier
 
 A rule joins its conditions with a single AND or OR. Nested groups are out of

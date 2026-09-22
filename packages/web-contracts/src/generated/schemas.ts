@@ -457,6 +457,7 @@ export const schemas = {
               "userNote",
               "description",
               "payee",
+              "amount",
               "amountMinor",
               "accountId"
             ]
@@ -525,6 +526,31 @@ export const schemas = {
             }
           },
           {
+            "properties": {
+              "field": {
+                "const": "amount"
+              },
+              "operator": {
+                "enum": [
+                  "greaterThan",
+                  "lessThan",
+                  "equals"
+                ]
+              },
+              "value": {
+                "type": "number"
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              }
+            },
+            "required": [
+              "currency"
+            ]
+          },
+          {
+            "description": "Legacy amount field in minor units, kept for backward compatibility.",
             "properties": {
               "field": {
                 "const": "amountMinor"
