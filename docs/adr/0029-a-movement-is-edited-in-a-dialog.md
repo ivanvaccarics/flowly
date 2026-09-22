@@ -1,6 +1,8 @@
 # ADR 0029 — A movement is edited in a dialog, not in its row
 
-Status: Accepted (2026-09-22)
+Status: Accepted (2026-09-22). The gesture described below is superseded by
+[ADR 0030](./0030-one-click-opens-the-movement-editor.md): the editor opens on a
+single click.
 
 ## Context
 

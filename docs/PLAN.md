@@ -1495,6 +1495,20 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0029`.
   top bar (it used to slide under it, hiding the dialog's first line) and the
   top padding keeps the title clear of the window edge on short screens.
 
+#### Task `open-the-movement-editor-with-one-click`
+
+Status: **complete** (2026-09-22), decision in `docs/adr/0030`.
+
+- One click on a cell the dialog can change — date, payee, note, tags, amount —
+  opens the movement editor; the row's **Edit** button does the same and stays
+  the keyboard-reachable way in. The double-click the row editor needed is gone,
+  because a dialog no longer changes the cell under the pointer.
+- The status chip keeps its own single-click action — booked ↔ pending — and
+  never opens the editor; **Raw**, delete and the source chip are unchanged.
+- The ledger card's hint reads "click the date, payee, note, tags or amount to
+  edit the movement", and the test that covered the double-click now clicks once
+  and asserts that the status chip still only toggles.
+
 #### Task `restyle-the-rules-page-and-count-what-rules-cover`
 
 Status: **complete** (2026-09-22), decision in `docs/adr/0027`.

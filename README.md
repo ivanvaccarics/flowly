@@ -228,7 +228,7 @@ card, and records a movement from **Add transaction**, which opens the form in a
 dialog as well. The ledger pages through its matching rows on the server — 25 per
 page by default, 50 or 100 from the selector — and always says which window it is
 showing, so a vault with thousands of movements is never silently truncated. A
-movement is corrected in a dialog too: double-click the payee, the note, the
+movement is corrected in a dialog too: click the date, the payee, the note, the
 tags or the amount, or press the row's **Edit** button, and the same form the
 composer uses opens with everything prefilled. The dashboard's recent
 transactions page the same way, ten rows at a time. The dashboard charts weekly

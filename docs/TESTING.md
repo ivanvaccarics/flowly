@@ -117,7 +117,7 @@ you should see.
 | Press **Add transaction** on the ledger | The record form opens in a dialog over the page; saving it closes the dialog and the new movement is at the top of the ledger |
 | Look at the top of any section | A tinted banner names what the section is about (green for money, violet for automation, slate for the vault) with its figures, and a headline with the section's action sits under it; the top bar carries the breadcrumb above the title |
 | Edit the note of a transaction | The change is saved; the revision increases |
-| Double-click the payee (or the note, the tags, the amount) of a row | The movement opens in the same dialog **Add transaction** uses, prefilled with its account, date, amount, payee, note, status and tags; **Cancel** closes it without writing, and the row's **Edit** button opens it too |
+| Click the date (or the payee, the note, the tags, the amount) of a row | The movement opens in the same dialog **Add transaction** uses, prefilled with its account, date, amount, payee, note, status and tags; **Cancel** closes it without writing, and the row's **Edit** button opens it too. The status chip is the exception: a click there only switches booked ↔ pending |
 | Open any dialog while the page is scrolled, with the top bar pinned | The dialog covers the whole window, top bar included: its title is never hidden under the bar and the first field stays reachable |
 | Open the same transaction in two tabs and save both | The second save reports a revision conflict instead of overwriting |
 | Filter by account, date range, tag, status or free text | The list narrows and the count updates; nothing is filtered in the browser only |

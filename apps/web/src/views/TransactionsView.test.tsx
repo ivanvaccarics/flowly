@@ -331,7 +331,7 @@ describe("transactions view", () => {
     expect(calls[0]?.body).toContain('"payee":"Bar Centrale Roma"');
   });
 
-  it("opens the edit dialog on a double-click, and keeps the Edit button", async () => {
+  it("opens the edit dialog on a single click, and keeps the Edit button", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -351,11 +351,11 @@ describe("transactions view", () => {
     await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
 
     // The hint says the cells are the shortcut, not another control to find.
-    expect(screen.getByText(/double-click a cell to edit it in place/)).toBeTruthy();
+    expect(screen.getByText(/click the date, payee, note, tags or amount/)).toBeTruthy();
 
-    // A double-click on the payee opens the movement in a dialog.
+    // One click on the payee opens the movement in a dialog.
     const payeeCell = screen.getByText("Bar Centrale");
-    fireEvent.doubleClick(payeeCell);
+    fireEvent.click(payeeCell);
     const editor = await screen.findByRole("dialog", { name: "Edit Bar Centrale" });
     expect((within(editor).getByLabelText("Payee") as HTMLInputElement).value).toBe("Bar Centrale");
     expect((within(editor).getByLabelText("Amount (EUR)") as HTMLInputElement).value).toBe(
@@ -368,6 +368,10 @@ describe("transactions view", () => {
 
     // Cancel returns the read-only row, and the button still opens the editor.
     fireEvent.click(within(editor).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog", { name: "Edit Bar Centrale" })).toBeNull();
+    // The status chip keeps its own single-click action: it toggles, it does
+    // not open the editor.
+    fireEvent.click(screen.getByRole("button", { name: "Set status for Bar Centrale" }));
     expect(screen.queryByRole("dialog", { name: "Edit Bar Centrale" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Edit Bar Centrale" }));
     expect(await screen.findByRole("dialog", { name: "Edit Bar Centrale" })).toBeTruthy();

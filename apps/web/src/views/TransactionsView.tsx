@@ -160,7 +160,7 @@ export function TransactionsView({
     setComposer(emptyTransactionDraft(new Date().toISOString().slice(0, 10)));
   }
 
-  /** A double-click on a cell and the row's Edit button open the same dialog. */
+  /** A click on a cell — or the row's Edit button — opens the same dialog. */
   function startEditing(transaction: Transaction, opener: HTMLElement | null) {
     setFormError(undefined);
     setComposer(undefined);
@@ -397,7 +397,7 @@ export function TransactionsView({
             <p className="eyebrow">Ledger</p>
             <h2>Every movement</h2>
             <span className="sub">
-              {total} matching · double-click a cell to edit it in place, or use the Edit button
+              {total} matching · click the date, payee, note, tags or amount to edit the movement
             </span>
           </div>
           <button type="button" className="btn small" onClick={() => updateFilters(EMPTY_FILTERS)}>
@@ -529,8 +529,13 @@ export function TransactionsView({
               {items.map((transaction) => (
                 <Fragment key={transaction.id}>
                   <tr>
-                    <td className="mono cell-nowrap">{transaction.bookingDate}</td>
-                    <td onDoubleClick={(event) => startEditing(transaction, event.currentTarget)}>
+                    <td
+                      className="mono cell-nowrap"
+                      onClick={(event) => startEditing(transaction, event.currentTarget)}
+                    >
+                      {transaction.bookingDate}
+                    </td>
+                    <td onClick={(event) => startEditing(transaction, event.currentTarget)}>
                       <span className="tx">
                         <span
                           className={
@@ -548,10 +553,10 @@ export function TransactionsView({
                         </span>
                       </span>
                     </td>
-                    <td onDoubleClick={(event) => startEditing(transaction, event.currentTarget)}>
+                    <td onClick={(event) => startEditing(transaction, event.currentTarget)}>
                       {transaction.userNote ?? "—"}
                     </td>
-                    <td onDoubleClick={(event) => startEditing(transaction, event.currentTarget)}>
+                    <td onClick={(event) => startEditing(transaction, event.currentTarget)}>
                       {transaction.tagIds.length === 0 ? (
                         <span className="muted">—</span>
                       ) : (
@@ -586,7 +591,7 @@ export function TransactionsView({
                     </td>
                     <td
                       className="cell-amount"
-                      onDoubleClick={(event) => startEditing(transaction, event.currentTarget)}
+                      onClick={(event) => startEditing(transaction, event.currentTarget)}
                     >
                       <Money minor={transaction.amountMinor} currency={transaction.currency} />
                     </td>
