@@ -2,7 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Account, Dashboard, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, Empty, Money, PageHeader, tagPillStyle } from "../components/ui.js";
+import {
+  Banner,
+  BannerFigure,
+  Chip,
+  Empty,
+  Money,
+  SectionBanner,
+  SectionIntro,
+  tagPillStyle,
+} from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { describeError } from "../hooks/use-workspace.js";
 import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
@@ -209,19 +218,39 @@ export function DashboardView({
 
   return (
     <section className="view" aria-labelledby="dashboard-title">
-      <PageHeader
-        eyebrow="Sovereign vault ledger"
-        lead={`${accounts.length} accounts · period ${from} → ${to} · aggregates use booked transactions only`}
-        facts={
+      <SectionBanner
+        tone="vault"
+        icon="dashboard"
+        eyebrow="Encrypted ledger"
+        title="Local financial overview"
+        badge={
+          <Chip tone="income" icon="shield">
+            zero-telemetry
+          </Chip>
+        }
+        lead="Every figure below is aggregated on this device from the booked movements of the encrypted vault; nothing is uploaded and no currency is ever converted."
+        side={
+          <Chip tone="vault" icon="lock">
+            AES-256-GCM
+          </Chip>
+        }
+        figures={
           <>
-            <Chip tone="income" icon="shield">
-              zero-telemetry
-            </Chip>
-            <Chip tone="vault" icon="lock">
-              AES-256-GCM
-            </Chip>
+            <BannerFigure label="Accounts" value={String(accounts.length)} />
+            <BannerFigure
+              label="Currencies"
+              value={String(new Set(dashboard?.balances.map((line) => line.currency) ?? []).size)}
+            />
+            <BannerFigure label="Period" value={`${from} → ${to}`} />
           </>
         }
+      />
+
+      <SectionIntro
+        icon="dashboard"
+        eyebrow="Analysis & trend"
+        title="Where the money went, and what is left."
+        lead="Aggregates use booked transactions only, and each currency keeps its own figures."
         actions={
           <>
             <div className="segmented" role="group" aria-label="Period">
@@ -353,6 +382,7 @@ export function DashboardView({
           <div className="card">
             <header>
               <div>
+                <p className="eyebrow">Trend</p>
                 <h2>Cash flow</h2>
                 <span className="sub">
                   Income vs expenses per week · {from} → {to}
@@ -383,7 +413,10 @@ export function DashboardView({
 
           <div className="card">
             <header>
-              <h2>Recent transactions</h2>
+              <div>
+                <p className="eyebrow">Movements</p>
+                <h2>Recent transactions</h2>
+              </div>
               <div className="cell-actions">
                 <Chip tone="neutral">{recentTotal} records</Chip>
                 <button type="button" className="btn small" onClick={() => onSeeAllTransactions()}>
@@ -516,6 +549,7 @@ export function DashboardView({
           <div className="card">
             <header>
               <div>
+                <p className="eyebrow">Breakdown</p>
                 <h2>Spending breakdown</h2>
                 <span className="sub">
                   {spendingGroups.length > 1
@@ -560,7 +594,10 @@ export function DashboardView({
 
           <div className="card">
             <header>
-              <h2>Accounts summary</h2>
+              <div>
+                <p className="eyebrow">Accounts</p>
+                <h2>Accounts summary</h2>
+              </div>
             </header>
             {dashboard && dashboard.balances.length > 0 ? (
               <ul className="account-rows">

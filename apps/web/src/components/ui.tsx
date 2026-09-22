@@ -64,10 +64,110 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="muted">{children}</p>;
 }
 
+/** One figure a section banner carries, either beside the title or under it. */
+export function BannerFigure({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "income" | "expense";
+}) {
+  return (
+    <span className="banner-figure">
+      <span className="eyebrow">{label}</span>
+      <strong className={tone ?? undefined}>{value}</strong>
+    </span>
+  );
+}
+
+/**
+ * The tinted strip a section opens with, above its own headline: an icon tile,
+ * an optional eyebrow, the section's title with a badge, a description, and
+ * whatever the section has to state — state chips on the right, or a row of
+ * figures under the text. Every section opens this way, so the pages read as
+ * one product instead of six.
+ */
+export function SectionBanner({
+  tone = "vault",
+  icon,
+  eyebrow,
+  title,
+  badge,
+  lead,
+  side,
+  figures,
+}: {
+  tone?: "vault" | "info" | "neutral";
+  icon: IconName;
+  eyebrow?: string;
+  title: string;
+  badge?: ReactNode;
+  lead?: ReactNode;
+  side?: ReactNode;
+  figures?: ReactNode;
+}) {
+  return (
+    <section className={`section-banner ${tone}`}>
+      <div className="section-banner-top">
+        <div className="section-banner-main">
+          <span className={`tile ${tone}`}>
+            <Icon name={icon} size={20} />
+          </span>
+          <div className="stack">
+            {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+            <div className="section-banner-title">
+              <h2>{title}</h2>
+              {badge}
+            </div>
+            {lead ? <p className="sub">{lead}</p> : null}
+          </div>
+        </div>
+        {side ? <div className="section-banner-side">{side}</div> : null}
+      </div>
+      {figures ? <div className="section-banner-figures">{figures}</div> : null}
+    </section>
+  );
+}
+
+/**
+ * The section's own headline, under the banner: an eyebrow with the section's
+ * icon, a sentence worth reading, and the one action the section is for.
+ */
+export function SectionIntro({
+  icon,
+  eyebrow,
+  title,
+  lead,
+  actions,
+}: {
+  icon: IconName;
+  eyebrow: string;
+  title: string;
+  lead?: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="section-intro">
+      <div className="section-intro-main">
+        <p className="eyebrow primary">
+          <Icon name={icon} size={14} />
+          {eyebrow}
+        </p>
+        <h2>{title}</h2>
+        {lead ? <p className="lead">{lead}</p> : null}
+      </div>
+      {actions ? <div className="section-intro-actions">{actions}</div> : null}
+    </div>
+  );
+}
+
 /**
  * The summary block a section opens with, under the top bar's `h1`: an eyebrow
  * line, an optional card heading, a lead paragraph, right-aligned facts and
- * actions, and an optional sunken ribbon of key figures.
+ * actions. Only the standalone bank callback still uses it: every section
+ * inside the shell opens with a `SectionBanner` and a `SectionIntro`.
  */
 export function PageHeader({
   eyebrow,
@@ -77,8 +177,6 @@ export function PageHeader({
   lead,
   facts,
   actions,
-  ribbon,
-  tone = "default",
 }: {
   eyebrow: string;
   title?: string;
@@ -88,11 +186,9 @@ export function PageHeader({
   lead?: ReactNode;
   facts?: ReactNode;
   actions?: ReactNode;
-  ribbon?: ReactNode;
-  tone?: "default" | "info";
 }) {
   return (
-    <section className={tone === "info" ? "hero info" : "hero"}>
+    <section className="hero">
       <div className="hero-top">
         <div className="hero-title">
           <p className="eyebrow primary">{eyebrow}</p>
@@ -105,26 +201,7 @@ export function PageHeader({
           {actions ? <div className="cell-actions">{actions}</div> : null}
         </div>
       </div>
-      {ribbon ? <div className="ribbon">{ribbon}</div> : null}
     </section>
-  );
-}
-
-/** One figure inside a `PageHeader` ribbon. */
-export function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "income" | "expense" | "primary";
-}) {
-  return (
-    <span className="ribbon-item">
-      <span className="eyebrow">{label}</span>
-      <span className={tone ? `value ${tone}` : "value"}>{value}</span>
-    </span>
   );
 }
 

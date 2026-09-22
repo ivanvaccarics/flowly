@@ -114,6 +114,8 @@ you should see.
 | Add a tag from the colour palette | It appears with that colour and can be selected on transactions |
 | Rename a tag and pick another colour, then save | The row shows the new name once; transactions and rules that use the tag keep it |
 | Add a transaction with payee, note and a tag | It appears in the table with the amount formatted in its currency |
+| Press **Add transaction** on the ledger | The record form opens in a dialog over the page; saving it closes the dialog and the new movement is at the top of the ledger |
+| Look at the top of any section | A tinted banner names what the section is about (green for money, violet for automation, slate for the vault) with its figures, and a headline with the section's action sits under it; the top bar carries the breadcrumb above the title |
 | Edit the note of a transaction | The change is saved; the revision increases |
 | Double-click the payee (or the note, the tags, the amount) of a row | The row becomes editable with the caret in the cell you double-clicked; **Cancel** returns it to read-only, and the row's **Edit** button still opens the same editor |
 | Open the same transaction in two tabs and save both | The second save reports a revision conflict instead of overwriting |

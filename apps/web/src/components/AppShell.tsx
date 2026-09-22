@@ -12,16 +12,58 @@ import { TransactionsView } from "../views/TransactionsView.js";
 
 /**
  * One entry per section: the sidebar label, the `h1` the top bar shows for that
- * section (the id is what every view points its `aria-labelledby` at) and the
- * icon.
+ * section (the id is what every view points its `aria-labelledby` at), the
+ * breadcrumb above it and the icon.
  */
-const NAVIGATION: Array<{ key: string; label: string; title: string; icon: IconName }> = [
-  { key: "dashboard", label: "Dashboard", title: "Financial overview", icon: "dashboard" },
-  { key: "accounts", label: "Accounts", title: "Accounts & resources", icon: "accounts" },
-  { key: "transactions", label: "Transactions", title: "Transactions", icon: "transactions" },
-  { key: "tags", label: "Tags", title: "Tags", icon: "tags" },
-  { key: "rules", label: "Rules", title: "Tagging & automation", icon: "rules" },
-  { key: "settings", label: "Settings", title: "Settings & vault data", icon: "settings" },
+const NAVIGATION: Array<{
+  key: string;
+  label: string;
+  group: string;
+  title: string;
+  icon: IconName;
+}> = [
+  {
+    key: "dashboard",
+    label: "Dashboard",
+    group: "Analysis & trend",
+    title: "Financial overview",
+    icon: "dashboard",
+  },
+  {
+    key: "accounts",
+    label: "Accounts",
+    group: "Money & accounts",
+    title: "Accounts & resources",
+    icon: "accounts",
+  },
+  {
+    key: "transactions",
+    label: "Transactions",
+    group: "Analysis & trend",
+    title: "Transactions",
+    icon: "transactions",
+  },
+  {
+    key: "tags",
+    label: "Tags",
+    group: "Automation & taxonomy",
+    title: "Tags",
+    icon: "tags",
+  },
+  {
+    key: "rules",
+    label: "Rules",
+    group: "Automation & taxonomy",
+    title: "Tagging & automation",
+    icon: "rules",
+  },
+  {
+    key: "settings",
+    label: "Settings",
+    group: "Vault & data",
+    title: "Settings & vault data",
+    icon: "settings",
+  },
 ];
 
 /** The wall clock in the top bar: local time, refreshed every 30 s. */
@@ -124,9 +166,12 @@ export function AppShell({
 
       <header className="topbar">
         <div className="topbar-heading">
-          <h1 className="topbar-title" id={`${section.key}-title`}>
-            {section.title}
-          </h1>
+          <div className="topbar-heading-text">
+            <p className="topbar-eyebrow eyebrow">{section.group}</p>
+            <h1 className="topbar-title" id={`${section.key}-title`}>
+              {section.title}
+            </h1>
+          </div>
           <div className="topbar-status">
             <span className="status-pill" title="Encrypted vault, unlocked for this session">
               <span className="pulse" />

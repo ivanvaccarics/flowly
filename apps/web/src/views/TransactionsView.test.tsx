@@ -228,7 +228,7 @@ describe("transactions view", () => {
     expect(screen.getAllByText("Coffee").length).toBeGreaterThan(0);
     // The status of every row is visible, and it is switchable.
     expect(screen.getByRole("button", { name: /Set status for Bar Centrale/ })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "Status" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Filter by status" })).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Search"), { target: { value: "espresso" } });
     await waitFor(() => expect(requests.some((url) => url.includes("q=espresso"))).toBe(true));
@@ -349,7 +349,7 @@ describe("transactions view", () => {
     await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
 
     // The hint says the cells are the shortcut, not another control to find.
-    expect(screen.getByText(/Double-click payee, note, tags or amount/)).toBeTruthy();
+    expect(screen.getByText(/double-click a cell to edit it in place/)).toBeTruthy();
 
     // A double-click on the payee opens the whole row and puts the caret there.
     const payeeCell = screen.getByText("Bar Centrale");

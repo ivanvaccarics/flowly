@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Tag } from "@flowly/web-contracts";
 import { Icon } from "../components/icons.js";
 import { TagColorField } from "../components/TagColorField.js";
-import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
+import { Banner, Chip, Empty, SectionBanner, SectionIntro } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { DEFAULT_TAG_COLOR, normalizeTagName } from "../lib/tags.js";
 
@@ -65,15 +65,27 @@ export function TagsView({ csrf }: { csrf: string }) {
 
   return (
     <section className="view" aria-labelledby="tags-title">
-      <PageHeader
-        eyebrow="Taxonomy · case-insensitive, Unicode-aware"
+      <SectionBanner
+        tone="info"
+        icon="tags"
+        eyebrow="Automation & taxonomy"
+        title="One label, used everywhere"
+        badge={<Chip tone="neutral">{tags.items.length} defined</Chip>}
         lead="Tags bucket spending and drive the tagging rules. Renaming one keeps every transaction and rule that uses it."
-        facts={<Chip tone="neutral">{tags.items.length} defined</Chip>}
+        side={<Chip tone="income">Unicode-aware</Chip>}
+      />
+
+      <SectionIntro
+        icon="tags"
+        eyebrow="Taxonomy"
+        title="Name it once, find it everywhere."
+        lead="Matching is case-insensitive and keeps the casing you typed; a tag's colour is used by the interface alone."
       />
 
       <form className="card" onSubmit={submit}>
         <header>
           <div>
+            <p className="eyebrow">Setup</p>
             <h2>New tag</h2>
             <span className="sub">The colour is only used by the interface</span>
           </div>
@@ -106,6 +118,7 @@ export function TagsView({ csrf }: { csrf: string }) {
       <div className="card">
         <header>
           <div>
+            <p className="eyebrow">Registry</p>
             <h2>Your tags</h2>
             <span className="sub">Matching is case-insensitive, whatever casing you type</span>
           </div>

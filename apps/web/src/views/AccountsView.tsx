@@ -2,7 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import type { Account, Dashboard } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon, type IconName } from "../components/icons.js";
-import { Banner, Chip, Empty, PageHeader, Stat } from "../components/ui.js";
+import {
+  Banner,
+  BannerFigure,
+  Chip,
+  Empty,
+  SectionBanner,
+  SectionIntro,
+} from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { ACCOUNT_TYPES, CURRENCIES, formatMoney } from "../lib/money.js";
@@ -99,22 +106,23 @@ export function AccountsView({ csrf }: { csrf: string }) {
 
   return (
     <section className="view" aria-labelledby="accounts-title">
-      <PageHeader
-        eyebrow="Accounts · balances per currency"
+      <SectionBanner
+        tone="vault"
+        icon="accounts"
+        eyebrow="Money & accounts"
+        title="Every account, one vault"
+        badge={<Chip tone="neutral">{accounts.items.length} accounts</Chip>}
         lead="Every account is a local endpoint: a bank-linked account shows the balance your bank sends, every other account books its own movements, and no currency is ever converted."
-        facts={
-          <>
-            <Chip tone="neutral">{accounts.items.length} accounts</Chip>
-            <Chip tone="neutral">
-              {currencies.size} {currencies.size === 1 ? "currency" : "currencies"}
-            </Chip>
-          </>
+        side={
+          <Chip tone="vault" icon="lock">
+            AES-256-GCM
+          </Chip>
         }
-        ribbon={
+        figures={
           totals.length > 0 ? (
             <>
               {totals.map((total) => (
-                <Stat
+                <BannerFigure
                   key={total.currency}
                   label={`Booked balance · ${total.currency}`}
                   value={formatMoney(total.balanceMinor, total.currency)}
@@ -125,9 +133,22 @@ export function AccountsView({ csrf }: { csrf: string }) {
         }
       />
 
+      <SectionIntro
+        icon="accounts"
+        eyebrow="Balances per currency"
+        title="Where your money sits right now."
+        lead="Archived accounts keep their movements and can be restored; deleting one asks for an explicit cascade."
+        actions={
+          <Chip tone="neutral">
+            {currencies.size} {currencies.size === 1 ? "currency" : "currencies"}
+          </Chip>
+        }
+      />
+
       <form className="card" onSubmit={submit}>
         <header>
           <div>
+            <p className="eyebrow">Setup</p>
             <h2>New account</h2>
             <span className="sub">Stored only in the local keystore</span>
           </div>
@@ -171,7 +192,10 @@ export function AccountsView({ csrf }: { csrf: string }) {
 
       <section className="view" aria-label="Your accounts">
         <div className="view-header-inline">
-          <h2>Active endpoints</h2>
+          <div>
+            <p className="eyebrow">Registry</p>
+            <h2>Active endpoints</h2>
+          </div>
           <span className="sub">
             Linked accounts use the bank balance; the rest use booked movements
           </span>

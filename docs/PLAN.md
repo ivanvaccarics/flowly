@@ -1499,6 +1499,31 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0027`.
   in the new table, adds All/Active filters and an enable/disable-all action, and
   opens a rule's editor from anywhere on its row.
 
+#### Task `give-every-section-the-same-heading`
+
+Status: **complete** (2026-09-22), decision in `docs/adr/0028`.
+
+- The rules page's banner and headline are now the product's page pattern:
+  `SectionBanner` (icon tile, eyebrow, title with a state chip, a sentence about
+  the section, state chips on the right and a row of figures when the section
+  has numbers) and `SectionIntro` (the eyebrow with the section's icon, the
+  headline and the section's own action) are shared components, and every
+  in-shell page uses them.
+- The tones carry meaning rather than decoration: green banners for the money
+  itself (dashboard, accounts, ledger), violet for automation (rules, tags),
+  slate for the vault (settings).
+- The top bar gained the breadcrumb the mockups show above the title, naming the
+  family a section belongs to; the vault state pill, the vault id, the clock and
+  the session controls are unchanged.
+- The ledger follows its own redrawn mockup further: the green banner carries
+  this month's income, expenses and net (read from the same dashboard the
+  dashboard page reads), the record form moved into a dialog opened by **Add
+  transaction**, and the filters, the **View** pills, the table and the pager
+  now live in one card.
+- Card headers across the pages gained the mockups' uppercase eyebrow above
+  their heading (Trend, Movements, Breakdown, Accounts, Setup, Registry, Data in,
+  Data out, Security), so every card says what it is at a glance.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`

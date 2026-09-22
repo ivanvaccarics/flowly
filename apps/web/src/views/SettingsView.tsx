@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api } from "../api/client.js";
 import { BankingPanel } from "../components/BankingPanel.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, FileField, PageHeader } from "../components/ui.js";
+import { Banner, Chip, FileField, SectionBanner, SectionIntro } from "../components/ui.js";
 import { describeError } from "../hooks/use-workspace.js";
 
 interface CsvPreview {
@@ -61,19 +61,29 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
 
   return (
     <section className="view" aria-labelledby="settings-title">
-      <PageHeader
-        eyebrow="Settings · bank, passphrase and portable data"
-        lead="Connect your bank, protect the local vault with its passphrase, and export or import your ledger without giving up sovereignty."
-        facts={
-          <>
-            <Chip tone="vault" icon="shield">
-              AES-256-GCM
-            </Chip>
-            <Chip tone="income" icon="check">
-              zero-cloud
-            </Chip>
-          </>
+      <SectionBanner
+        tone="neutral"
+        icon="settings"
+        eyebrow="Vault & data"
+        title="Your vault, your rules"
+        badge={
+          <Chip tone="vault" icon="shield">
+            AES-256-GCM
+          </Chip>
         }
+        lead="Connect your bank, protect the local vault with its passphrase, and export or import your ledger without giving up sovereignty."
+        side={
+          <Chip tone="income" icon="check">
+            zero-cloud
+          </Chip>
+        }
+      />
+
+      <SectionIntro
+        icon="settings"
+        eyebrow="Settings"
+        title="Nothing leaves the device unless you take it."
+        lead="The bank connection, the passphrase and the portable export all work against the local vault; the three export shapes are the supported way out."
       />
 
       <BankingPanel csrf={csrf} />
@@ -94,6 +104,7 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
       >
         <header>
           <div>
+            <p className="eyebrow">Security</p>
             <h2>Passphrase</h2>
             <span className="sub">Re-wraps the vault key; your data is not re-encrypted</span>
           </div>
@@ -137,6 +148,7 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
       <div className="card" id="settings-export" tabIndex={-1}>
         <header>
           <div>
+            <p className="eyebrow">Data out</p>
             <h2>Portable export</h2>
             <span className="sub">Everything stays on your device — no upload, no telemetry</span>
           </div>
@@ -237,6 +249,7 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
       <div className="card">
         <header>
           <div>
+            <p className="eyebrow">Data in</p>
             <h2>Import into the vault</h2>
             <span className="sub">A CSV merge is additive; an archive replaces the vault</span>
           </div>

@@ -11,7 +11,15 @@ import {
   type RuleDraft,
 } from "../components/RuleFields.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, Empty, tagPillStyle } from "../components/ui.js";
+import {
+  Banner,
+  BannerFigure,
+  Chip,
+  Empty,
+  SectionBanner,
+  SectionIntro,
+  tagPillStyle,
+} from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
@@ -250,51 +258,34 @@ export function RulesView({ csrf }: { csrf: string }) {
 
   return (
     <section className="view" aria-labelledby="rules-title">
-      <section className="engine-banner">
-        <div className="engine-banner-main">
-          <span className="tile info">
-            <Icon name="rules" size={20} />
-          </span>
-          <div className="stack">
-            <div className="engine-banner-title">
-              <h2>Deterministic heuristic engine</h2>
-              <Chip tone="income">Zero-knowledge</Chip>
-            </div>
-            <p className="sub">
-              Active rules are evaluated in memory, on your device. Nothing is uploaded and nothing
-              is measured: matching happens here, inside the encrypted vault.
-            </p>
-          </div>
-        </div>
-        <div className="engine-banner-side">
-          <span className="engine-figure">
-            <span className="eyebrow">Evaluated</span>
-            <strong>{stats ? evaluated : "—"}</strong>
-            <span className="sub">transactions in this vault</span>
-          </span>
-          <Chip tone={activeRules.length > 0 ? "income" : "neutral"}>
-            {activeRules.length > 0 ? `${activeRules.length} active` : "Engine idle"}
-          </Chip>
-        </div>
-      </section>
+      <SectionBanner
+        tone="info"
+        icon="rules"
+        title="Deterministic heuristic engine"
+        badge={<Chip tone="income">Zero-knowledge</Chip>}
+        lead="Active rules are evaluated in memory, on your device. Nothing is uploaded and nothing is measured: matching happens here, inside the encrypted vault."
+        side={
+          <>
+            <BannerFigure label="Evaluated" value={stats ? String(evaluated) : "—"} />
+            <Chip tone={activeRules.length > 0 ? "income" : "neutral"}>
+              {activeRules.length > 0 ? `${activeRules.length} active` : "Engine idle"}
+            </Chip>
+          </>
+        }
+      />
 
-      <div className="rules-intro">
-        <div>
-          <p className="eyebrow primary">
-            <Icon name="rules" size={14} />
-            Local rules
-          </p>
-          <h2>Keep order, without thinking about it twice.</h2>
-          <p className="lead">
-            Define the signal, pick a label and Flowly does the repetitive work. Rules only ever add
-            tags, they run on new transactions and imports, and they stay yours alone.
-          </p>
-        </div>
-        <button type="button" className="btn primary" onClick={startNewRule}>
-          <Icon name="plus" size={16} />
-          New rule
-        </button>
-      </div>
+      <SectionIntro
+        icon="rules"
+        eyebrow="Local rules"
+        title="Keep order, without thinking about it twice."
+        lead="Define the signal, pick a label and Flowly does the repetitive work. Rules only ever add tags, they run on new transactions and imports, and they stay yours alone."
+        actions={
+          <button type="button" className="btn primary" onClick={startNewRule}>
+            <Icon name="plus" size={16} />
+            New rule
+          </button>
+        }
+      />
 
       <div className="dash">
         <div className="dash-main">

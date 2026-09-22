@@ -2,8 +2,18 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { Account, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
+import { Modal } from "../components/Modal.js";
 import { TagPicker } from "../components/TagPicker.js";
-import { Banner, Chip, Empty, Money, PageHeader, tagPillStyle } from "../components/ui.js";
+import {
+  Banner,
+  BannerFigure,
+  Chip,
+  Empty,
+  Money,
+  SectionBanner,
+  SectionIntro,
+  tagPillStyle,
+} from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { parseAmountToMinor } from "../lib/money.js";
@@ -74,6 +84,11 @@ export function TransactionsView({
   const [editing, setEditing] = useState<EditingRow | undefined>(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
   const [rawOpen, setRawOpen] = useState<string | undefined>(undefined);
+  const [composerOpen, setComposerOpen] = useState(false);
+  /** This month's flows, for the banner: the same figures the dashboard shows. */
+  const [monthFlow, setMonthFlow] = useState<
+    { currency: string; incomeMinor: number; expensesMinor: number; netMinor: number } | undefined
+  >(undefined);
   /** The three text inputs a double-click may have to focus. */
   const editInputs = useRef<Record<"payee" | "note" | "amount", HTMLInputElement | null>>({
     payee: null,
@@ -131,6 +146,23 @@ export function TransactionsView({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const to = new Date().toISOString().slice(0, 10);
+    void api
+      .dashboard({ from: `${to.slice(0, 7)}-01`, to })
+      .then((data) => {
+        if (cancelled) return;
+        setMonthFlow(data.cashFlow[0] ?? undefined);
+      })
+      .catch(() => {
+        if (!cancelled) setMonthFlow(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // A double-click on a cell opens the row with the caret in that cell, not
   // merely at the first input of the row. The Edit button opens without focus.
@@ -197,6 +229,7 @@ export function TransactionsView({
       setUserNote("");
       setSelectedTags([]);
       setStatus("booked");
+      setComposerOpen(false);
       // A new row is normally dated today, so it belongs at the top of the
       // newest-first order: show it instead of leaving the user on page 5.
       if (page === 1) {
@@ -258,102 +291,153 @@ export function TransactionsView({
 
   return (
     <section className="view" aria-labelledby="transactions-title">
-      <PageHeader
-        eyebrow="Ledger · every movement, notes and tags"
-        title="Transaction ledger"
-        lead="Search and filters run on the server against the encrypted vault; nothing leaves this device."
-        facts={
+      <SectionBanner
+        tone="vault"
+        icon="transactions"
+        eyebrow="Encrypted ledger"
+        title="Local transactions database"
+        badge={<Chip tone="income">Zero-knowledge</Chip>}
+        lead="Every movement is validated and stays on this device. Search, filters and paging run on the server against the encrypted vault; nothing is searched in the browser."
+        side={
+          <Chip tone="vault" icon="lock">
+            AES-256-GCM
+          </Chip>
+        }
+        figures={
           <>
-            <Chip tone="neutral">{total} matching</Chip>
-            <Chip tone="vault" icon="lock">
-              offline AES-256
-            </Chip>
+            <BannerFigure
+              label="Income this month"
+              value={
+                monthFlow
+                  ? `+${formatMinorToAmount(monthFlow.incomeMinor, monthFlow.currency)} ${monthFlow.currency}`
+                  : "—"
+              }
+              tone="income"
+            />
+            <BannerFigure
+              label="Expenses this month"
+              value={
+                monthFlow
+                  ? `-${formatMinorToAmount(monthFlow.expensesMinor, monthFlow.currency)} ${monthFlow.currency}`
+                  : "—"
+              }
+              tone="expense"
+            />
+            <BannerFigure
+              label="Net flow this month"
+              value={
+                monthFlow
+                  ? `${monthFlow.netMinor >= 0 ? "+" : "-"}${formatMinorToAmount(Math.abs(monthFlow.netMinor), monthFlow.currency)} ${monthFlow.currency}`
+                  : "—"
+              }
+              tone={monthFlow && monthFlow.netMinor < 0 ? "expense" : "income"}
+            />
           </>
         }
       />
 
-      <form className="card" onSubmit={submit}>
-        <header>
-          <div>
-            <h2>Record a transaction</h2>
-            <span className="sub">Tagging rules run when you save</span>
-          </div>
-        </header>
-        <div className="fieldset framed">
-          <label>
-            Account
-            <select
-              value={accountId}
-              onChange={(event) => setAccountId(event.target.value)}
-              required
-            >
-              <option value="">Select…</option>
-              {accounts.items.map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidate.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Booking date
-            <input
-              type="date"
-              value={bookingDate}
-              onChange={(event) => setBookingDate(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Amount ({currency})
-            <input
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="-12.30"
-              required
-            />
-          </label>
-          <label>
-            Payee
-            <input value={payee} onChange={(event) => setPayee(event.target.value)} />
-          </label>
-          <label>
-            Note
-            <input value={userNote} onChange={(event) => setUserNote(event.target.value)} />
-          </label>
-          <label>
-            Status
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value as "booked" | "pending")}
-            >
-              <option value="booked">booked</option>
-              <option value="pending">pending</option>
-            </select>
-          </label>
-        </div>
-        <fieldset className="fieldset">
-          <legend>Tags</legend>
-          <TagPicker
-            tags={tags.items}
-            selected={selectedTags}
-            onChange={setSelectedTags}
-            label="Select tags for the new transaction"
-          />
-        </fieldset>
-        <div>
-          <button type="submit" className="btn primary">
+      <SectionIntro
+        icon="transactions"
+        eyebrow="Analysis & trend"
+        title="A readable trace of every movement."
+        lead="Tagging rules run when you save a movement, and only ever add tags."
+        actions={
+          <button type="button" className="btn primary" onClick={() => setComposerOpen(true)}>
             <Icon name="plus" size={16} />
             Add transaction
           </button>
-        </div>
-      </form>
+        }
+      />
+
+      {composerOpen ? (
+        <Modal title="Add transaction" onClose={() => setComposerOpen(false)}>
+          <form className="stack" onSubmit={submit}>
+            <p className="muted">
+              Tagging rules run when you save. The new movement appears at the top of the ledger.
+            </p>
+            <div className="fieldset framed">
+              <label>
+                Account
+                <select
+                  value={accountId}
+                  onChange={(event) => setAccountId(event.target.value)}
+                  required
+                >
+                  <option value="">Select…</option>
+                  {accounts.items.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Booking date
+                <input
+                  type="date"
+                  value={bookingDate}
+                  onChange={(event) => setBookingDate(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Amount ({currency})
+                <input
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  placeholder="-12.30"
+                  required
+                />
+              </label>
+              <label>
+                Payee
+                <input value={payee} onChange={(event) => setPayee(event.target.value)} />
+              </label>
+              <label>
+                Note
+                <input value={userNote} onChange={(event) => setUserNote(event.target.value)} />
+              </label>
+              <label>
+                Status
+                <select
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value as "booked" | "pending")}
+                >
+                  <option value="booked">booked</option>
+                  <option value="pending">pending</option>
+                </select>
+              </label>
+            </div>
+            <fieldset className="fieldset">
+              <legend>Tags</legend>
+              <TagPicker
+                tags={tags.items}
+                selected={selectedTags}
+                onChange={setSelectedTags}
+                label="Select tags for the new transaction"
+              />
+            </fieldset>
+            <div className="cell-actions">
+              <button type="submit" className="btn primary">
+                <Icon name="plus" size={16} />
+                Add transaction
+              </button>
+              <button type="button" className="btn" onClick={() => setComposerOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
 
       <div className="card">
         <header>
           <div>
-            <h2>Filters</h2>
-            <span className="sub">Every control narrows the same server-side query</span>
+            <p className="eyebrow">Ledger</p>
+            <h2>Every movement</h2>
+            <span className="sub">
+              {total} matching · double-click a cell to edit it in place, or use the Edit button
+            </span>
           </div>
           <button type="button" className="btn small" onClick={() => updateFilters(EMPTY_FILTERS)}>
             Reset filters
@@ -424,42 +508,46 @@ export function TransactionsView({
             />
           </label>
         </fieldset>
-        {tags.items.length > 0 ? (
-          <div className="quick-filters">
-            <span className="eyebrow" style={{ margin: 0 }}>
-              Quick filters
-            </span>
-            {tags.items.map((tag) => (
-              <button
-                key={tag.id}
-                type="button"
-                className={filters.tagId === tag.id ? "tag-pill active" : "tag-pill"}
-                style={filters.tagId === tag.id ? undefined : tagPillStyle(tag.color)}
-                aria-pressed={filters.tagId === tag.id}
-                onClick={() =>
-                  updateFilters({ ...filters, tagId: filters.tagId === tag.id ? "" : tag.id })
-                }
-              >
-                {tag.name}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
+        <div className="quick-filters">
+          <span className="eyebrow" style={{ margin: 0 }}>
+            View
+          </span>
+          <button
+            type="button"
+            className={
+              filters.q === "" &&
+              filters.accountId === "" &&
+              filters.tagId === "" &&
+              filters.status === "" &&
+              filters.from === "" &&
+              filters.to === ""
+                ? "tag-pill active"
+                : "tag-pill"
+            }
+            aria-pressed={filters.tagId === ""}
+            onClick={() => updateFilters({ ...filters, tagId: "" })}
+          >
+            All movements
+          </button>
+          {tags.items.map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              className={filters.tagId === tag.id ? "tag-pill active" : "tag-pill"}
+              style={filters.tagId === tag.id ? undefined : tagPillStyle(tag.color)}
+              aria-pressed={filters.tagId === tag.id}
+              onClick={() =>
+                updateFilters({ ...filters, tagId: filters.tagId === tag.id ? "" : tag.id })
+              }
+            >
+              #{tag.name}
+            </button>
+          ))}
+        </div>
 
-      {(formError ?? error) ? <Banner tone="error">{formError ?? error}</Banner> : null}
-      {loading ? <Banner>Searching…</Banner> : null}
+        {(formError ?? error) ? <Banner tone="error">{formError ?? error}</Banner> : null}
+        {loading ? <Banner>Searching…</Banner> : null}
 
-      <div className="card">
-        <header>
-          <div>
-            <h2>Transactions</h2>
-            <span className="sub">
-              Double-click payee, note, tags or amount to edit the row in place; the Edit button
-              does the same.
-            </span>
-          </div>
-        </header>
         <div className="table-wrap">
           <table>
             <thead>

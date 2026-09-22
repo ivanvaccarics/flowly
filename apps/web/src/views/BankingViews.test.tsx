@@ -150,7 +150,11 @@ describe("Enable Banking in Settings", () => {
       expect(screen.getByRole("heading", { name: "Connect to Enable Banking" })).toBeTruthy(),
     );
     const headings = Array.from(container.querySelectorAll("h2")).map((node) => node.textContent);
-    expect(headings[0]).toBe("Connect to Enable Banking");
+    // The bank connection comes before the passphrase, under the banner.
+    expect(headings).toContain("Connect to Enable Banking");
+    expect(headings.indexOf("Connect to Enable Banking")).toBeLessThan(
+      headings.indexOf("Passphrase"),
+    );
     expect(headings).toContain("Passphrase");
   });
 
@@ -755,8 +759,10 @@ describe("Enable Banking in Settings", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /^Connect$/ })).toBeTruthy());
 
     // `.tile` is the dashboard's 48x48 icon square: reusing it squeezed the
-    // bank rows into overlapping 48px cells.
-    expect(container.querySelectorAll(".tile")).toHaveLength(0);
+    // bank rows into overlapping 48px cells. Only the section banner carries
+    // one now; the rows themselves stay list rows.
+    const tiles = Array.from(container.querySelectorAll(".tile"));
+    expect(tiles.every((tile) => tile.closest(".section-banner") !== null)).toBe(true);
     expect(container.querySelectorAll(".rule-tile").length).toBeGreaterThanOrEqual(2);
   });
 });

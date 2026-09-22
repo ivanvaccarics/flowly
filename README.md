@@ -215,12 +215,17 @@ Flowly brand palette — deep green `#0b3d2e`, medium green `#1e6f4e`, gold
 `#d4af37` — for the mark, the product's own actions and the default tag colour.
 It has one sidebar and six sections: **Dashboard**, **Accounts**,
 **Transactions**, **Tags**, **Rules** and **Settings**. The top bar carries the
-section title, the vault state, the local clock and the session controls, and
-every section opens with a summary card carrying its status facts and actions.
-Accounts are endpoint cards with their real balances and a ribbon of booked
-totals, rules are tiles with an on/off switch that reopen in the builder for
-editing — each one opens in a dialog, so the card building a new rule is never
-taken over — and the ledger's filters include quick tag pills. The ledger pages
+section title over a breadcrumb naming its family, the vault state, the local
+clock and the session controls. Every section opens the same way: a tinted
+banner — green for the money itself, violet for the automation around it, slate
+for the vault — with the figures that matter, and a headline with the one action
+that section is for.
+Accounts are endpoint cards with their real balances and the booked total per
+currency; rules are a registry table whose rows carry an on/off switch and open
+the rule in a dialog over the page, so the composer writing a new one keeps its
+own draft; the ledger keeps its filters, its **View** pills and its pager in one
+card, and records a movement from **Add transaction**, which opens the form in a
+dialog as well. The ledger pages
 through its matching rows on the server — 25 per page by default, 50 or 100
 from the selector — and always says which window it is showing, so a vault with
 thousands of movements is never silently truncated. A row is edited in place:
