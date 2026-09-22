@@ -51,7 +51,7 @@ duplicating them in the React app is how two implementations start to disagree.
   bounded to the most recent rows.
 - The registry's **Matches** column, the overview's figures and the live
   evaluation line all come from one place, so they cannot drift from each other.
-- A native client gets the same numbers from the same endpoints instead of
+- The desktop client gets the same numbers from the same endpoints instead of
   re-implementing the evaluation, and `docs/DESIGN.md`, `docs/TESTING.md`,
   `docs/PLAN.md` and `README.md` describe the page as measured rather than
   decorative.

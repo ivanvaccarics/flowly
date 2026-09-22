@@ -2,7 +2,7 @@
 
 `contracts/` is the language-neutral source of truth for persisted shapes, CSV
 and archive formats, fixtures and expected results. Both the TypeScript server
-and the future Dart application consume it; nothing here may depend on a
+and the future Dart desktop application consume it; nothing here may depend on a
 storage engine, a framework or a language runtime.
 
 ## Layout
@@ -22,7 +22,7 @@ storage engine, a framework or a language runtime.
   currency (ADR 0026). The server upgrades version 1 rules on unlock and on
   archive import.
 - A breaking change requires a new format version plus a migration in the server
-  and the native application. Adding an optional field is not breaking.
+  and in the desktop application. Adding an optional field is not breaking.
 - Export formats are versioned separately: the transaction CSV and the complete
   portable archive both start at version `1`. Tagging rules ship inside archive
   version 1 because they land in the Server MVP; new record types add a new

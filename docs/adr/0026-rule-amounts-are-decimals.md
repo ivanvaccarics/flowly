@@ -50,6 +50,6 @@ filters and in the rule tile itself.
   web contracts and the golden vectors are the specification; `docs/PLAN.md`,
   `docs/TESTING.md`, `README.md` and `contracts/README.md` describe the new
   field.
-- The rule editor no longer mirrors the transaction record's minor units, so a
-  future native client must parse the decimal string with the same
+- The rule editor no longer mirrors the transaction record's minor units, so the
+  future desktop client must parse the decimal string with the same
   currency-aware rules rather than with its own float parsing.

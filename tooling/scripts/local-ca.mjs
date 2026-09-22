@@ -70,8 +70,7 @@ if (!command) {
   console.log(
     "Trust this certificate in the operating system or browser you use, then reload Flowly.\n" +
       "On Windows: certutil -addstore -user Root data\\flowly-local-ca.crt\n" +
-      "On iOS/Android: open the certificate file and install it as a profile/CA certificate,\n" +
-      "then enable full trust for it.",
+      "In a browser: import the certificate as a trusted root authority.",
   );
   process.exit(0);
 }
@@ -81,7 +80,7 @@ const printable = command
   .join(" ");
 console.log(`Trust it (this asks for your password):\n\n  ${printable}\n`);
 console.log(
-  "Phones need the same certificate installed as a profile, with full trust enabled.\n" +
+  "Every desktop that opens Flowly needs the same trust: the system store, or the browser's.\n" +
     "To avoid trusting anything at all, put Tailscale in front of the stack:\n" +
     "  deploy on 127.0.0.1 and run `tailscale serve` — see docs/DEPLOYMENT.md.\n",
 );

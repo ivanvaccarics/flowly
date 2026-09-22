@@ -98,9 +98,9 @@ service we operate: if your host is down, or you delete the vault, that is
 beyond our control.
 
 Support is community-based, through issues and discussions on the project
-repository. Features described as planned — including the native iOS, Android,
-macOS and Windows applications — are not part of what ships today and create no
-obligation to deliver them.
+repository. Features described as planned — including the desktop application
+for macOS and Windows — are not part of what ships today and create no obligation
+to deliver them.
 
 We may publish a new version of these terms when the product changes. The
 version that applies to you is the one contained in the commit you deploy, and

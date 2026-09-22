@@ -2,6 +2,10 @@
 
 Status: Accepted (2026-09-18)
 
+The icon list below is superseded in part by
+[ADR 0032](./0032-flowly-targets-the-desktop-only.md): the iOS touch icon was
+removed with the mobile target, so the assets are SVG only.
+
 Supersedes the brand and accent-colour decisions of
 [ADR 0021](./0021-slate-and-teal-ui-with-dashboard-pie-chart.md) and the tag
 palette added by [ADR 0022](./0022-italian-number-formatting-and-palette-colour-picker.md).

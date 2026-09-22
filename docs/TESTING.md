@@ -214,7 +214,8 @@ credentials Enable Banking returns.
   `docs/security/data-loss.md`.
 - **No automatic backups.** Export archives manually; Phase 12 adds scheduling.
 - **No multi-user or sharing.** One owner, one vault.
-- **No mobile app.** The phone client is the browser (Phases 8-11 add Flutter).
+- **No mobile app.** Flowly is desktop-only: the server with its browser UI
+  today, and one desktop application for macOS and Windows from Phase 8.
 - **Pending transactions** do not move cash flow. A bank-linked account shows
   the balance the bank reports; the others show their booked movements.
 - **No implicit currency conversion**, anywhere.

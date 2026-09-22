@@ -1,7 +1,7 @@
 # Running Flowly
 
-How to run the app today, how to reach it from a phone, and what the mobile and
-desktop apps will need when their phases land. The roadmap itself lives in
+How to run the app today, on your own machine or server, and what the planned
+desktop application will need when its phase lands. The roadmap itself lives in
 [PLAN.md](./PLAN.md); binding technical decisions live in [adr/](./adr/).
 
 ## 1. What you need
@@ -240,38 +240,32 @@ Backups are manual in the MVP: **Import & export → Export complete archive**
 produces a password-encrypted file that is the supported way to move or restore
 a vault. Optional automatic encrypted backups arrive in Phase 12.
 
-## 4. Using it from a phone today
+## 4. The desktop application (planned)
 
-Flowly is server first: the phone client is the browser. On a phone connected to
-the same private network or VPN, open the server URL, unlock the vault and use
-the same screens described above. Nothing is installed on the phone and no data
-leaves your server.
+Flowly is desktop-only: the server with its browser UI is what runs today, and
+Phases 8-10 add one **desktop application** for macOS and Windows (Phase 11 adds
+Enable Banking to it). There is no mobile client and none is planned. Until
+those phases run, `apps/desktop/` does not exist and this document will not
+pretend otherwise.
 
-Keep it that way: the product is designed to be unreachable from the public
-Internet, and the server enforces a private bind by default.
-
-## 5. Mobile and desktop apps (planned)
-
-Phases 8-10 add one Flutter codebase for **iOS, Android, macOS and Windows**
-(Phase 11 adds Enable Banking to it). Until those phases run, `apps/native/`
-does not exist and this document will not pretend otherwise.
-
-What is already prepared for them:
+What is already prepared for it:
 
 - `contracts/` holds the canonical JSON Schemas, fixtures and golden vectors
-  (money, tagging-rule evaluation) that the Dart client must satisfy unchanged.
-- `docs/PLAN.md` fixes the storage, unlock and portability semantics the native
-  app has to match (`SQLCipher + Drift`, passphrase plus optional biometrics).
+  (money, tagging-rule evaluation) that the Dart desktop client must satisfy
+  unchanged.
+- `docs/PLAN.md` fixes the storage, unlock and portability semantics the desktop
+  app has to match (`SQLCipher + Drift`, passphrase plus optional Touch ID or
+  Windows Hello).
 - CI already fails when the generated TypeScript drifts from `contracts/`, and
   the same check will cover the generated Dart types.
 
 When Phase 8 starts, this section gains the exact commands: Flutter SDK
-installation, per-platform run targets (simulator, emulator, desktop), the
-SQLCipher build for each platform, and the golden-fixture conformance run. The
-plan is to keep one command surface, so the native app is verified with the same
-fixtures rather than a parallel test suite.
+installation, the macOS and Windows run targets, the SQLCipher build for each
+platform, and the golden-fixture conformance run. The plan is to keep one
+command surface, so the desktop app is verified with the same fixtures rather
+than a parallel test suite.
 
-## 6. Working on the next iteration
+## 5. Working on the next iteration
 
 1. Read `docs/PLAN.md` (the phase you are starting) and this document.
 2. Implement the phase tasks, keeping contracts first: change `contracts/`, run
@@ -346,6 +340,6 @@ kill %1 && rm -rf /tmp/flowly-demo
 | The bank window says **Flowly has no pending request for this code** | The authorization was already completed, deleted, or started in another Flowly instance. Delete the pending request in Settings and connect once more. |
 | Flowly still shows an old interface after a rebuild | The shell itself is served `no-cache` now, so a normal reload is enough; before that fix, empty the browser cache or hard-reload. |
 | The browser says **Not secure** / warns about the certificate | That is Caddy's local CA, not a broken connection. Trust it once with `pnpm ca:export` and the command it prints (see [DEPLOYMENT.md](DEPLOYMENT.md#certificates)), or serve Flowly through `tailscale serve` and there is nothing to trust. |
-| A phone shows the warning even after installing the certificate | The profile has to be enabled for full trust in the device settings; otherwise reinstall it and accept it as a root CA. |
+| A device still shows the warning after installing the certificate | Trust for the CA profile has to be enabled in the device settings; otherwise reinstall it and accept it as a root CA. |
 | A linked bank shows **consent expired** | The bank consent lapsed or was revoked. Connect that bank again from Settings. |
 | An account is missing from a sync | Only **mapped** accounts are imported. Map it in Settings; accounts whose currency Flowly cannot store yet are skipped and reported. |

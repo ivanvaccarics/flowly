@@ -42,5 +42,5 @@ payees and the vault id.
 - The images are committed (`docs/images/*.png`, ~150 KB each at 1440×900) and
   reviewed like any other file: a screenshot that shows an empty vault is a bug
   in the seed, not in the app.
-- A future native client can reuse the same seed data to produce its own
+- The future desktop client can reuse the same seed data to produce its own
   screenshots with the same vocabulary.

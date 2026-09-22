@@ -6,13 +6,13 @@
 
 ### Your money. Your device. Your keys.
 
-**A self-hosted personal finance server first, with native apps planned for
-iOS, Android, macOS and Windows.**
+**A self-hosted personal finance server first, with a desktop app planned for
+macOS and Windows.**
 No account. No cloud. No tracking. Ever.
 
 ![Status](https://img.shields.io/badge/status-early%20development-orange)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
-![Platforms](https://img.shields.io/badge/platforms-server%20first%20%7C%20native%20planned-8A2BE2)
+![Platforms](https://img.shields.io/badge/platforms-server%20first%20%7C%20desktop%20app%20planned-8A2BE2)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 ![Container image](https://github.com/ivanvaccarics/flowly/actions/workflows/image.yml/badge.svg)
 
@@ -29,10 +29,10 @@ Flowly asks for nothing.
 
 Everything lives in an **encrypted vault on hardware you control**, unlocked by
 a passphrase only you know. The first release stores one shared vault on your
-self-hosted server for all of your private-network browser sessions. Planned
-native apps will keep independent local vaults. There is no Flowly cloud account
-or analytics pipeline quietly watching. If you want data in another independent
-vault, you export it and import it. That's it. 🔐
+self-hosted server for all of your private-network browser sessions. The planned
+desktop app will keep its own independent local vault. There is no Flowly cloud
+account or analytics pipeline quietly watching. If you want data in another
+independent vault, you export it and import it. That's it. 🔐
 
 | 🙃 Most finance apps | 🚀 Flowly |
 | --- | --- |
@@ -162,12 +162,11 @@ the bank sent, as tables rather than a JSON blob.
 ### 🔐 Security you can explain to a friend
 - A **mandatory passphrase** protects a randomly generated encryption key,
   derived with Argon2id and a per-vault salt.
-- **Optional biometrics are planned for native apps** — Face ID, Touch ID,
-  Android BiometricPrompt and Windows Hello will be shortcuts, never
-  replacements for your passphrase.
+- **Optional biometrics are planned for the desktop app** — Touch ID and
+  Windows Hello will be shortcuts, never replacements for your passphrase.
 - **Encrypted at rest**: SQLCipher 4 on the self-hosted server — verified in
   Phase 0 on Linux `arm64` and `amd64` with no readable data on disk while the
-  vault is locked — and SQLCipher on installed apps.
+  vault is locked — and SQLCipher in the desktop app.
 - **Auto-lock** on inactivity and when the app goes to the background.
 - **Fails closed**: wrong key or tampered data raises a clear error, never a
   silently empty vault.
@@ -179,7 +178,7 @@ the bank sent, as tables rather than a JSON blob.
 - 🔒 **Complete portable export** — a password-encrypted, versioned archive with
   everything (accounts, transactions, tags, tagging rules, preferences) and a
   checksum manifest. This is the supported way to move a complete vault between
-  independent server and native deployments.
+  independent server and desktop deployments.
 - 🛡️ Spreadsheet formula-injection protection on export.
 - ✅ Import with a **preview first**: transaction CSVs merge after duplicate
   checks; complete portable archives always replace the destination vault after
@@ -202,23 +201,21 @@ The delivery strategy starts with the server:
   chosen Docker host, shared by browsers on a private LAN or VPN over required
   HTTPS. Supported hosts are Linux `amd64`/`arm64` and Docker Desktop on macOS
   and Windows.
-- 📱🖥️ **Installed apps, planned after the Server MVP** — a single Flutter
-  codebase for iOS, Android, macOS and Windows
+- 🖥️ **Desktop app, planned after the Server MVP** — one Flutter codebase for
+  macOS and Windows
 - 🔗 **Shared contracts** — versioned JSON Schemas, one canonical CSV/archive
   spec, and golden fixtures that both clients must satisfy in CI
 
 | Platform | Runtime | Storage | Delivery |
 | --- | --- | --- | --- |
 | 🌐 Self-hosted server | React + TS service | Encrypted SQLite | Server MVP, Phases 0-5 |
-| 🍎 iOS | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
-| 🤖 Android | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
 | 💻 macOS | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
 | 🪟 Windows | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
 
-Why two clients instead of one? Because a browser shell bolted onto a phone is a
-worse product than a native app. React first provides an accessible interface
-to the self-hosted vault. After that release is stable, Flutter adds mature
-encrypted storage, biometrics and installers. Shared contracts plus
+Why a second client at all? Because a browser shell is a worse product than an
+installed application. React first provides an accessible interface to the
+self-hosted vault. After that release is stable, Flutter adds mature encrypted
+storage, biometrics and installers on the desktop. Shared contracts plus
 cross-client tests keep the two implementations honest. 🤝
 
 ### 🗂️ Inside the repository
@@ -287,9 +284,9 @@ replaces the vault for a complete archive, after an explicit confirmation and an
 encrypted safety snapshot. Deleting an account or a tag asks for a cascade and
 tells you how many records are affected.
 The product mark — a white keyhole in a squircle filled with the brand gradient,
-next to the rounded `Flowly` wordmark — ships as SVG (plus the iOS icon) in
-`apps/web/public` and is documented in [docs/DESIGN.md](docs/DESIGN.md), along
-with the tokens and the mapping to what actually ships.
+next to the rounded `Flowly` wordmark — ships as SVG in `apps/web/public` and is
+documented in [docs/DESIGN.md](docs/DESIGN.md), along with the tokens and the
+mapping to what actually ships.
 
 You can drive the whole lifecycle against a running server with
 `node tooling/scripts/vault-smoke.mjs create` and then
@@ -309,7 +306,7 @@ sandbox fixture, not a blanket path or rule exclusion.
 ### 📚 Documentation
 
 - [docs/RUNNING.md](docs/RUNNING.md) — how to run Flowly locally, self-host it,
-  use it from a phone today, and what the planned mobile/desktop apps will need.
+  and what the planned desktop app will need.
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — install on Docker Compose, trust the
   local certificate authority, upgrade, roll back and back up.
 - [docs/AUTOMATIC_STARTUP.md](docs/AUTOMATIC_STARTUP.md) — Docker and Tailscale
@@ -361,10 +358,10 @@ cryptographic review and a full assistive-technology audit remain open.
 | 4️⃣ | Server dashboard and search | ✅ Complete |
 | 5️⃣ | Server hardening and release | ✅ Complete |
 | 6️⃣ | Enable Banking for Server | ✅ Complete |
-| 8️⃣ | Flutter foundation and encrypted native vaults | 🔮 Post-MVP |
-| 9️⃣ | Flutter feature parity | 🔮 Post-MVP |
-| 🔟 | Native hardening and release | 🔮 Post-MVP |
-| 1️⃣1️⃣ | Enable Banking for Flutter | 🔮 Post-MVP |
+| 8️⃣ | Desktop app foundation and encrypted local vaults | 🔮 Post-MVP |
+| 9️⃣ | Desktop feature parity | 🔮 Post-MVP |
+| 🔟 | Desktop hardening and release | 🔮 Post-MVP |
+| 1️⃣1️⃣ | Enable Banking for the desktop app | 🔮 Post-MVP |
 | 1️⃣2️⃣ | Opt-in automatic encrypted backups | 🔮 Post-MVP |
 
 ⭐ **Star the repo** to follow along — that's the easiest way to see it grow.
@@ -372,7 +369,7 @@ cryptographic review and a full assistive-technology audit remain open.
 ### 🏦 About bank connections
 
 Phase 6 connects the server to **Enable Banking**; Phase 11 adds the same
-connector to the Flutter clients. Provider credentials and signing keys **never**
+connector to the desktop app. Provider credentials and signing keys **never**
 ship inside any client: the application key pair is stored in the encrypted
 vault, JWT signing happens on the server only, and the API exposes just a
 fingerprint of the matching public key. Bank data arrives as an import channel —
@@ -399,7 +396,7 @@ into booked activity in place, and your notes and tags are never overwritten. �
   escrow exists. Lose your passphrase and every unlocked vault, and the data is
   gone forever. Your only safety net is an export whose password you know.
 - 🔁 **There is no sync between vaults.** Browsers connected to one server
-  deployment share its vault; future native apps and other deployments remain
+  deployment share its vault; the future desktop app and other deployments remain
   independent.
 - 📄 **Plain CSV exports are not encrypted.** Use the password-protected archive
   to move data around.

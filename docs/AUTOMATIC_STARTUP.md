@@ -5,7 +5,7 @@ Tailscale, and one script that starts the stack and publishes it inside your
 tailnet.
 
 The result: the machine can be switched off, moved, or power-cycled by a
-blackout, and when it returns your phone finds Flowly again at the same HTTPS
+blackout, and when it returns your browser finds Flowly again at the same HTTPS
 address — the same address the bank redirects to, so the bank connection keeps
 working without touching the Enable Banking control panel.
 
@@ -493,8 +493,8 @@ buying anything.
 
 - [DEPLOYMENT.md](./DEPLOYMENT.md) — install, upgrade, roll back, back up, and
   the certificate options for LAN and tailnet access.
-- [RUNNING.md](./RUNNING.md) — everyday use, the callback URL rules, and what a
-  phone client needs today.
+- [RUNNING.md](./RUNNING.md) — everyday use, the callback URL rules, and what
+  the desktop application will need when its phase lands.
 - [`deployment/self-hosted/startup.sh`](../deployment/self-hosted/startup.sh) —
   the script this page describes.
 - [`deployment/self-hosted/compose.yaml`](../deployment/self-hosted/compose.yaml)

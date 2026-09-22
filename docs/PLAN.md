@@ -9,12 +9,9 @@
 ## 1. Purpose
 
 Flowly is a local-first personal finance application delivered first as a
-self-hosted server and web UI. Later phases add installed applications for:
-
-- iOS
-- Android
-- macOS
-- Windows
+self-hosted server and web UI. A later phase adds one installed client, a
+**desktop application** for macOS and Windows. Flowly is desktop-only: there is
+no mobile application and no mobile platform in this plan.
 
 A server deployment owns one vault shared by its browser sessions; browsers are
 clients of that vault and do not persist independent copies. Later installed
@@ -35,8 +32,8 @@ The first release is the **Flowly Server MVP**. It includes:
 - Full data export and import
 - Server-side passphrase protection and secure browser sessions
 
-Flutter applications, native encrypted storage, and biometric unlock are
-post-Server-MVP deliverables in Phases 8-10.
+The desktop application, its encrypted local storage and optional biometric
+unlock are post-Server-MVP deliverables in Phases 8-10.
 
 Username/password accounts, Flowly-operated cloud services, and cross-device
 synchronization are explicitly out of scope.
@@ -83,14 +80,14 @@ the build, the tests or the release.
 | Decision | Selected direction |
 |---|---|
 | First release | Self-hosted Server MVP at the end of Phase 5 |
-| Later mobile targets | iOS and Android |
-| Later desktop targets | macOS and Windows |
+| Platform scope | Desktop only: the self-hosted server with its browser UI, plus one desktop application. No mobile client |
+| Desktop application targets | macOS and Windows |
 | Browser target | React web UI served by a self-hosted service on a private network |
 | Server distribution | Docker Compose on Linux amd64/arm64 and Docker Desktop on macOS/Windows |
-| Native distribution | App stores for mobile; direct signed downloads for desktop |
+| Desktop distribution | Direct signed downloads for macOS and Windows; no app store |
 | Account meaning | Financial account, not a Flowly user identity |
-| Unlock | Server passphrase and secure session; native passphrase plus optional biometrics from Phase 8 |
-| Device relationship | Installed apps own independent vaults; browser sessions share their server vault |
+| Unlock | Server passphrase and secure session; desktop passphrase plus optional biometrics (Touch ID, Windows Hello) from Phase 8 |
+| Device relationship | The desktop application owns an independent vault; browser sessions share their server vault |
 | Data transfer | Explicit export/import performed by the user |
 | Web ownership | Single owner, one vault, multiple concurrent browser sessions |
 | Web deployment | Persistent Docker volume and private-network HTTPS; no direct Internet exposure |
@@ -99,22 +96,21 @@ the build, the tests or the release.
 | Toolchain | pnpm workspace on Node.js 22.12 or newer; TypeScript 6.0.3 while `typescript-eslint` does not support TypeScript 7 |
 | Server HTTP layer | Fastify 5 serving a same-origin JSON API; the domain imports no HTTP or storage API |
 | Contract tooling | JSON Schema 2020-12 as the source of truth, generated TypeScript types, and Ajv runtime validation that always accompanies them |
-| Delivery order | Release the server, then Enable Banking for Server, then Flutter |
+| Delivery order | Release the server, then Enable Banking for Server, then the desktop application |
 | Bank integration | Enable Banking, implemented inside the server (`docs/adr/0016`): credentials live in the encrypted vault, raw provider JSON is stored per account, and the vault keeps the canonical ledger |
 | Additional MVP scope | Dashboard, advanced search, multi-currency, manual tagging rules |
 | Auto-tagging rules | Server MVP, Phase 3: one AND/OR condition group over note, description, payee, amount, or account, adding one or more tags; tags are only added, provenance is not tracked, and editing a transaction does not re-run rules |
-| Next feature after the MVP | Flutter foundation in Phase 8; Enable Banking for Server (Phase 6) is delivered |
+| Next feature after the MVP | Desktop application foundation in Phase 8; Enable Banking for Server (Phase 6) is delivered |
 
 ## 4. Architecture Options Considered
 
 | Option | Advantages | Disadvantages | Decision |
 |---|---|---|---|
-| Flutter for every client | One Dart UI codebase; mature mobile and desktop support; web target available | Does not provide the desired central self-hosted vault and multi-PC browser access without adding a server anyway | Not selected |
-| Tauri 2 for desktop and mobile plus web | Small binaries; Rust security boundary; high code sharing | Mobile ecosystem and security/database plugins are newer; increases risk for biometric and encrypted database support | Reserve as a future simplification option |
-| React UI + self-hosted TypeScript service + Flutter installed clients | One server vault is shared safely by multiple PCs; browser storage is not a source of truth; Flutter retains mature native storage and biometrics | Requires private-network HTTPS, server sessions, concurrency handling, multi-architecture packaging, and an available host | **Recommended** |
+| Flutter for every client | One Dart UI codebase; mature desktop and web targets | Does not provide the desired central self-hosted vault and multi-PC browser access without adding a server anyway | Not selected |
+| Tauri 2 for the desktop client plus the web UI | Small binaries; Rust security boundary; high code sharing | Adds a second toolchain and a Rust surface beside Flutter | Reserve as a future simplification option |
+| React UI + self-hosted TypeScript service + a Flutter desktop client | One server vault is shared safely by multiple PCs; browser storage is not a source of truth; Flutter desktop keeps mature local storage and biometrics | Requires private-network HTTPS, server sessions, concurrency handling, desktop packaging, and an available host | **Recommended** |
 | Encrypted browser PWA + self-hosted file storage | The host never handles plaintext domain data | Each browser still owns a divergent vault; conflict resolution, querying, and multi-PC consistency become substantially more complex | Rejected |
-| React/TypeScript + Capacitor mobile + Tauri desktop + local service | High TypeScript sharing | Two native shells; mobile Tauri is newer; native security and biometric integrations carry more risk | Valid fallback if minimizing duplicate product code becomes the primary constraint |
-| Fully separate native applications | Maximum platform-specific control | Excessive duplication across five targets | Rejected |
+| Fully separate applications per platform | Maximum platform-specific control | Excessive duplication across the server, the browser UI and the desktop client | Rejected |
 
 ### Recommendation
 
@@ -124,27 +120,28 @@ Use a polyglot monorepo with two application implementations:
   deployed together with Docker Compose. The service owns the encrypted vault,
   domain operations, sessions, and import/export. Browsers are presentation
   clients and persist no financial records.
-- **Installed application:** one Flutter/Dart codebase compiled for iOS,
-  Android, macOS, and Windows.
+- **Desktop application:** one Flutter/Dart codebase compiled for macOS and
+  Windows.
 - **Bank connector:** a module inside the self-hosted TypeScript service
   (`apps/server/src/banking/`) that owns Enable Banking credentials and API
   sessions, keeps them inside the encrypted vault, and serves both the web UI
-  and, from Phase 11, the native clients (`docs/adr/0016`).
+  and, from Phase 11, the desktop application (`docs/adr/0016`).
 
 Delivery is intentionally sequential: implement and release the TypeScript
 server first, then use its stable contracts and golden fixtures to implement
-Flutter. Do not scaffold or implement Flutter during Server MVP phases 0-5.
+the desktop client. Do not scaffold or implement the desktop client during
+Server MVP phases 0-5.
 
 This hybrid approach is preferable when a single self-hosted private-network vault,
-encrypted SQLite, native platform maturity, biometric integration, and
+encrypted SQLite, desktop platform maturity, biometric integration, and
 consistent installed-app behavior are more important than maximum source-code
-sharing. It also avoids forcing a browser-oriented shell onto mobile and
-desktop.
+sharing. It also keeps the desktop client a real installed application instead
+of a browser shell.
 
-The trade-off must be accepted explicitly: the TypeScript service and Flutter
-will have separate application/domain implementations, while React remains a
-thin client of the service. TypeScript and Dart share specifications rather
-than runtime libraries. Product parity is enforced through:
+The trade-off must be accepted explicitly: the TypeScript service and the
+desktop client will have separate application/domain implementations, while
+React remains a thin client of the service. TypeScript and Dart share
+specifications rather than runtime libraries. Product parity is enforced through:
 
 - Versioned JSON Schema contracts
 - Generated TypeScript and Dart data types where practical
@@ -178,7 +175,7 @@ flowly/
       src/
         api/                     # Same-origin API client
         components/              # Locked-vault shell and future screens
-    native/                      # Flutter app for iOS/Android/macOS/Windows
+    desktop/                     # Flutter desktop app for macOS and Windows
   contracts/
     schemas/                     # Canonical JSON Schema definitions
     fixtures/                    # Valid instances every client must accept
@@ -186,7 +183,7 @@ flowly/
   packages/
     web-contracts/               # Generated TS types plus Ajv runtime validators
     web-test-support/            # React/TS conformance helpers
-  native-packages/
+  desktop-packages/
     flowly_contracts/            # Generated Dart models and validators
     flowly_test_support/         # Flutter/Dart conformance helpers
   tooling/
@@ -203,7 +200,7 @@ flowly/
 
 Use `pnpm` workspaces for the React client and the generated TypeScript
 packages, on Node.js 22.12 or newer. Use the Flutter SDK and Dart
-packages for the native client. Root scripts provide one command surface:
+packages for the desktop client. Root scripts provide one command surface:
 `pnpm verify` (format, lint, secret scan, types, tests), `pnpm build`,
 `pnpm dev`, and `pnpm contracts:generate` / `pnpm contracts:check`. Add a Flutter
 monorepo tool such as Melos only if multiple Dart packages make it worthwhile.
@@ -223,22 +220,22 @@ monorepo tool such as Melos only if multiple Dart packages make it worthwhile.
 - Cryptographic envelope metadata and known-answer vectors
 
 Breaking contract changes require a new schema/export version and migrations in
-the server and native application. Generated types do not replace runtime
+the server and the desktop application. Generated types do not replace runtime
 validation or domain invariants.
 
 ### 6.2 Domain and application layers
 
 Implement the same clean boundaries independently in the TypeScript service and
-the Dart application:
+the desktop application:
 
 - The server domain imports no React, HTTP framework, SQL, filesystem, or
   network APIs.
-- The native domain imports no Flutter widgets, SQL, platform channels, or
+- The desktop domain imports no Flutter widgets, SQL, platform channels, or
   network APIs.
 - Application services depend on repositories and platform-service interfaces.
 - React and Flutter UI code never query storage directly.
 
-The server and native implementations own the same behavior:
+The server and desktop implementations own the same behavior:
 
 - Financial account lifecycle
 - Money and currency invariants
@@ -290,7 +287,7 @@ never silently overwrites a newer edit from another browser session.
   persist financial records in browser storage or service-worker caches.
 - Flutter adapters use Drift/SQLite, SQLCipher libraries, platform secure
   storage, `local_auth`, filesystem APIs, and platform-specific backup controls.
-- Native plugins must be wrapped behind application-owned interfaces so plugin
+- Desktop plugins must be wrapped behind application-owned interfaces so plugin
   changes do not leak into domain or presentation code.
 
 ### 6.5 User interfaces
@@ -315,17 +312,14 @@ squircle filled with the brand gradient, deep green `#0b3d2e` → medium green
 and the progress bars; everything else stays a semantic colour.
 
 The two UIs follow one product design specification but are implemented with
-their platform-native toolkit:
+their own toolkit:
 
-- React provides a responsive LAN web interface with browser accessibility
-  semantics.
-- Flutter provides adaptive mobile and desktop layouts from one Dart widget
-  codebase.
-- Mobile uses bottom navigation where appropriate.
-- Desktop and wide web layouts use a sidebar or navigation rail.
-- Both support keyboard navigation on desktop-class devices.
+- React provides the LAN web interface, with browser accessibility semantics and
+  a layout that adapts to the width of the window.
+- Flutter provides the desktop application from one Dart widget codebase.
+- Both use a sidebar shell and support keyboard navigation.
 - WCAG 2.2 AA target for the web UI
-- Flutter semantics and platform accessibility checks for installed clients
+- Flutter semantics and platform accessibility checks for the desktop client
 - Locale-aware dates, amounts, and currencies
 - No raw HTML rendering from imported or provider-supplied text
 - Shared design tokens may be generated from neutral JSON, but widgets and
@@ -491,13 +485,12 @@ an unsigned magnitude) and are converted to signed minor units.
 
 ## 8. Local Storage Strategy
 
-### 8.1 Native mobile and desktop
+### 8.1 Desktop application
 
 Use Flutter with Drift over SQLite and a SQLCipher-compatible native library.
 The current leading candidate is `sqlcipher_flutter_libs` with `sqlite3`/Drift,
 but it is not accepted until the architecture spike proves installation,
-encryption, migrations, release builds, and licensing on iOS, Android, macOS,
-and Windows.
+encryption, migrations, release builds, and licensing on macOS and Windows.
 
 Required behavior:
 
@@ -507,7 +500,6 @@ Required behavior:
 - Migrations are transactional and forward-only.
 - Database backups are not copied to cloud backup locations unless explicitly
   approved and encrypted.
-- Mobile backup exclusion flags are configured where available.
 - Desktop database files use restrictive filesystem permissions.
 
 ### 8.2 Self-hosted web service
@@ -541,7 +533,7 @@ Internet connection or third-party service.
 ### 8.3 Storage contract tests
 
 Define one language-neutral behavioral specification and fixture set. Implement
-equivalent suites in TypeScript and Dart against the server and native storage
+equivalent suites in TypeScript and Dart against the server and desktop storage
 adapters. CI must compare canonical outputs. The suites verify:
 
 - CRUD behavior
@@ -581,8 +573,7 @@ can be strengthened later without re-encrypting data.
 
 Biometrics are a convenience mechanism, not the only recovery mechanism:
 
-- iOS/macOS: Keychain protected by the system biometric policy
-- Android: Keystore key gated by `BiometricPrompt`
+- macOS: Keychain protected by the system biometric policy
 - Windows: DPAPI and, where practical, Windows Hello-backed protection
 - Self-hosted web: passphrase unlock only in the MVP; WebAuthn convenience
   unlock is deferred
@@ -594,9 +585,10 @@ never the user's passphrase.
 
 - Lock on explicit user action.
 - Auto-lock after a configurable inactivity interval.
-- Lock when the app is backgrounded beyond a short grace period.
+- Lock when the desktop app is hidden beyond a short grace period.
 - Clear decrypted caches and sensitive form state on lock.
-- Prevent sensitive screenshots/app-switcher previews where supported.
+- Prevent sensitive screenshots and window previews where the platform supports
+  it.
 - Require re-authentication before exporting all data or changing the
   passphrase.
 - On the web, `Lock this device` revokes only the current server session.
@@ -725,7 +717,7 @@ Support combinations of:
 - Source
 - Payee/description/user-note text
 
-Search semantics must match across native and server adapters.
+Search semantics must match across the desktop and server adapters.
 
 ### 11.3 Multi-currency
 
@@ -741,7 +733,8 @@ Automatic foreign-exchange rate retrieval is out of scope.
 
 ### 11.4 Recurrence
 
-Delivered in Phase 7, after Enable Banking for Server and before Flutter.
+Delivered in Phase 7, after Enable Banking for Server and before the desktop
+application.
 
 Rules use calendar-aware arithmetic, not fixed day counts for monthly or yearly
 periods. Time-zone and end-of-month behavior must be covered by tests.
@@ -764,15 +757,15 @@ for name, conditions, and tags.
 
 Enable Banking is delivered in two steps: Phase 6 integrates the connector with
 the released server, and Phase 11 integrates the same connector contracts with
-Flutter. Neither step introduces synchronization between vaults. The server half
-is implemented in `apps/server/src/banking/` (`docs/adr/0016`).
+the desktop application. Neither step introduces synchronization between vaults.
+The server half is implemented in `apps/server/src/banking/` (`docs/adr/0016`).
 
 ### 12.1 Security boundary
 
-Enable Banking application private keys and JWT signing never ship in the web,
-mobile, or desktop clients. Reverse engineering a distributed client would
-expose those credentials, so signing happens only on the server, and the key
-lives in the encrypted vault:
+Enable Banking application private keys and JWT signing never ship in the web or
+desktop clients. Reverse engineering a distributed client would expose those
+credentials, so signing happens only on the server, and the key lives in the
+encrypted vault:
 
 - The connection is configured from Settings: application id, the `.pem` private
   key, the callback URL, the environment and the default country/PSU type.
@@ -796,7 +789,7 @@ The connector is an ingestion channel, not the canonical database:
 - The server vault links and imports independently in Phase 6: connecting a bank
   asks whether to create a Flowly account or pair an existing one, and unmapped
   accounts are never imported.
-- Each native vault links and imports independently in Phase 11.
+- The desktop vault links and imports independently in Phase 11.
 - The destination encrypted vault remains the source of truth.
 - The connector does not provide cross-device synchronization.
 - Raw provider responses are kept per account in `bank_payloads` inside the
@@ -897,8 +890,8 @@ The connector is written from the provider's documented API, inside the server:
 
 - Validate all data at trust boundaries with runtime schemas.
 - Use parameterized SQL exclusively.
-- Request the minimum Flutter platform permissions and audit every native
-  plugin and platform channel.
+- Request the minimum platform permissions and audit every plugin and platform
+  channel the desktop client ships.
 - Disable unnecessary network access in installed clients for the MVP.
 - Use HTTPS and a restrictive same-origin `connect-src` policy for the
   self-hosted web service.
@@ -914,7 +907,7 @@ The connector is written from the provider's documented API, inside the server:
 - No analytics or telemetry in the MVP by default.
 - No third-party advertising or tracking SDKs.
 - No automatic cloud backup or upload.
-- Native applications have no network dependency for core usage. The web UI
+- The desktop application has no network dependency for core usage. The web UI
   depends only on private-network access to the user's server and never on
   Internet access or a Flowly-operated service.
 - Collect only data entered/imported by the user.
@@ -977,7 +970,7 @@ The connector is written from the provider's documented API, inside the server:
 - React component and accessibility tests
 - Tagging rule contract, normalization, AND/OR, amount-currency, account,
   import-preview, and idempotent backfill tests in Phase 3, with golden
-  rule-evaluation vectors shared with Dart
+  rule-evaluation vectors shared with the Dart desktop client
 - Migration tests from every released schema
 - Multi-architecture container, HTTPS, session, restart, concurrent-edit, and
   update tests on Linux amd64/arm64 and Docker Desktop on macOS/Windows
@@ -988,17 +981,18 @@ The connector is written from the provider's documented API, inside the server:
   idempotent sync, pending-to-booked reconciliation, expired consent, raw
   payload storage, and the portability round trip (Phase 6)
 - Equivalent Dart domain, property-based, storage, crypto, component, and
-  accessibility tests beginning in Phase 8
+  accessibility tests for the desktop client beginning in Phase 8
 - Cross-language golden-vector and portable-archive conformance tests in Phases
   8-11
-- Platform smoke tests on iOS, Android, macOS, and Windows beginning in Phase 8
+- Platform smoke tests on macOS and Windows beginning in Phase 8
 
 ### Security verification
 
-- Static analysis for TypeScript in Server MVP phases and Dart from Phase 8
+- Static analysis for TypeScript in Server MVP phases and Dart for the desktop
+  client from Phase 8
 - Dependency and license scanning
 - Secret scanning
-- Mobile checks aligned with OWASP MASVS from Phase 8
+- Desktop checks aligned with the OWASP MASVS desktop guidance from Phase 8
 - Web checks aligned with OWASP ASVS
 - Threat-model review before beta
 - Independent review of key management and export handling before production
@@ -1007,9 +1001,9 @@ The connector is written from the provider's documented API, inside the server:
 
 Phases 0-5 are strictly server-first. They deliver the first releasable product,
 the **Flowly Server MVP**. After that release gate, Phase 6 adds Enable Banking
-for Server, and Flutter work begins in Phase 8. Phase 7 (recurring transactions)
-and its tasks were removed from the plan in `docs/adr/0015`; the remaining phase
-numbers are kept as published so earlier records stay accurate.
+for Server, and desktop application work begins in Phase 8. Phase 7 (recurring
+transactions) and its tasks were removed from the plan in `docs/adr/0015`; the
+remaining phase numbers are kept as published so earlier records stay accurate.
 
 ### Phase 0 - Server architecture and security feasibility
 
@@ -1232,7 +1226,8 @@ Delivered:
   in-memory aggregate cache keyed by a cheap table fingerprint keeps repeated
   dashboard reads fast without persisting anything derived from decrypted data.
 - `dashboard.schema.json` joins the contracts, so the dashboard response is
-  validated at runtime and the shape is shared with the future Dart client.
+  validated at runtime and the shape is shared with the future Dart desktop
+  client.
 - React dashboard section plus server-side filters in the transactions section,
   and the Settings section that opens with the bank connection and consolidates
   the passphrase change with export and import
@@ -1377,8 +1372,8 @@ Status: **complete** (2026-09-18), decision in `docs/adr/0023`.
   progress bar, the focus halo and the default tag colour are Flowly's own
   colours instead of the mockups' teal.
 - Re-cut `logo.svg`, `logo-mark.svg`, `logo-mark-mono.svg`, `favicon.svg` and
-  the 180 px iOS icon from the new artwork, with the tile's knockout painted
-  through a mask so no seam or halo survives from the trace.
+  the app icon from the new artwork, with the tile's knockout painted through a
+  mask so no seam or halo survives from the trace.
 
 #### Task `paginate-the-ledger`
 
@@ -1528,6 +1523,29 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0031`.
 - The README images are committed, and the demo data is regenerated rather than
   hand-cropped, so a UI change ends with a `pnpm demo:screenshots` run.
 
+#### Task `drop-the-mobile-target`
+
+Status: **complete** (2026-09-22), decision in `docs/adr/0032`.
+
+- Flowly is desktop-only now: the self-hosted server with its browser UI, plus
+  one desktop application for macOS and Windows. The mobile client, the mobile
+  platform rows, the app-store distribution and every mobile-derived requirement
+  are out of the plan.
+- Phases 8-11 keep their published numbers and are named for the desktop
+  (foundation, feature parity, hardening and release, Enable Banking for the
+  desktop app); their tasks are `desktop-architecture-spike`,
+  `scaffold-desktop`, `implement-desktop-*`, `harden-desktop` and
+  `build-desktop-release-pipelines`, and the planned client lives in
+  `apps/desktop/` with `desktop-packages/` beside it.
+- The mobile-shaped requirements are gone with it: phone usage in the runbook,
+  mobile permissions and app-switcher privacy, the mobile biometric API and
+  backup-exclusion flags, the mobile security checklist (desktop guidance
+  replaces it), and the touch icon that existed only for a phone home screen.
+- The stack does not change: Flutter + Drift + SQLCipher, the generated Dart
+  types from `contracts/`, and Touch ID / Windows Hello as the optional
+  biometric shortcuts. The browser UI stays responsive — it is served to
+  desktop browsers, not phones.
+
 #### Task `restyle-the-rules-page-and-count-what-rules-cover`
 
 Status: **complete** (2026-09-22), decision in `docs/adr/0027`.
@@ -1590,7 +1608,7 @@ Status: **complete** (2026-09-11), decision in `docs/adr/0016`.
   the encrypted vault, raw payload retention, retry and rate-limit handling,
   deletion on unlink, and the normalized transaction mapping.
 - Kept the delivery contract client-neutral: the banking endpoints return plain
-  JSON, so Flutter can adopt it in Phase 11 without provider secrets.
+  JSON, so the desktop client can adopt it in Phase 11 without provider secrets.
 - Recorded the security boundary, the deduplication rule and the refresh
   behaviour in `docs/PLAN.md` §12 and the threat model in §13.
 
@@ -1679,89 +1697,91 @@ Status: **complete** (2026-09-20), decision in `docs/adr/0025`.
   bank is refusing and when Flowly will try again, instead of printing the raw
   ASPSP code.
 
-### Phase 8 - Flutter foundation
+### Phase 8 - Desktop application foundation
 
-#### Task `native-architecture-spike`
+#### Task `desktop-architecture-spike`
 
-- Prove Flutter + Drift + SQLCipher create/open/migrate/release builds on iOS,
-  Android, macOS, and Windows.
+- Prove Flutter + Drift + SQLCipher create/open/migrate/release builds on macOS
+  and Windows.
 - Prove secure storage, `local_auth`, passphrase-derived key wrapping, and
   encrypted portable-archive compatibility with the server.
 - Record plugin maintenance, licenses, binary size, and platform failure modes.
 
-#### Task `scaffold-native`
+#### Task `scaffold-desktop`
 
 - Scaffold the Flutter application and Dart packages after server contracts are
   stable.
 - Generate Dart types and validators from the canonical contracts.
 - Port the domain rules and run them against the existing golden fixtures.
 
-#### Task `implement-native-vault-storage`
+#### Task `implement-desktop-vault-storage`
 
-- Implement native vault creation, passphrase lifecycle, optional biometric
+- Implement desktop vault creation, passphrase lifecycle, optional biometric
   unlock, auto-lock, deletion, Drift/SQLCipher storage, and migrations.
 - Add backup exclusions, restrictive filesystem handling, and storage contract
   tests.
 
-**Exit criteria:** every native target opens the canonical fixture vault, fails
-closed on tampering, and matches the server domain and crypto vectors.
+**Exit criteria:** both desktop targets open the canonical fixture vault, fail
+closed on tampering, and match the server domain and crypto vectors.
 
-### Phase 9 - Flutter feature parity
+### Phase 9 - Desktop feature parity
 
-#### Task `implement-native-core-finance`
+#### Task `implement-desktop-core-finance`
 
 - Implement accounts, transactions, tags, notes, validation, and adaptive
   navigation in Flutter.
 - Implement tagging-rule CRUD, the rule engine, and backfill in Flutter,
   validated against the shared rule-evaluation fixtures.
 
-#### Task `implement-native-csv-transfer`
+#### Task `implement-desktop-csv-transfer`
 
 - Implement transaction CSV merge and complete portable archive export/import.
-- Verify bidirectional server/native round trips and replace-only complete
+- Verify bidirectional server/desktop round trips and replace-only complete
   imports.
 
-#### Task `implement-native-analysis`
+#### Task `implement-desktop-analysis`
 
 - Implement dashboard, search, recurrence, and multi-currency rules.
 - Run the shared acceptance fixtures against Dart and TypeScript.
 
-**Exit criteria:** native results and portable exports conform to the released
-server contracts on iOS, Android, macOS, and Windows.
+**Exit criteria:** desktop results and portable exports conform to the released
+server contracts on macOS and Windows.
 
-### Phase 10 - Native hardening and release
+### Phase 10 - Desktop hardening and release
 
-#### Task `harden-native`
+#### Task `harden-desktop`
 
-- Complete mobile permissions, biometric UX, app-switcher privacy, desktop file
-  dialogs, keyboard behavior, accessibility, performance, and recovery tests.
-- Complete OWASP MASVS checks and platform support documentation.
+- Complete platform permissions, biometric UX, window preview privacy, file
+  dialogs, keyboard behaviour, accessibility, performance, and recovery tests.
+- Complete the OWASP MASVS desktop checks and the platform support
+  documentation.
 
-#### Task `build-native-release-pipelines`
+#### Task `build-desktop-release-pipelines`
 
-- Create reproducible, signed mobile and desktop builds.
-- Verify installers, store packages, updates, migrations, and portable export
-  compatibility on every native target.
+- Create reproducible, signed macOS and Windows builds.
+- Verify installers, updates, migrations, and portable export compatibility on
+  both targets.
 
-**Exit criteria:** signed native releases pass the cross-platform acceptance
-suite and remain independent vaults with no automatic server synchronization.
+**Exit criteria:** the signed desktop releases pass the cross-platform
+acceptance suite and remain independent vaults with no automatic server
+synchronization.
 
-### Phase 11 - Enable Banking for Flutter
+### Phase 11 - Enable Banking for the desktop application
 
-#### Task `implement-native-banking-import`
+#### Task `implement-desktop-banking-import`
 
-- Integrate iOS, Android, macOS, and Windows with the connector contracts
-  released in Phase 6.
+- Integrate the macOS and Windows clients with the connector contracts released
+  in Phase 6.
 - Implement platform authorization callbacks, one-time batch delivery,
-  reconciliation, and idempotent import into each local native vault.
+  reconciliation, and idempotent import into each local desktop vault.
 - Run the same sanitized provider fixtures and deduplication expectations used
   by the server.
 - Apply tagging rules to imported transactions and verify parity with server
   results.
 
-**Exit criteria:** every supported native target can explicitly import from
-Enable Banking without receiving provider application secrets, synchronizing
-with another vault, or changing server-side normalization semantics.
+**Exit criteria:** both desktop targets can explicitly import from Enable
+Banking without receiving provider application secrets, synchronizing with
+another vault, or changing server-side normalization semantics.
 
 ### Phase 12 - Automatic encrypted backups
 
@@ -1795,21 +1815,21 @@ recovery point.
 | `build-server-release-pipeline` | `integrate-server-deployment`, `harden-server` |
 | `design-banking-connector` | `build-server-release-pipeline` |
 | `implement-server-banking-import` | `design-banking-connector` |
-| `native-architecture-spike` | `implement-server-banking-import`, `build-server-release-pipeline` |
-| `scaffold-native` | `native-architecture-spike`, `define-contracts-and-server-domain` |
-| `implement-native-vault-storage` | `scaffold-native` |
-| `implement-native-core-finance` | `implement-native-vault-storage` |
-| `implement-native-csv-transfer` | `implement-native-core-finance` |
-| `implement-native-analysis` | `implement-native-core-finance` |
-| `harden-native` | `implement-native-csv-transfer`, `implement-native-analysis` |
-| `build-native-release-pipelines` | `harden-native` |
-| `implement-native-banking-import` | `implement-server-banking-import`, `build-native-release-pipelines` |
-| `implement-automatic-backups` | `build-server-release-pipeline`, `implement-native-banking-import` |
+| `desktop-architecture-spike` | `implement-server-banking-import`, `build-server-release-pipeline` |
+| `scaffold-desktop` | `desktop-architecture-spike`, `define-contracts-and-server-domain` |
+| `implement-desktop-vault-storage` | `scaffold-desktop` |
+| `implement-desktop-core-finance` | `implement-desktop-vault-storage` |
+| `implement-desktop-csv-transfer` | `implement-desktop-core-finance` |
+| `implement-desktop-analysis` | `implement-desktop-core-finance` |
+| `harden-desktop` | `implement-desktop-csv-transfer`, `implement-desktop-analysis` |
+| `build-desktop-release-pipelines` | `harden-desktop` |
+| `implement-desktop-banking-import` | `implement-server-banking-import`, `build-desktop-release-pipelines` |
+| `implement-automatic-backups` | `build-server-release-pipeline`, `implement-desktop-banking-import` |
 
 Server phases are sequential release gates. After the Server MVP, Enable Banking
-for Server (Phase 6) is delivered first, before Flutter foundation (Phase 8) may
-begin. Flutter feature work cannot move ahead of its foundation and conformance
-gates.
+for Server (Phase 6) is delivered first, before the desktop application
+foundation (Phase 8) may begin. Desktop feature work cannot move ahead of its
+foundation and conformance gates.
 
 ## 19. Definition of Done for the Server MVP
 
@@ -1847,14 +1867,14 @@ The first MVP is complete at the end of Phase 5 only when:
 - Multi-user or role-based access to a server vault
 - Browser-side offline vaults or installable PWA behavior
 - Automatic or scheduled backups in the MVP
-- Flutter applications in the Server MVP
+- The desktop application in the Server MVP
 - Automatic exchange-rate retrieval
 - Investment portfolio pricing
 - Receipt/image attachment storage
 - Payment initiation
 - Enable Banking integration in the Server MVP (it ships as Phase 6, after the
   MVP release gate)
-- Bank account linking for the Flutter clients (Phase 11)
+- Bank account linking for the desktop client (Phase 11)
 - Nested boolean condition groups, tag-removal actions, rule-driven edits to
   payee or note, rule re-evaluation when a transaction is edited, and background
   rule scheduling in the Server MVP
@@ -1894,7 +1914,6 @@ The first MVP is complete at the end of Phase 5 only when:
 - Dart package `flutter_secure_storage`:
   <https://pub.dev/packages/flutter_secure_storage>
 - JSON Schema: <https://json-schema.org/>
-- Capacitor: <https://capacitorjs.com/docs>
 - Tauri 2: <https://v2.tauri.app/>
 - Docker Compose: <https://docs.docker.com/compose/>
 - SQLCipher: <https://www.zetetic.net/sqlcipher/>
@@ -1903,16 +1922,15 @@ The first MVP is complete at the end of Phase 5 only when:
 - Node.js SQLite (`node:sqlite`): <https://nodejs.org/api/sqlite.html>
 - Node.js native TypeScript type stripping:
   <https://nodejs.org/api/typescript.html>
-- OWASP Mobile Application Security: <https://mas.owasp.org/>
 - OWASP Application Security Verification Standard:
   <https://owasp.org/www-project-application-security-verification-standard/>
+- OWASP MASVS desktop and platform guidance: <https://mas.owasp.org/>
 - Argon2 specification, RFC 9106: <https://www.rfc-editor.org/rfc/rfc9106>
 - Apple Keychain Services:
   <https://developer.apple.com/documentation/security/keychain_services>
-- Android Keystore:
-  <https://developer.android.com/privacy-and-security/keystore>
 - Windows Data Protection API:
   <https://learn.microsoft.com/windows/win32/secauthn/data-protection>
+- Flutter desktop support: <https://docs.flutter.dev/platform-integration/desktop>
 - OWASP Session Management Cheat Sheet:
   <https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html>
 - Enable Banking API reference:

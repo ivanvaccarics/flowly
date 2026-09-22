@@ -21,9 +21,8 @@ engine-level information.
 ## Brand
 
 The Flowly mark is a white keyhole knocked out of a green-to-gold squircle,
-locked up with the rounded `Flowly` wordmark. Everything is SVG (plus the one
-PNG the iOS icon needs), served from `apps/web/public`, and every asset carries
-the same three colours:
+locked up with the rounded `Flowly` wordmark. Everything is SVG, served from
+`apps/web/public`, and every asset carries the same three colours:
 
 | Colour | Value | Where it lands |
 | --- | --- | --- |
@@ -41,7 +40,6 @@ only other fade the product paints is the soft wash behind the unlock card.
 | `logo-mark.svg` | The tile alone on a transparent square, for light or dark surfaces |
 | `logo-mark-mono.svg` | The keyhole alone in white, for dark or tinted surfaces; the sidebar brand tile |
 | `favicon.svg` | The tile with a little air around it; browser tab |
-| `apple-touch-icon.png` | 180 px full-bleed square — gradient, no corner rounding, white keyhole — for iOS home-screen bookmarks |
 
 The tile is painted through a mask (the tile's two traced halves minus the
 keyhole) so its knockout edge stays crisp instead of picking up the seam where

@@ -193,9 +193,10 @@ sudo cp data/flowly-local-ca.crt /usr/local/share/ca-certificates/flowly-local-c
 sudo update-ca-certificates
 ```
 
-Phones need the same certificate installed as a profile, with full trust enabled
-for it afterwards. Then open Flowly at the address in `.env`; the address bar
-shows a normal padlock instead of "Not secure".
+Every desktop that opens Flowly needs the same certificate trusted: install it
+in the system store as above, or import it into the browser. Then open Flowly at
+the address in `.env`; the address bar shows a normal padlock instead of "Not
+secure".
 
 Direct IP access works too: Caddy falls back to the `localhost` certificate when
 the client sends no SNI (`default_sni localhost`), so `https://192.168.1.20:8443`

@@ -1,6 +1,8 @@
 # ADR 0016 — Enable Banking inside the server, not in a separate service
 
-Status: Accepted (2026-09-11)
+Status: Accepted (2026-09-11). The mobile client named below is out of scope
+since [ADR 0032](./0032-flowly-targets-the-desktop-only.md): Flowly ships a
+browser UI and one desktop application, with no mobile target.
 
 ## Context
 

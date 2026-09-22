@@ -342,15 +342,15 @@ for (let offset = 3; offset >= 0; offset -= 1) {
     );
   }
 
-  const phone = dayIn(month, 12);
-  if (isPast(phone)) {
+  const telecom = dayIn(month, 12);
+  if (isPast(telecom)) {
     rows.push(
       movement({
-        date: phone,
+        date: telecom,
         account: "card",
         amountMinor: -2990,
-        payee: "Mobile Demo",
-        note: "phone plan",
+        payee: "Telecom Demo",
+        note: "monthly plan",
       }),
     );
   }
