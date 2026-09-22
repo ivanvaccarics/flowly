@@ -448,11 +448,13 @@ h3 {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  /* Above the sticky top bar (40): a dialog covers the whole viewport instead
+     of sliding under the bar and losing its own first line. */
+  z-index: 60;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: clamp(1rem, 6vh, 4rem) 1rem 2rem;
+  padding: clamp(1.5rem, 8vh, 4.5rem) 1rem 2rem;
   overflow-y: auto;
   background: rgba(15, 23, 42, 0.45);
 }

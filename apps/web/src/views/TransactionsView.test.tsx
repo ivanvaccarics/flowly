@@ -270,19 +270,20 @@ describe("transactions view", () => {
     await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
 
     expect(screen.queryByText("± tag")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Bar Centrale" }));
 
-    // Tags are chosen from the compact picker, not from an inline checkbox list.
-    fireEvent.click(await screen.findByRole("button", { name: /Edit tags for Bar Centrale/ }));
-    const dialog = await screen.findByRole("dialog", { name: /Edit tags for Bar Centrale/ });
-    const tagCheckbox = within(dialog).getByRole("checkbox", {
+    // The row opens the same dialog the composer uses, tags included.
+    const editor = await screen.findByRole("dialog", { name: "Edit Bar Centrale" });
+    fireEvent.click(within(editor).getByRole("button", { name: /Edit tags for Bar Centrale/ }));
+    const picker = await screen.findByRole("dialog", { name: /Edit tags for Bar Centrale/ });
+    const tagCheckbox = within(picker).getByRole("checkbox", {
       name: /Coffee/,
     }) as HTMLInputElement;
     expect(tagCheckbox.checked).toBe(true);
     fireEvent.click(tagCheckbox);
-    fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
+    fireEvent.click(within(picker).getByRole("button", { name: "Done" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(within(editor).getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]?.method).toBe("PUT");
@@ -290,7 +291,7 @@ describe("transactions view", () => {
     expect(calls[0]?.body).toContain('"tagIds":[]');
   });
 
-  it("edits payee and amount in the same inline save", async () => {
+  it("edits payee and amount in the same dialog", async () => {
     const calls: Array<{ body: string }> = [];
     vi.stubGlobal(
       "fetch",
@@ -313,23 +314,24 @@ describe("transactions view", () => {
 
     render(<TransactionsView csrf="csrf-token" />);
     await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Bar Centrale" }));
 
-    // The row prefills the amount in its own currency, editable as a decimal.
-    const amount = (await screen.findByLabelText("Amount in EUR")) as HTMLInputElement;
+    // The dialog prefills the amount in the movement's own currency.
+    const editor = await screen.findByRole("dialog", { name: "Edit Bar Centrale" });
+    const amount = within(editor).getByLabelText("Amount (EUR)") as HTMLInputElement;
     expect(amount.value).toBe("-12,30");
     fireEvent.change(amount, { target: { value: "-15,00" } });
-    fireEvent.change(screen.getByLabelText(`Payee for ${transaction.id}`), {
+    fireEvent.change(within(editor).getByLabelText("Payee"), {
       target: { value: "Bar Centrale Roma" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(within(editor).getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]?.body).toContain('"amountMinor":-1500');
     expect(calls[0]?.body).toContain('"payee":"Bar Centrale Roma"');
   });
 
-  it("opens a row for editing on a double-click, and keeps the Edit button", async () => {
+  it("opens the edit dialog on a double-click, and keeps the Edit button", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -351,31 +353,24 @@ describe("transactions view", () => {
     // The hint says the cells are the shortcut, not another control to find.
     expect(screen.getByText(/double-click a cell to edit it in place/)).toBeTruthy();
 
-    // A double-click on the payee opens the whole row and puts the caret there.
+    // A double-click on the payee opens the movement in a dialog.
     const payeeCell = screen.getByText("Bar Centrale");
     fireEvent.doubleClick(payeeCell);
-    const payeeInput = (await screen.findByLabelText(
-      `Payee for ${transaction.id}`,
-    )) as HTMLInputElement;
-    expect(payeeInput.value).toBe("Bar Centrale");
-    expect(document.activeElement).toBe(payeeInput);
-    // The rest of the row is editable in the same pass.
-    expect((screen.getByLabelText("Amount in EUR") as HTMLInputElement).value).toBe("-12,30");
-    expect(screen.getByRole("button", { name: /Edit tags for Bar Centrale/ })).toBeTruthy();
-
-    // Moving to another cell keeps what was typed, it does not reload the row.
-    fireEvent.change(payeeInput, { target: { value: "Bar Centrale Roma" } });
-    fireEvent.doubleClick(screen.getByLabelText("Note for Bar Centrale"));
-    expect(document.activeElement).toBe(screen.getByLabelText(`Note for Bar Centrale`));
-    expect((screen.getByLabelText(`Payee for ${transaction.id}`) as HTMLInputElement).value).toBe(
-      "Bar Centrale Roma",
+    const editor = await screen.findByRole("dialog", { name: "Edit Bar Centrale" });
+    expect((within(editor).getByLabelText("Payee") as HTMLInputElement).value).toBe("Bar Centrale");
+    expect((within(editor).getByLabelText("Amount (EUR)") as HTMLInputElement).value).toBe(
+      "-12,30",
     );
+    expect((within(editor).getByLabelText("Note") as HTMLInputElement).value).toBe(
+      "espresso with Luca",
+    );
+    expect(within(editor).getByRole("button", { name: /Edit tags for Bar Centrale/ })).toBeTruthy();
 
     // Cancel returns the read-only row, and the button still opens the editor.
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByLabelText(`Payee for ${transaction.id}`)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-    expect(await screen.findByLabelText(`Payee for ${transaction.id}`)).toBeTruthy();
+    fireEvent.click(within(editor).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog", { name: "Edit Bar Centrale" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Edit Bar Centrale" }));
+    expect(await screen.findByRole("dialog", { name: "Edit Bar Centrale" })).toBeTruthy();
   });
 
   it("pages through the ledger on the server and starts over when the filters change", async () => {

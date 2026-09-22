@@ -117,7 +117,8 @@ you should see.
 | Press **Add transaction** on the ledger | The record form opens in a dialog over the page; saving it closes the dialog and the new movement is at the top of the ledger |
 | Look at the top of any section | A tinted banner names what the section is about (green for money, violet for automation, slate for the vault) with its figures, and a headline with the section's action sits under it; the top bar carries the breadcrumb above the title |
 | Edit the note of a transaction | The change is saved; the revision increases |
-| Double-click the payee (or the note, the tags, the amount) of a row | The row becomes editable with the caret in the cell you double-clicked; **Cancel** returns it to read-only, and the row's **Edit** button still opens the same editor |
+| Double-click the payee (or the note, the tags, the amount) of a row | The movement opens in the same dialog **Add transaction** uses, prefilled with its account, date, amount, payee, note, status and tags; **Cancel** closes it without writing, and the row's **Edit** button opens it too |
+| Open any dialog while the page is scrolled, with the top bar pinned | The dialog covers the whole window, top bar included: its title is never hidden under the bar and the first field stays reachable |
 | Open the same transaction in two tabs and save both | The second save reports a revision conflict instead of overwriting |
 | Filter by account, date range, tag, status or free text | The list narrows and the count updates; nothing is filtered in the browser only |
 | Look at the footer of a filtered ledger with more rows than one page | It reads `Showing 1–25 of N transactions` with `Page 1 / x`; **Next** shows the following rows and **Previous** comes back; **Rows per page** switches to 50 or 100 and starts again from page 1 |

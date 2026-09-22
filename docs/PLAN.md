@@ -1461,6 +1461,9 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0026`.
 
 Status: **complete** (2026-09-22).
 
+*(The row-editing surface this task introduced became a dialog in
+`edit-a-movement-in-a-dialog`; the gesture is unchanged.)*
+
 - A row in the ledger opens for editing on a double-click of an editable cell —
   payee, note, tags or amount — as well as on its **Edit** button, which stays
   as the explicit, keyboard-friendly way in. The editor turns the whole row
@@ -1473,6 +1476,24 @@ Status: **complete** (2026-09-22).
   note; **Cancel** returns the row to its read-only cells.
 - The table card names the shortcut, so the gesture is discoverable rather than
   hidden.
+
+#### Task `edit-a-movement-in-a-dialog`
+
+Status: **complete** (2026-09-22), decision in `docs/adr/0029`.
+
+- A movement is corrected in a dialog, not in the row: the **Edit** button and a
+  double-click on the payee, note, tags or amount cell both open the same form
+  the composer uses, prefilled with the account, booking date, amount, payee,
+  note, status and tags. **Cancel**, Escape and the X close it without writing,
+  and focus returns to the row that opened it.
+- The edit keeps the movement's own currency unless the account changes, so a
+  USD movement booked on a EUR account is not silently converted; editing still
+  never re-runs the tagging rules.
+- `TransactionFields` is the shared form behind **Add transaction** and the edit
+  dialog, the way `RuleFields` is behind the rule composer and its editor.
+- The dialog covers the whole viewport: the backdrop now sits above the sticky
+  top bar (it used to slide under it, hiding the dialog's first line) and the
+  top padding keeps the title clear of the window edge on short screens.
 
 #### Task `restyle-the-rules-page-and-count-what-rules-cover`
 

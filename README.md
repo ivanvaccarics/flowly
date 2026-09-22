@@ -225,15 +225,15 @@ currency; rules are a registry table whose rows carry an on/off switch and open
 the rule in a dialog over the page, so the composer writing a new one keeps its
 own draft; the ledger keeps its filters, its **View** pills and its pager in one
 card, and records a movement from **Add transaction**, which opens the form in a
-dialog as well. The ledger pages
-through its matching rows on the server — 25 per page by default, 50 or 100
-from the selector — and always says which window it is showing, so a vault with
-thousands of movements is never silently truncated. A row is edited in place:
-double-click the payee, the note, the tags or the amount, or press the row's
-**Edit** button, and the caret lands in the cell you clicked. The dashboard's
-recent transactions page the same way, ten rows at a time. The dashboard charts
-weekly cash flow and draws spending by tag as a pie chart per currency, so no
-chart ever blends currencies. Accounts can be archived and restored, tags can be
+dialog as well. The ledger pages through its matching rows on the server — 25 per
+page by default, 50 or 100 from the selector — and always says which window it is
+showing, so a vault with thousands of movements is never silently truncated. A
+movement is corrected in a dialog too: double-click the payee, the note, the
+tags or the amount, or press the row's **Edit** button, and the same form the
+composer uses opens with everything prefilled. The dashboard's recent
+transactions page the same way, ten rows at a time. The dashboard charts weekly
+cash flow and draws spending by tag as a pie chart per currency, so no chart ever
+blends currencies. Accounts can be archived and restored, tags can be
 renamed and recoloured in place, and Settings holds the passphrase change plus
 export and import, after the Enable Banking connection. Export comes in three
 shapes: the single transaction CSV, a plain ZIP with one CSV per table (and a

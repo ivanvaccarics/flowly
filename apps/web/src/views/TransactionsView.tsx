@@ -1,9 +1,15 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import type { Account, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
 import { Modal } from "../components/Modal.js";
-import { TagPicker } from "../components/TagPicker.js";
+import {
+  TransactionFields,
+  draftCurrency,
+  draftFromTransaction,
+  emptyTransactionDraft,
+  type TransactionDraft,
+} from "../components/TransactionFields.js";
 import {
   Banner,
   BannerFigure,
@@ -36,19 +42,6 @@ const EMPTY_FILTERS: Filters = { accountId: "", from: "", to: "", tagId: "", sta
 const PAGE_SIZES = [25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 25;
 
-/** Cells a double-click can carry the row into edit mode through. */
-type EditableField = "payee" | "note" | "tags" | "amount";
-
-interface EditingRow {
-  id: string;
-  payee: string;
-  amount: string;
-  note: string;
-  tagIds: string[];
-  /** The cell the double-click came from, focused once the row is editable. */
-  focus?: EditableField;
-}
-
 export function TransactionsView({
   csrf,
   seed,
@@ -74,30 +67,27 @@ export function TransactionsView({
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
-  const [accountId, setAccountId] = useState("");
-  const [bookingDate, setBookingDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [amount, setAmount] = useState("");
-  const [payee, setPayee] = useState("");
-  const [userNote, setUserNote] = useState("");
-  const [status, setStatus] = useState<"booked" | "pending">("booked");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [editing, setEditing] = useState<EditingRow | undefined>(undefined);
+  /** The movement being added, while its dialog is open. */
+  const [composer, setComposer] = useState<TransactionDraft | undefined>(undefined);
+  /** The movement being corrected, with the row to hand focus back to. */
+  const [editor, setEditor] = useState<
+    { transaction: Transaction; draft: TransactionDraft; opener: HTMLElement | null } | undefined
+  >(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
   const [rawOpen, setRawOpen] = useState<string | undefined>(undefined);
-  const [composerOpen, setComposerOpen] = useState(false);
   /** This month's flows, for the banner: the same figures the dashboard shows. */
   const [monthFlow, setMonthFlow] = useState<
     { currency: string; incomeMinor: number; expensesMinor: number; netMinor: number } | undefined
   >(undefined);
-  /** The three text inputs a double-click may have to focus. */
-  const editInputs = useRef<Record<"payee" | "note" | "amount", HTMLInputElement | null>>({
-    payee: null,
-    note: null,
-    amount: null,
-  });
 
-  const account = accounts.items.find((candidate) => candidate.id === accountId);
-  const currency = account?.defaultCurrency ?? "EUR";
+  const composerCurrency = composer ? draftCurrency(composer, accounts.items) : "EUR";
+  // An edit keeps the movement's own currency unless the account changes: a USD
+  // movement booked on a EUR account must stay USD.
+  const editorCurrency = editor
+    ? editor.draft.accountId === editor.transaction.accountId
+      ? editor.transaction.currency
+      : draftCurrency(editor.draft, accounts.items, editor.transaction.currency)
+    : "EUR";
 
   // The ledger pages on the server: `offset` picks the window and `total` says
   // how many rows the filter matches in the vault, not how many came back.
@@ -164,44 +154,38 @@ export function TransactionsView({
     };
   }, []);
 
-  // A double-click on a cell opens the row with the caret in that cell, not
-  // merely at the first input of the row. The Edit button opens without focus.
-  const focus = editing?.focus;
-  const editingId = editing?.id;
-  useEffect(() => {
-    if (!focus || focus === "tags") return;
-    const input = editInputs.current[focus];
-    input?.focus();
-    input?.select();
-  }, [editingId, focus]);
+  function startComposer() {
+    setFormError(undefined);
+    setEditor(undefined);
+    setComposer(emptyTransactionDraft(new Date().toISOString().slice(0, 10)));
+  }
 
-  function startEditing(transaction: Transaction, field?: EditableField) {
-    // Moving between cells of the row being edited keeps what was typed; it
-    // only moves the caret.
-    if (editing?.id === transaction.id) {
-      setEditing({ ...editing, ...(field ? { focus: field } : {}) });
-      return;
-    }
-    setEditing({
-      id: transaction.id,
-      payee: transaction.payee ?? "",
-      amount: formatMinorToAmount(transaction.amountMinor, transaction.currency),
-      note: transaction.userNote ?? "",
-      tagIds: transaction.tagIds,
-      ...(field ? { focus: field } : {}),
-    });
+  /** A double-click on a cell and the row's Edit button open the same dialog. */
+  function startEditing(transaction: Transaction, opener: HTMLElement | null) {
+    setFormError(undefined);
+    setComposer(undefined);
+    setEditor({ transaction, draft: draftFromTransaction(transaction), opener });
+  }
+
+  function closeEditor() {
+    const opener = editor?.opener ?? null;
+    setEditor(undefined);
+    setFormError(undefined);
+    opener?.focus?.();
   }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setFormError(undefined);
-    if (!accountId) {
+    if (!composer) return;
+    const account = accounts.items.find((candidate) => candidate.id === composer.accountId);
+    if (!account) {
       setFormError("Choose an account first.");
       return;
     }
     let amountMinor: number;
     try {
-      amountMinor = parseAmountToMinor(amount, currency);
+      amountMinor = parseAmountToMinor(composer.amount, composerCurrency);
     } catch (cause) {
       setFormError(cause instanceof Error ? cause.message : "Invalid amount");
       return;
@@ -212,24 +196,19 @@ export function TransactionsView({
         formatVersion: 1,
         revision: 1,
         id: crypto.randomUUID(),
-        accountId,
-        bookingDate,
+        accountId: account.id,
+        bookingDate: composer.bookingDate,
         amountMinor,
-        currency,
-        status,
+        currency: account.defaultCurrency,
+        status: composer.status,
         source: "manual",
-        tagIds: selectedTags,
+        tagIds: composer.tagIds,
         createdAt: now,
         updatedAt: now,
-        ...(payee ? { payee } : {}),
-        ...(userNote ? { userNote } : {}),
+        ...(composer.payee ? { payee: composer.payee } : {}),
+        ...(composer.note ? { userNote: composer.note } : {}),
       });
-      setAmount("");
-      setPayee("");
-      setUserNote("");
-      setSelectedTags([]);
-      setStatus("booked");
-      setComposerOpen(false);
+      setComposer(undefined);
       // A new row is normally dated today, so it belongs at the top of the
       // newest-first order: show it instead of leaving the user on page 5.
       if (page === 1) {
@@ -242,27 +221,33 @@ export function TransactionsView({
     }
   }
 
-  async function saveEdits(transaction: Transaction) {
-    if (!editing) return;
+  async function saveEdits(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editor) return;
+    setFormError(undefined);
     let amountMinor: number;
     try {
-      amountMinor = parseAmountToMinor(editing.amount, transaction.currency);
+      amountMinor = parseAmountToMinor(editor.draft.amount, editorCurrency);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Invalid amount");
+      setFormError(cause instanceof Error ? cause.message : "Invalid amount");
       return;
     }
     try {
-      await api.update<Transaction>(csrf, "transactions", transaction.id, {
-        ...transaction,
-        payee: editing.payee,
+      await api.update<Transaction>(csrf, "transactions", editor.transaction.id, {
+        ...editor.transaction,
+        accountId: editor.draft.accountId,
+        bookingDate: editor.draft.bookingDate,
         amountMinor,
-        userNote: editing.note,
-        tagIds: editing.tagIds,
+        currency: editorCurrency,
+        payee: editor.draft.payee,
+        userNote: editor.draft.note,
+        status: editor.draft.status,
+        tagIds: editor.draft.tagIds,
       });
-      setEditing(undefined);
+      closeEditor();
       await load();
     } catch (cause) {
-      setError(describeError(cause));
+      setFormError(describeError(cause));
     }
   }
 
@@ -342,87 +327,63 @@ export function TransactionsView({
         title="A readable trace of every movement."
         lead="Tagging rules run when you save a movement, and only ever add tags."
         actions={
-          <button type="button" className="btn primary" onClick={() => setComposerOpen(true)}>
+          <button type="button" className="btn primary" onClick={startComposer}>
             <Icon name="plus" size={16} />
             Add transaction
           </button>
         }
       />
 
-      {composerOpen ? (
-        <Modal title="Add transaction" onClose={() => setComposerOpen(false)}>
+      {composer ? (
+        <Modal title="Add transaction" onClose={() => setComposer(undefined)}>
           <form className="stack" onSubmit={submit}>
             <p className="muted">
               Tagging rules run when you save. The new movement appears at the top of the ledger.
             </p>
-            <div className="fieldset framed">
-              <label>
-                Account
-                <select
-                  value={accountId}
-                  onChange={(event) => setAccountId(event.target.value)}
-                  required
-                >
-                  <option value="">Select…</option>
-                  {accounts.items.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Booking date
-                <input
-                  type="date"
-                  value={bookingDate}
-                  onChange={(event) => setBookingDate(event.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Amount ({currency})
-                <input
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
-                  placeholder="-12.30"
-                  required
-                />
-              </label>
-              <label>
-                Payee
-                <input value={payee} onChange={(event) => setPayee(event.target.value)} />
-              </label>
-              <label>
-                Note
-                <input value={userNote} onChange={(event) => setUserNote(event.target.value)} />
-              </label>
-              <label>
-                Status
-                <select
-                  value={status}
-                  onChange={(event) => setStatus(event.target.value as "booked" | "pending")}
-                >
-                  <option value="booked">booked</option>
-                  <option value="pending">pending</option>
-                </select>
-              </label>
-            </div>
-            <fieldset className="fieldset">
-              <legend>Tags</legend>
-              <TagPicker
-                tags={tags.items}
-                selected={selectedTags}
-                onChange={setSelectedTags}
-                label="Select tags for the new transaction"
-              />
-            </fieldset>
+            <TransactionFields
+              draft={composer}
+              accounts={accounts.items}
+              tags={tags.items}
+              currency={composerCurrency}
+              tagLabel="Select tags for the new transaction"
+              onChange={setComposer}
+            />
+            {formError ? <Banner tone="error">{formError}</Banner> : null}
             <div className="cell-actions">
               <button type="submit" className="btn primary">
                 <Icon name="plus" size={16} />
                 Add transaction
               </button>
-              <button type="button" className="btn" onClick={() => setComposerOpen(false)}>
+              <button type="button" className="btn" onClick={() => setComposer(undefined)}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {editor ? (
+        <Modal title={`Edit ${editor.transaction.payee ?? "transaction"}`} onClose={closeEditor}>
+          <form className="stack" onSubmit={saveEdits}>
+            <p className="muted">
+              Saving replaces this movement and keeps its id and its revision chain. Editing never
+              re-runs the tagging rules, so a tag you removed by hand stays removed.
+            </p>
+            <TransactionFields
+              draft={editor.draft}
+              accounts={accounts.items}
+              tags={tags.items}
+              currency={editorCurrency}
+              tagLabel={`Edit tags for ${editor.transaction.payee ?? editor.transaction.id}`}
+              onChange={(next) => setEditor({ ...editor, draft: next })}
+            />
+            {formError ? <Banner tone="error">{formError}</Banner> : null}
+            <div className="cell-actions">
+              <button type="submit" className="btn primary">
+                <Icon name="check" size={16} />
+                Save changes
+              </button>
+              <button type="button" className="btn" onClick={closeEditor}>
                 Cancel
               </button>
             </div>
@@ -569,60 +530,29 @@ export function TransactionsView({
                 <Fragment key={transaction.id}>
                   <tr>
                     <td className="mono cell-nowrap">{transaction.bookingDate}</td>
-                    <td onDoubleClick={() => startEditing(transaction, "payee")}>
-                      {editing?.id === transaction.id ? (
-                        <input
-                          aria-label={`Payee for ${transaction.id}`}
-                          ref={(node) => {
-                            editInputs.current.payee = node;
-                          }}
-                          value={editing.payee}
-                          onChange={(event) =>
-                            setEditing({ ...editing, payee: event.target.value })
+                    <td onDoubleClick={(event) => startEditing(transaction, event.currentTarget)}>
+                      <span className="tx">
+                        <span
+                          className={
+                            transaction.amountMinor < 0 ? "tx-icon expense" : "tx-icon income"
                           }
-                        />
-                      ) : (
-                        <span className="tx">
-                          <span
-                            className={
-                              transaction.amountMinor < 0 ? "tx-icon expense" : "tx-icon income"
-                            }
-                          >
-                            <Icon name="transactions" size={15} />
-                          </span>
-                          <span className="stack">
-                            <strong>{transaction.payee ?? "—"}</strong>
-                            {transaction.description &&
-                            transaction.description !== transaction.payee ? (
-                              <span className="sub">{transaction.description}</span>
-                            ) : null}
-                          </span>
+                        >
+                          <Icon name="transactions" size={15} />
                         </span>
-                      )}
+                        <span className="stack">
+                          <strong>{transaction.payee ?? "—"}</strong>
+                          {transaction.description &&
+                          transaction.description !== transaction.payee ? (
+                            <span className="sub">{transaction.description}</span>
+                          ) : null}
+                        </span>
+                      </span>
                     </td>
-                    <td onDoubleClick={() => startEditing(transaction, "note")}>
-                      {editing?.id === transaction.id ? (
-                        <input
-                          aria-label={`Note for ${transaction.payee ?? transaction.id}`}
-                          ref={(node) => {
-                            editInputs.current.note = node;
-                          }}
-                          value={editing.note}
-                          onChange={(event) => setEditing({ ...editing, note: event.target.value })}
-                        />
-                      ) : (
-                        (transaction.userNote ?? "—")
-                      )}
+                    <td onDoubleClick={(event) => startEditing(transaction, event.currentTarget)}>
+                      {transaction.userNote ?? "—"}
                     </td>
-                    <td onDoubleClick={() => startEditing(transaction, "tags")}>
-                      {editing?.id === transaction.id ? (
-                        <TagPicker
-                          tags={tags.items}
-                          selected={editing.tagIds}
-                          onChange={(tagIds) => setEditing({ ...editing, tagIds })}
-                          label={`Edit tags for ${transaction.payee ?? transaction.id}`}
-                        />
-                      ) : transaction.tagIds.length === 0 ? (
+                    <td onDoubleClick={(event) => startEditing(transaction, event.currentTarget)}>
+                      {transaction.tagIds.length === 0 ? (
                         <span className="muted">—</span>
                       ) : (
                         transaction.tagIds.map((id) => {
@@ -656,25 +586,9 @@ export function TransactionsView({
                     </td>
                     <td
                       className="cell-amount"
-                      onDoubleClick={() => startEditing(transaction, "amount")}
+                      onDoubleClick={(event) => startEditing(transaction, event.currentTarget)}
                     >
-                      {editing?.id === transaction.id ? (
-                        <span className="amount-edit">
-                          <input
-                            aria-label={`Amount in ${transaction.currency}`}
-                            ref={(node) => {
-                              editInputs.current.amount = node;
-                            }}
-                            value={editing.amount}
-                            onChange={(event) =>
-                              setEditing({ ...editing, amount: event.target.value })
-                            }
-                          />
-                          <span className="sub mono">{transaction.currency}</span>
-                        </span>
-                      ) : (
-                        <Money minor={transaction.amountMinor} currency={transaction.currency} />
-                      )}
+                      <Money minor={transaction.amountMinor} currency={transaction.currency} />
                     </td>
                     <td>
                       <div className="row-actions">
@@ -689,32 +603,14 @@ export function TransactionsView({
                           <Icon name="eye" size={14} />
                           Raw
                         </button>
-                        {editing?.id === transaction.id ? (
-                          <>
-                            <button
-                              type="button"
-                              className="btn small primary"
-                              onClick={() => void saveEdits(transaction)}
-                            >
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              className="btn small"
-                              onClick={() => setEditing(undefined)}
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn small"
-                            onClick={() => startEditing(transaction)}
-                          >
-                            Edit
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="btn small"
+                          aria-label={`Edit ${transaction.payee ?? "transaction"}`}
+                          onClick={(event) => startEditing(transaction, event.currentTarget)}
+                        >
+                          Edit
+                        </button>
                         <button
                           type="button"
                           className="btn small danger"
