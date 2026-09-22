@@ -127,15 +127,18 @@ rounding drama. Each transaction keeps its original currency, and Flowly refuses
 to blend unlike currencies into one fake number without a real exchange rate.
 
 ### 📊 A dashboard worth opening
-Balances per account, net cash flow, income vs. expenses, a pie chart of
-spending by tag and the latest movements, ten at a time, with **Previous** and
-**Next** when the vault has more — all computed on your self-hosted server,
-without an Internet dependency. Totals always carry their currency, and only
-booked transactions move a balance. The charts are meant to be touched: each
-week of the cash-flow chart lights up under the pointer or the arrow keys and
-reads out its income, expenses and net, and a slice of the spending pie
-highlights its legend row and shows that tag's share in the hole — click either
-one and the ledger opens filtered to exactly those rows.
+Balances per account, net cash flow, income vs. expenses, spending by category
+and the latest movements, ten at a time, with **Previous** and **Next** when the
+vault has more — all computed on your self-hosted server, without an Internet
+dependency. Totals always carry their currency, and only booked transactions
+move a balance. **Pick the months you care about** — a preset, a year strip, or
+any combination of months as removable chips — and the whole page follows.
+**Switch categories on and off** to ask "what if I ignore the rent?": every
+figure, the chart and the recent movements recompute for the tags you left on,
+and the categories you switched off stay visible so you can bring them back.
+The cash-flow chart is meant to be touched: each month lights up under the
+pointer or the arrow keys and reads out its income, expenses and net, and each
+category row opens the ledger filtered to that tag.
 
 ### 🔎 Search that actually finds it
 Filter by date range, account, tag, amount, currency, status or source — and
@@ -272,8 +275,9 @@ showing, so a vault with thousands of movements is never silently truncated. A
 movement is corrected in a dialog too: click the date, the payee, the note, the
 tags or the amount, or press the row's **Edit** button, and the same form the
 composer uses opens with everything prefilled. The dashboard's recent
-transactions page the same way, ten rows at a time. The dashboard charts weekly
-cash flow and draws spending by tag as a pie chart per currency, so no chart ever
+transactions page the same way, ten rows at a time. The dashboard scopes every
+figure to the months and the categories you select, charts cash flow month by
+month and draws spending as bars per category and per currency, so no total ever
 blends currencies. Accounts can be archived and restored, tags can be
 renamed and recoloured in place, and Settings holds the passphrase change plus
 export and import, after the Enable Banking connection. Export comes in three

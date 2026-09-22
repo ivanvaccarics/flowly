@@ -47,7 +47,7 @@ export interface ArchiveManifest {
 }
 
 /**
- * Dashboard view computed from the vault. Totals always carry a currency code and never blend currencies.
+ * Dashboard view computed from the vault. Totals always carry a currency code and never blend currencies. A caller may narrow it with `months=YYYY-MM,…` and `tags=<id>,<id>`: the flows, the buckets and the recent movements then cover exactly those months and those tags, while `balances` stays the account balances and `spendingByTag` keeps describing every tag in the period, so one the reader switched off can be switched back on.
  */
 export interface Dashboard {
   range: {
@@ -71,7 +71,7 @@ export interface Dashboard {
     transactionCount: number;
   }[];
   /**
-   * Income and expenses split into calendar buckets (one week by default) so the dashboard can chart the period without blending currencies.
+   * Income and expenses split into calendar buckets — one month per selected month when the caller scoped the dashboard by months, one week otherwise — so the dashboard charts the period without blending currencies.
    */
   cashFlowBuckets: {
     currency: string;

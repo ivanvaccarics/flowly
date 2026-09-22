@@ -30,7 +30,13 @@ const outDir = join(here, "..", "..", "docs", "images");
 
 /** The sections the README shows, in the order they are captured. */
 const SECTIONS = [
-  { file: "dashboard.png", nav: "Dashboard", title: "Financial overview" },
+  {
+    file: "dashboard.png",
+    nav: "Dashboard",
+    title: "Financial overview",
+    // The dashboard opens on the current month; the screenshot shows a trend.
+    prepare: "3 months",
+  },
   { file: "accounts.png", nav: "Accounts", title: "Accounts & resources" },
   { file: "transactions.png", nav: "Transactions", title: "Transactions" },
   { file: "tags.png", nav: "Tags", title: "Tags" },
@@ -209,6 +215,15 @@ async function main() {
         `document.querySelector(".topbar-title")?.textContent.trim() === ${JSON.stringify(section.title)}`,
       );
       await devtools.waitFor("!!document.querySelector('.section-banner')");
+      if (section.prepare) {
+        await devtools.evaluate(`(() => {
+          const button = [...document.querySelectorAll("button")]
+            .find((candidate) => candidate.textContent.trim() === ${JSON.stringify(section.prepare)});
+          if (!button) throw new Error("no control named ${section.prepare}");
+          button.click();
+        })()`);
+        await delay(600);
+      }
       // The charts and the live reads settle a moment after the first paint.
       await delay(800);
       const shot = await devtools.send("Page.captureScreenshot", { format: "png" });

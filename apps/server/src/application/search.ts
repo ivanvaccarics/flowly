@@ -6,6 +6,8 @@ export interface TransactionQuery {
   accountId?: string;
   fromDate?: string;
   toDate?: string;
+  /** `YYYY-MM` months to include, so a scattered month selection stays exact. */
+  months?: string[];
   tagIds?: string[];
   currency?: string;
   status?: TransactionStatus;
@@ -47,6 +49,16 @@ export function parseTransactionQuery(query: Record<string, unknown>): Transacti
   if (fromDate) result.fromDate = fromDate;
   const toDate = string("to");
   if (toDate) result.toDate = toDate;
+  const months = string("months");
+  if (months) {
+    const parsed = months
+      .split(",")
+      .map((month) => month.trim())
+      .filter(Boolean);
+    if (parsed.every((month) => /^\d{4}-(0[1-9]|1[0-2])$/.test(month))) {
+      result.months = [...new Set(parsed)].sort();
+    }
+  }
   const tags = string("tags");
   if (tags)
     result.tagIds = tags
@@ -76,6 +88,7 @@ export function matchesQuery(transaction: Transaction, query: TransactionQuery):
   if (query.accountId && transaction.accountId !== query.accountId) return false;
   if (query.fromDate && transaction.bookingDate < query.fromDate) return false;
   if (query.toDate && transaction.bookingDate > query.toDate) return false;
+  if (query.months && !query.months.includes(transaction.bookingDate.slice(0, 7))) return false;
   if (query.currency && transaction.currency !== query.currency) return false;
   if (query.status && transaction.status !== query.status) return false;
   if (query.source && transaction.source !== query.source) return false;

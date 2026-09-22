@@ -5,9 +5,58 @@ import type { Transaction } from "../domain/transaction.js";
 import type { Vault } from "../vault/vault.js";
 import { cacheFor } from "./aggregate-cache.js";
 
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/** `2026-02` → 28/29, so a monthly bucket covers its whole month. */
+export function monthEnd(month: string): string {
+  return `${month}-${String(daysInMonth(month)).padStart(2, "0")}`;
+}
+
+function daysInMonth(month: string): number {
+  const year = Number(month.slice(0, 4));
+  const index = Number(month.slice(5, 7));
+  return new Date(Date.UTC(year, index, 0)).getUTCDate();
+}
+
+/**
+ * Reads a `YYYY-MM,YYYY-MM` query value into a sorted, deduplicated list.
+ * Returns `undefined` when a value is not a month, so the caller can answer 400
+ * instead of silently ignoring the filter.
+ */
+export function parseMonthKeys(value: unknown): string[] | undefined {
+  if (typeof value !== "string" || value.trim() === "") return [];
+  const months = value.split(",").map((month) => month.trim());
+  if (months.some((month) => !/^\d{4}-(0[1-9]|1[0-2])$/.test(month))) return undefined;
+  return [...new Set(months)].sort();
+}
+
 export interface DateRange {
   from: string;
   to: string;
+}
+
+/**
+ * What the dashboard is scoped to: a range, plus an optional set of calendar
+ * months and an optional set of tags. Empty sets mean "no extra narrowing".
+ */
+export interface DashboardScope extends DateRange {
+  /** `YYYY-MM` months to include, so a scattered selection never pulls in the months between. */
+  months?: readonly string[];
+  /** Tag ids to include; a transaction matches when it carries at least one. */
+  tagIds?: readonly string[];
 }
 
 export interface CurrencyTotals {
@@ -69,14 +118,30 @@ export class AnalyticsService {
     this.clock = clock;
   }
 
-  async dashboard(range: DateRange): Promise<Dashboard> {
-    return cacheFor(this.vault, this.clock).get(`dashboard|${range.from}|${range.to}`, async () => {
-      const [balances, cashFlow, cashFlowBuckets, spendingByTag] = await Promise.all([
-        this.balances(),
-        this.cashFlow(range),
-        this.cashFlowBuckets(range),
-        this.spendingByTag(range),
-      ]);
+  async dashboard(scope: DashboardScope): Promise<Dashboard> {
+    const months = [...new Set(scope.months ?? [])].sort();
+    const tagIds = [...new Set(scope.tagIds ?? [])].sort();
+    const range: DateRange = { from: scope.from, to: scope.to };
+    const cacheKey = `dashboard|${range.from}|${range.to}|${months.join(",")}|${tagIds.join(",")}`;
+    return cacheFor(this.vault, this.clock).get(cacheKey, async () => {
+      const inRange = await this.inRange(range);
+      // The categories always describe the whole period, so the reader keeps
+      // seeing every tag they could switch back on; the tag filter narrows the
+      // flows, the chart and the totals instead.
+      const inScope =
+        months.length === 0
+          ? inRange
+          : inRange.filter((transaction) => months.includes(transaction.bookingDate.slice(0, 7)));
+      const selected =
+        tagIds.length === 0
+          ? inScope
+          : inScope.filter((transaction) =>
+              transaction.tagIds.some((tagId) => tagIds.includes(tagId)),
+            );
+      const [balances, tagRecords] = await Promise.all([this.balances(), this.vault.tags.list()]);
+      const cashFlow = this.flowOf(selected);
+      const cashFlowBuckets = this.bucketsOf(selected, months, range);
+      const spendingByTag = this.spendingOf(inScope, tagRecords);
       return {
         range,
         generatedAt: this.clock.nowIso(),
@@ -160,8 +225,12 @@ export class AnalyticsService {
 
   /** Income, expenses and net per currency over a date range (booked only). */
   async cashFlow(range: DateRange): Promise<CurrencyTotals[]> {
+    return this.flowOf(await this.inRange(range));
+  }
+
+  private flowOf(transactions: readonly Transaction[]): CurrencyTotals[] {
     const totals = new Map<string, CurrencyTotals>();
-    for (const transaction of await this.inRange(range)) {
+    for (const transaction of transactions) {
       if (transaction.status !== "booked") continue;
       const entry = totals.get(transaction.currency) ?? {
         currency: transaction.currency,
@@ -182,11 +251,19 @@ export class AnalyticsService {
   /** Booked outflows grouped by tag and currency. */
   /** Income and expenses per week, per currency, for the chart. */
   async cashFlowBuckets(range: DateRange, bucketDays = 7): Promise<CashFlowBucket[]> {
+    return this.weeklyBuckets(await this.inRange(range), range, bucketDays);
+  }
+
+  private weeklyBuckets(
+    transactions: readonly Transaction[],
+    range: DateRange,
+    bucketDays = 7,
+  ): CashFlowBucket[] {
     const buckets = new Map<string, CashFlowBucket>();
     const start = new Date(`${range.from}T00:00:00.000Z`);
     const end = new Date(`${range.to}T00:00:00.000Z`);
 
-    for (const transaction of await this.inRange(range)) {
+    for (const transaction of transactions) {
       if (transaction.status !== "booked") continue;
       const booking = new Date(`${transaction.bookingDate}T00:00:00.000Z`);
       const index = Math.floor((booking.getTime() - start.getTime()) / (bucketDays * 86_400_000));
@@ -215,8 +292,63 @@ export class AnalyticsService {
     );
   }
 
+  private bucketsOf(
+    transactions: readonly Transaction[],
+    months: readonly string[],
+    range: DateRange,
+  ): CashFlowBucket[] {
+    return months.length === 0
+      ? this.weeklyBuckets(transactions, range)
+      : this.monthlyBuckets(transactions, months);
+  }
+
+  /**
+   * One bucket per selected month, per currency, so the chart keeps a
+   * continuous axis even where a month holds nothing — and never invents a
+   * figure for a month nobody selected.
+   */
+  private monthlyBuckets(
+    transactions: readonly Transaction[],
+    months: readonly string[],
+  ): CashFlowBucket[] {
+    const totals = new Map<string, { incomeMinor: number; expensesMinor: number }>();
+    const currencies = new Set<string>();
+    for (const transaction of transactions) {
+      if (transaction.status !== "booked") continue;
+      currencies.add(transaction.currency);
+      const key = `${transaction.currency}|${transaction.bookingDate.slice(0, 7)}`;
+      const entry = totals.get(key) ?? { incomeMinor: 0, expensesMinor: 0 };
+      if (transaction.amountMinor >= 0) entry.incomeMinor += transaction.amountMinor;
+      else entry.expensesMinor += -transaction.amountMinor;
+      totals.set(key, entry);
+    }
+
+    const buckets: CashFlowBucket[] = [];
+    for (const currency of [...currencies].sort()) {
+      for (const month of months) {
+        const entry = totals.get(`${currency}|${month}`) ?? { incomeMinor: 0, expensesMinor: 0 };
+        buckets.push({
+          currency,
+          label: `${MONTH_LABELS[Number(month.slice(5, 7)) - 1] ?? month} ${month.slice(0, 4)}`,
+          from: `${month}-01`,
+          to: `${month}-${String(daysInMonth(month)).padStart(2, "0")}`,
+          incomeMinor: entry.incomeMinor,
+          expensesMinor: entry.expensesMinor,
+        });
+      }
+    }
+    return buckets;
+  }
+
   async spendingByTag(range: DateRange): Promise<TagSpending[]> {
     const [tags, transactions] = await Promise.all([this.vault.tags.list(), this.inRange(range)]);
+    return this.spendingOf(transactions, tags);
+  }
+
+  private spendingOf(
+    transactions: readonly Transaction[],
+    tags: readonly Tag[] = [],
+  ): TagSpending[] {
     const names = new Map(tags.map((tag: Tag) => [tag.id, tag.name]));
     const totals = new Map<string, TagSpending>();
 

@@ -5,6 +5,10 @@ Status: Accepted (2026-09-16)
 Supersedes the palette, shape, page-header and panel decisions of
 [ADR 0012](./0012-align-web-ui-with-sovereign-ledger-mockups.md).
 
+The spending pie decided below is superseded by
+[ADR 0033](./0033-the-dashboard-is-scoped-by-months-and-tags.md): the breakdown
+is a list of category bars that doubles as the tag filter.
+
 ## Context
 
 ADR 0011 and ADR 0012 built the web client on the first set of mockups in `ui/`:

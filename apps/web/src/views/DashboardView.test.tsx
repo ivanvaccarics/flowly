@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DashboardView } from "./DashboardView.js";
 
@@ -216,7 +216,7 @@ describe("dashboard charts", () => {
     );
     expect(onSeeAll).toHaveBeenCalledWith({ from: "2026-09-01", to: "2026-09-07" });
 
-    fireEvent.click(screen.getByRole("button", { name: /Rent/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Rent in the ledger" }));
     expect(onSeeAll).toHaveBeenCalledWith({
       tagId: RENT_TAG,
       from: expect.any(String),
@@ -224,18 +224,59 @@ describe("dashboard charts", () => {
     });
   });
 
-  it("shows the hovered tag in the middle of the donut", async () => {
-    mockVault(2, chartedDashboard);
+  it("filters every figure by the categories the reader leaves selected", async () => {
+    const queries: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+          "http://localhost",
+        );
+        queries.push(`${url.pathname}${url.search}`);
+        if (url.pathname === "/api/dashboard") return json(chartedDashboard);
+        if (url.pathname === "/api/transactions") {
+          return json({ items: [], total: 0, limit: 10, offset: 0 });
+        }
+        if (url.pathname === "/api/accounts" || url.pathname === "/api/tags") {
+          return json({ items: [] });
+        }
+        if (url.pathname === "/api/banking/status") {
+          return json({ provider: "enable-banking", configured: false, links: [], sync: {} });
+        }
+        return json({ error: "not_found" }, 404);
+      }),
+    );
     renderDashboard();
 
-    await waitFor(() => expect(screen.getByText("Spending breakdown")).toBeTruthy());
-    // The hole shows the period total until a slice is pointed at.
-    expect(screen.getByText("1.000,00")).toBeTruthy();
+    // Every category starts included: the reads ask for the months only.
+    await waitFor(() => expect(screen.getByRole("button", { name: "Exclude Rent" })).toBeTruthy());
+    expect(
+      queries.some((query) => query.includes("/api/dashboard?") && query.includes("months=")),
+    ).toBe(true);
+    expect(queries.some((query) => query.includes("tags="))).toBe(false);
 
-    fireEvent.focus(screen.getByRole("button", { name: /Groceries/ }));
-    // The hole now reads the tag: its share, its amount and its currency.
-    const centre = screen.getByText("EUR · 25,0% of spending").parentElement!;
-    expect(within(centre).getByText("Groceries")).toBeTruthy();
-    expect(within(centre).getByText("250,00")).toBeTruthy();
+    // Switching a category off narrows the dashboard call and the ledger alike.
+    fireEvent.click(screen.getByRole("button", { name: "Exclude Rent" }));
+    await waitFor(() =>
+      expect(
+        queries.some(
+          (query) => query.includes("/api/dashboard?") && query.includes(`tags=${GROCERIES_TAG}`),
+        ),
+      ).toBe(true),
+    );
+    expect(
+      queries.some(
+        (query) => query.includes("/api/transactions?") && query.includes(`tags=${GROCERIES_TAG}`),
+      ),
+    ).toBe(true);
+    expect(screen.getByRole("button", { name: "Include Rent" })).toBeTruthy();
+
+    // And it can always be switched back on.
+    fireEvent.click(screen.getByRole("button", { name: "Include Rent" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Exclude Rent" })).toBeTruthy());
+    expect(
+      screen.getByText("2 of 2 tags included · click a category to filter the dashboard"),
+    ).toBeTruthy();
   });
 });

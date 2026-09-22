@@ -184,10 +184,11 @@ describe("Flowly web client", () => {
     }
     await waitFor(() => expect(screen.getAllByText("Rent").length).toBeGreaterThan(0));
     expect(screen.getByRole("img", { name: /Income and expenses per week/ })).toBeTruthy();
-    expect(screen.getByRole("img", { name: "Spending by tag in EUR: Rent 100%" })).toBeTruthy();
+    // The categories carry the tag filter, so the dashboard can be narrowed.
+    expect(screen.getByRole("button", { name: "Exclude Rent" })).toBeTruthy();
   });
 
-  it("splits the spending pie chart per tag and per currency", async () => {
+  it("keeps the category bars per currency, never adding unlike ones", async () => {
     const twoTags = {
       ...dashboard,
       spendingByTag: [
@@ -217,15 +218,15 @@ describe("Flowly web client", () => {
     mockFetch({ ...unlockedRoutes(), "/api/dashboard": () => json(twoTags) });
     await unlock();
 
-    // One pie per currency, never a total that adds unlike currencies.
-    await waitFor(() =>
-      expect(
-        screen.getByRole("img", { name: "Spending by tag in EUR: Rent 75%, Groceries 25%" }),
-      ).toBeTruthy(),
-    );
-    expect(screen.getByRole("img", { name: "Spending by tag in USD: Travel 100%" })).toBeTruthy();
-    expect(screen.getByText("75,0%")).toBeTruthy();
-    expect(screen.getByText("25,0%")).toBeTruthy();
+    // One group per currency, never a total that adds unlike currencies.
+    await waitFor(() => expect(screen.getByText("Total · 1.000,00 EUR")).toBeTruthy());
+    expect(screen.getByText("Total · 100,00 USD")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Exclude Rent" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Exclude Groceries" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Exclude Travel" })).toBeTruthy();
+    expect(
+      screen.getByText("3 of 3 tags included · click a category to filter the dashboard"),
+    ).toBeTruthy();
   });
 
   it("resumes an open vault from its session cookie instead of asking again", async () => {

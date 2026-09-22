@@ -258,12 +258,22 @@ export const api = {
       body: { currentPassphrase, nextPassphrase },
     }),
   list: <T>(kind: string) => request<{ items: T[] }>(`/api/${kind}`),
-  dashboard: (params: { from?: string; to?: string; reference?: string } = {}) =>
-    request<Dashboard>(`/api/dashboard${queryString(params)}`),
+  dashboard: (
+    params: {
+      from?: string;
+      to?: string;
+      /** `YYYY-MM` months to include; takes precedence over from/to. */
+      months?: string;
+      /** Tag ids the aggregates consider, comma separated. */
+      tags?: string;
+      reference?: string;
+    } = {},
+  ) => request<Dashboard>(`/api/dashboard${queryString(params)}`),
   searchTransactions: (params: {
     accountId?: string;
     from?: string;
     to?: string;
+    months?: string;
     tags?: string;
     currency?: string;
     status?: string;

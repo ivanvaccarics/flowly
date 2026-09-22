@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Account, Dashboard, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
+import { DashboardFilters } from "../components/DashboardFilters.js";
 import { Icon } from "../components/icons.js";
 import {
   Banner,
@@ -10,12 +11,19 @@ import {
   Money,
   SectionBanner,
   SectionIntro,
-  tagPillStyle,
 } from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { describeError } from "../hooks/use-workspace.js";
 import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
 import { formatDecimal, formatMinorToAmount, formatMoney } from "../lib/money.js";
+import {
+  MONTH_SHORT,
+  monthsQuery,
+  monthsRange,
+  presetMonths,
+  shiftMonths,
+  type MonthPreset,
+} from "../lib/months.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -33,31 +41,6 @@ const SPENDING_COLOURS = [
   "#0ea5e9",
   "#ec4899",
 ];
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function startOfMonth(): string {
-  return `${today().slice(0, 7)}-01`;
-}
-
-function monthsAgo(count: number): string {
-  const now = new Date();
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - count, 1));
-  return date.toISOString().slice(0, 10);
-}
-
-function shiftRange(from: string, to: string): { from: string; to: string } {
-  const start = new Date(`${from}T00:00:00.000Z`).getTime();
-  const end = new Date(`${to}T00:00:00.000Z`).getTime();
-  const days = Math.max(1, Math.round((end - start) / 86_400_000) + 1);
-  const previousEnd = start - 86_400_000;
-  return {
-    from: new Date(previousEnd - (days - 1) * 86_400_000).toISOString().slice(0, 10),
-    to: new Date(previousEnd).toISOString().slice(0, 10),
-  };
-}
 
 function delta(
   current: number,
@@ -90,9 +73,13 @@ export function DashboardView({
   onExportData,
   onOpenSettings,
 }: DashboardViewProps) {
-  const [from, setFrom] = useState(startOfMonth);
-  const [to, setTo] = useState(today);
-  const [preset, setPreset] = useState<"month" | "quarter" | "year" | "custom">("month");
+  const [months, setMonths] = useState<string[]>(() => presetMonths("month"));
+  const [preset, setPreset] = useState<MonthPreset>("month");
+  const [anchorYear, setAnchorYear] = useState(() => new Date().getUTCFullYear());
+  /** Tags the reader switched off; empty means "everything that is there". */
+  const [excludedTags, setExcludedTags] = useState<string[]>([]);
+  /** The tags the period actually holds, so a re-pick can always reach them. */
+  const [periodTagIds, setPeriodTagIds] = useState<string[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard | undefined>(undefined);
   const [previous, setPrevious] = useState<Dashboard | undefined>(undefined);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -103,26 +90,37 @@ export function DashboardView({
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
+  const { from, to } = useMemo(() => monthsRange(months), [months]);
+  const includedTags = useMemo(
+    () => periodTagIds.filter((tagId) => !excludedTags.includes(tagId)),
+    [periodTagIds, excludedTags],
+  );
+  const tagsAllIncluded = includedTags.length === periodTagIds.length;
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const scope = { months: monthsQuery(months) };
+      const tags = tagsAllIncluded ? undefined : monthsQuery(includedTags);
       const [current, earlier, accountList, tagList] = await Promise.all([
-        api.dashboard({ from, to }),
-        api.dashboard(shiftRange(from, to)),
+        api.dashboard({ months: scope.months, ...(tags ? { tags } : {}) }),
+        api.dashboard({ months: monthsQuery(shiftMonths(months)), ...(tags ? { tags } : {}) }),
         api.list<Account>("accounts"),
         api.list<Tag>("tags"),
       ]);
-      setDashboard(current);
+      setDashboard(months.length === 0 ? undefined : current);
       setPrevious(earlier);
       setAccounts(accountList.items);
       setTags(tagList.items);
+      const seen = current.spendingByTag.map((entry) => entry.tagId).sort();
+      setPeriodTagIds((previous) => (previous.join(",") === seen.join(",") ? previous : seen));
       setError(undefined);
     } catch (cause) {
       setError(describeError(cause));
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [months, includedTags, tagsAllIncluded]);
 
   // The recent card pages on the server like the ledger does, so a busy vault
   // is browsed here instead of being cut off at the first screenful.
@@ -131,6 +129,8 @@ export function DashboardView({
       const response = await api.searchTransactions({
         limit: RECENT_PAGE_SIZE,
         offset: (recentPage - 1) * RECENT_PAGE_SIZE,
+        months: monthsQuery(months),
+        ...(tagsAllIncluded ? {} : { tags: monthsQuery(includedTags) }),
       });
       // The page can empty under the user: fold back to the last one with rows.
       if (response.items.length === 0 && response.total > 0 && recentPage > 1) {
@@ -143,7 +143,7 @@ export function DashboardView({
     } catch (cause) {
       setError(describeError(cause));
     }
-  }, [recentPage]);
+  }, [recentPage, months, includedTags, tagsAllIncluded]);
 
   useEffect(() => {
     void load();
@@ -166,16 +166,6 @@ export function DashboardView({
   const recentFirstRow = recentTotal === 0 ? 0 : (recentPage - 1) * RECENT_PAGE_SIZE + 1;
   const recentLastRow = (recentPage - 1) * RECENT_PAGE_SIZE + recent.length;
 
-  const spendingTotal =
-    dashboard?.spendingByTag.reduce((total, entry) => total + entry.spentMinor, 0) ?? 0;
-  const days = Math.max(
-    1,
-    Math.round(
-      (new Date(`${to}T00:00:00.000Z`).getTime() - new Date(`${from}T00:00:00.000Z`).getTime()) /
-        86_400_000,
-    ) + 1,
-  );
-  const topSpendTag = dashboard?.spendingByTag[0];
   const primaryCurrency = dashboard?.cashFlow[0]?.currency ?? "EUR";
   const primaryBuckets =
     dashboard?.cashFlowBuckets?.filter((bucket) => bucket.currency === primaryCurrency) ?? [];
@@ -204,16 +194,37 @@ export function DashboardView({
 
   function applyPreset(next: "month" | "quarter" | "year" | "custom") {
     setPreset(next);
-    if (next === "month") {
-      setFrom(startOfMonth());
-      setTo(today());
-    } else if (next === "quarter") {
-      setFrom(monthsAgo(3));
-      setTo(today());
-    } else if (next === "year") {
-      setFrom(`${today().slice(0, 4)}-01-01`);
-      setTo(today());
-    }
+    if (next === "custom") return;
+    const nextMonths = presetMonths(next);
+    setMonths(nextMonths);
+    const newest = nextMonths[nextMonths.length - 1];
+    if (newest) setAnchorYear(Number(newest.slice(0, 4)));
+  }
+
+  /** Clicking a month is what "Custom" means, so the preset follows the click. */
+  function toggleMonth(month: string) {
+    setPreset("custom");
+    setMonths((current) =>
+      current.includes(month)
+        ? current.filter((candidate) => candidate !== month)
+        : [...current, month].sort(),
+    );
+  }
+
+  function selectYear(year: number) {
+    setPreset("custom");
+    setMonths(MONTH_SHORT.map((_short, index) => `${year}-${String(index + 1).padStart(2, "0")}`));
+  }
+
+  function clearMonths() {
+    setPreset("custom");
+    setMonths([]);
+  }
+
+  function toggleTag(tagId: string) {
+    setExcludedTags((current) =>
+      current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId],
+    );
   }
 
   return (
@@ -241,7 +252,7 @@ export function DashboardView({
               label="Currencies"
               value={String(new Set(dashboard?.balances.map((line) => line.currency) ?? []).size)}
             />
-            <BannerFigure label="Period" value={`${from} → ${to}`} />
+            <BannerFigure label="Selected months" value={String(months.length)} />
           </>
         }
       />
@@ -253,26 +264,6 @@ export function DashboardView({
         lead="Aggregates use booked transactions only, and each currency keeps its own figures."
         actions={
           <>
-            <div className="segmented" role="group" aria-label="Period">
-              {(
-                [
-                  ["month", "This month"],
-                  ["quarter", "3 months"],
-                  ["year", "Year"],
-                  ["custom", "Custom"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={preset === key ? "segment active" : "segment"}
-                  aria-pressed={preset === key}
-                  onClick={() => applyPreset(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
             <button type="button" className="btn ghost" onClick={onExportData}>
               <Icon name="download" size={16} />
               Export data
@@ -285,28 +276,21 @@ export function DashboardView({
         }
       />
 
-      {preset === "custom" ? (
-        <div className="fieldset">
-          <label>
-            From
-            <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
-          </label>
-          <label>
-            To
-            <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
-          </label>
-          <button
-            type="button"
-            className="btn small"
-            disabled={loading}
-            onClick={() => void load()}
-          >
-            Apply range
-          </button>
-        </div>
-      ) : null}
+      <DashboardFilters
+        months={months}
+        preset={preset}
+        anchorYear={anchorYear}
+        onPreset={applyPreset}
+        onAnchorYear={setAnchorYear}
+        onToggleMonth={toggleMonth}
+        onSelectYear={selectYear}
+        onClear={clearMonths}
+        onRemoveMonth={toggleMonth}
+      />
 
       {error ? <Banner tone="error">{error}</Banner> : null}
+      {loading ? <Banner>Reading the vault…</Banner> : null}
+      {months.length === 0 ? <Empty>Select at least one month to see the figures.</Empty> : null}
 
       {/* The metric row spans the whole content column, as in the mockups: the
           focal number of each currency sits beside the secondary panels. */}
@@ -320,57 +304,44 @@ export function DashboardView({
         const incomeDelta = delta(flow.incomeMinor, previousFlow?.incomeMinor ?? 0);
         const expenseDelta = delta(flow.expensesMinor, previousFlow?.expensesMinor ?? 0);
         return (
-          <div className="grid-cards" key={flow.currency}>
-            <article className="metric">
-              <header>
-                <span className="eyebrow">Total balance · {flow.currency}</span>
-                <span className="metric-icon vault">
-                  <Icon name="accounts" size={16} />
-                </span>
-              </header>
-              <span className="metric-value">
+          <div className="kpi-row" key={flow.currency}>
+            <article className="kpi">
+              <span className="eyebrow">Total balance</span>
+              <span className="kpi-value">
                 {formatMinorToAmount(balanceTotal, flow.currency)}
+                <span className="unit">{flow.currency}</span>
               </span>
-              <span className="muted">{accounts.length} accounts</span>
+              <span className="kpi-hint">{accounts.length} accounts</span>
             </article>
-            <article className="metric">
-              <header>
-                <span className="eyebrow">Income</span>
-                <span className="metric-icon income">
-                  <Icon name="check" size={16} />
-                </span>
-              </header>
-              <span className="metric-value">
+            <article className="kpi">
+              <span className="eyebrow">Income</span>
+              <span className="kpi-value income">
+                {flow.incomeMinor > 0 ? "+" : ""}
                 {formatMinorToAmount(flow.incomeMinor, flow.currency)}
+                <span className="unit">{flow.currency}</span>
               </span>
-              <Chip tone={incomeDelta.tone}>{incomeDelta.text}</Chip>
+              <span className={`kpi-hint ${incomeDelta.tone}`}>{incomeDelta.text}</span>
             </article>
-            <article className="metric">
-              <header>
-                <span className="eyebrow">Expenses</span>
-                <span className="metric-icon expense">
-                  <Icon name="alert" size={16} />
-                </span>
-              </header>
-              <span className="metric-value">
-                {formatMinorToAmount(flow.expensesMinor, flow.currency)}
+            <article className="kpi">
+              <span className="eyebrow">Expenses</span>
+              <span className="kpi-value expense">
+                -{formatMinorToAmount(flow.expensesMinor, flow.currency)}
+                <span className="unit">{flow.currency}</span>
               </span>
-              <Chip tone={expenseDelta.tone}>{expenseDelta.text}</Chip>
+              <span className={`kpi-hint ${expenseDelta.tone}`}>{expenseDelta.text}</span>
             </article>
-            <article className="metric lead">
-              <header>
-                <span className="eyebrow">Net flow</span>
-                <span className="metric-icon vault">
-                  {savingsRate === null ? "—" : `${formatDecimal(savingsRate)}%`}
-                </span>
-              </header>
-              <span className="metric-value">
-                {flow.netMinor >= 0 ? "+" : ""}
-                {formatMinorToAmount(flow.netMinor, flow.currency)}
+            <article className="kpi lead">
+              <span className="eyebrow">Net flow</span>
+              <span className={`kpi-value ${flow.netMinor < 0 ? "expense" : "income"}`}>
+                {flow.netMinor >= 0 ? "+" : "-"}
+                {formatMinorToAmount(Math.abs(flow.netMinor), flow.currency)}
+                <span className="unit">{flow.currency}</span>
               </span>
-              <span className="muted">
-                {flow.transactionCount} booked transactions
-                {savingsRate === null ? "" : " · savings rate"}
+              <span className="kpi-hint">
+                {flow.transactionCount} booked movements ·{" "}
+                {savingsRate === null
+                  ? "no income this period"
+                  : `${formatDecimal(savingsRate)}% savings rate`}
               </span>
             </article>
           </div>
@@ -385,7 +356,10 @@ export function DashboardView({
                 <p className="eyebrow">Trend</p>
                 <h2>Cash flow</h2>
                 <span className="sub">
-                  Income vs expenses per week · {from} → {to}
+                  Income vs expenses · {from} → {to}
+                  {includedTags.length === periodTagIds.length
+                    ? ""
+                    : ` · ${includedTags.length} of ${periodTagIds.length} tags`}
                 </span>
               </div>
               <div className="legend">
@@ -430,9 +404,7 @@ export function DashboardView({
                   <thead>
                     <tr>
                       <th>Beneficiary / cause</th>
-                      <th>Method / account</th>
-                      <th>Category</th>
-                      <th>Status</th>
+                      <th>Account</th>
                       <th>Date</th>
                       <th className="cell-amount">Amount</th>
                     </tr>
@@ -467,31 +439,10 @@ export function DashboardView({
                           <td>
                             <span className="stack">
                               <span>{account?.name ?? transaction.accountId.slice(0, 8)}</span>
-                              <span className="sub">{account?.type ?? "—"}</span>
+                              <span className="sub">
+                                {account?.type ?? "—"} · {transaction.status}
+                              </span>
                             </span>
-                          </td>
-                          <td>
-                            {transaction.tagIds.length === 0 ? (
-                              <span className="muted">—</span>
-                            ) : (
-                              transaction.tagIds.map((id) => {
-                                const tag = tagById.get(id);
-                                return (
-                                  <span
-                                    key={id}
-                                    className="tag-pill"
-                                    style={tagPillStyle(tag?.color)}
-                                  >
-                                    {tag?.name ?? "…"}
-                                  </span>
-                                );
-                              })
-                            )}
-                          </td>
-                          <td>
-                            <Chip tone={transaction.status === "booked" ? "income" : "vault"}>
-                              {transaction.status}
-                            </Chip>
                           </td>
                           <td>
                             <span className="cell-nowrap">
@@ -549,47 +500,75 @@ export function DashboardView({
           <div className="card">
             <header>
               <div>
-                <p className="eyebrow">Breakdown</p>
-                <h2>Spending breakdown</h2>
+                <p className="eyebrow">Categories</p>
+                <h2>Spending by category</h2>
                 <span className="sub">
-                  {spendingGroups.length > 1
-                    ? "One pie per currency · totals never mix currencies"
-                    : `Total: ${formatMinorToAmount(spendingGroups[0]?.totalMinor ?? spendingTotal, spendingGroups[0]?.currency ?? primaryCurrency)}`}
+                  {periodTagIds.length === 0
+                    ? "No tagged spending in this period"
+                    : `${includedTags.length} of ${periodTagIds.length} tags included · click a category to filter the dashboard`}
                 </span>
               </div>
+              {excludedTags.length > 0 ? (
+                <button
+                  type="button"
+                  className="btn small ghost"
+                  onClick={() => setExcludedTags([])}
+                >
+                  <Icon name="refresh" size={12} />
+                  Include all
+                </button>
+              ) : null}
             </header>
             {dashboard && dashboard.spendingByTag.length > 0 ? (
               spendingGroups.map((group) => (
-                <SpendingPie
-                  key={group.currency}
-                  currency={group.currency}
-                  totalMinor={group.totalMinor}
-                  entries={group.entries}
-                  colourOf={colourOf}
-                  onSelectTag={(tagId) => onSeeAllTransactions({ tagId, from, to })}
-                />
+                <div className="category-group" key={group.currency}>
+                  <span className="eyebrow">
+                    Total · {formatMinorToAmount(group.totalMinor, group.currency)} {group.currency}
+                  </span>
+                  <ul className="category-bars">
+                    {group.entries.map((entry, index) => {
+                      const included = !excludedTags.includes(entry.tagId);
+                      const width = `${Math.max(2, Math.round((entry.spentMinor / (group.entries[0]?.spentMinor ?? entry.spentMinor)) * 100))}%`;
+                      return (
+                        <li key={`${entry.tagId}-${entry.currency}`} className="category-row">
+                          <button
+                            type="button"
+                            className={included ? "category-bar" : "category-bar excluded"}
+                            aria-pressed={included}
+                            aria-label={`${included ? "Exclude" : "Include"} ${entry.tagName}`}
+                            onClick={() => toggleTag(entry.tagId)}
+                          >
+                            <span className="category-head">
+                              <span className="category-name">{entry.tagName}</span>
+                              <span className="category-amount mono">
+                                {formatMinorToAmount(entry.spentMinor, entry.currency)}
+                              </span>
+                            </span>
+                            <span className="category-track">
+                              <span
+                                className="category-fill"
+                                style={{ width, background: colourOf(entry.tagId, index) }}
+                              />
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            className="category-open"
+                            aria-label={`Show ${entry.tagName} in the ledger`}
+                            title={`Show ${entry.tagName} in the ledger`}
+                            onClick={() => onSeeAllTransactions({ tagId: entry.tagId, from, to })}
+                          >
+                            <Icon name="transactions" size={14} />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               ))
             ) : (
               <Empty>No tagged spending in this period.</Empty>
             )}
-            <div className="summary-row">
-              <span className="stack">
-                <span className="eyebrow">Average daily spend</span>
-                <span className="mono">
-                  {formatMinorToAmount(
-                    Math.round(
-                      (spendingGroups.find((group) => group.currency === primaryCurrency)
-                        ?.totalMinor ?? spendingTotal) / days,
-                    ),
-                    primaryCurrency,
-                  )}
-                </span>
-              </span>
-              <span className="stack">
-                <span className="eyebrow">Top category</span>
-                <span>{topSpendTag?.tagName ?? "—"}</span>
-              </span>
-            </div>
           </div>
 
           <div className="card">
@@ -632,149 +611,6 @@ export function DashboardView({
         only and never convert between currencies.
       </p>
     </section>
-  );
-}
-
-/**
- * The dashboard's pie chart: one arc per tag, drawn as an SVG donut so the
- * period total can sit in the middle. Hand-rolled — Flowly ships no charting
- * dependency and must work with no Internet access.
- */
-function SpendingPie({
-  entries,
-  totalMinor,
-  currency,
-  colourOf,
-  onSelectTag,
-}: {
-  entries: Array<{ tagId: string; tagName: string; currency: string; spentMinor: number }>;
-  totalMinor: number;
-  currency: string;
-  colourOf: (tagId: string, index: number) => string;
-  onSelectTag?: (tagId: string) => void;
-}) {
-  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
-  const size = 168;
-  const centre = size / 2;
-  const radius = 66;
-  const circumference = 2 * Math.PI * radius;
-  // A hair of space between slices keeps neighbours visually separate.
-  const gap = entries.length > 1 ? 3 : 0;
-  let consumed = 0;
-  const slices = entries.map((entry, index) => {
-    const share = totalMinor > 0 ? entry.spentMinor / totalMinor : 0;
-    const length = Math.max(0, share * circumference - gap);
-    const slice = {
-      key: `${entry.tagId}-${entry.currency}`,
-      colour: colourOf(entry.tagId, index),
-      dash: `${length} ${circumference - length}`,
-      offset: -consumed,
-    };
-    consumed += share * circumference;
-    return slice;
-  });
-  const totalText = formatMinorToAmount(totalMinor, currency);
-  const active = activeIndex === undefined ? undefined : entries[activeIndex];
-  const shareOf = (minor: number) => (totalMinor > 0 ? (minor / totalMinor) * 100 : 0);
-  const label = `Spending by tag in ${currency}: ${entries
-    .map(
-      (entry) =>
-        `${entry.tagName} ${totalMinor > 0 ? Math.round((entry.spentMinor / totalMinor) * 100) : 0}%`,
-    )
-    .join(", ")}`;
-
-  return (
-    <div className={activeIndex === undefined ? "donut" : "donut has-active"}>
-      <div className="donut-figure">
-        <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
-          <circle className="donut-track" cx={centre} cy={centre} r={radius} />
-          {slices.map((slice, index) => (
-            <circle
-              key={slice.key}
-              className={activeIndex === index ? "donut-slice is-active" : "donut-slice"}
-              cx={centre}
-              cy={centre}
-              r={radius}
-              stroke={slice.colour}
-              strokeDasharray={slice.dash}
-              strokeDashoffset={slice.offset}
-              transform={`rotate(-90 ${centre} ${centre})`}
-              style={onSelectTag ? { cursor: "pointer" } : undefined}
-              onPointerEnter={() => setActiveIndex(index)}
-              onPointerLeave={() =>
-                setActiveIndex((current) => (current === index ? undefined : current))
-              }
-              onClick={() => onSelectTag?.(entries[index]?.tagId ?? "")}
-            />
-          ))}
-        </svg>
-        <div className="donut-center">
-          {active ? (
-            <>
-              <span className="eyebrow" style={{ margin: 0 }} title={active.tagName}>
-                {active.tagName}
-              </span>
-              <span className="total small">
-                {formatMinorToAmount(active.spentMinor, active.currency)}
-              </span>
-              <span className="sub">
-                {active.currency} · {formatDecimal(shareOf(active.spentMinor))}% of spending
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="eyebrow" style={{ margin: 0 }}>
-                {currency}
-              </span>
-              <span className={totalText.length > 9 ? "total small" : "total"}>{totalText}</span>
-              <span className="sub">spent</span>
-            </>
-          )}
-        </div>
-      </div>
-      <ul className="legend-rows">
-        {entries.map((entry, index) => {
-          const row = (
-            <>
-              <span className="legend-item">
-                <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
-                {entry.tagName}
-              </span>
-              <span className="mono">{formatMinorToAmount(entry.spentMinor, entry.currency)}</span>
-              <span className="muted mono">{formatDecimal(shareOf(entry.spentMinor))}%</span>
-            </>
-          );
-          const highlight = {
-            onPointerEnter: () => setActiveIndex(index),
-            onPointerLeave: () =>
-              setActiveIndex((current) => (current === index ? undefined : current)),
-            onFocus: () => setActiveIndex(index),
-            onBlur: () => setActiveIndex((current) => (current === index ? undefined : current)),
-          };
-          return (
-            <li
-              key={`${entry.tagId}-${entry.currency}`}
-              className={activeIndex === index ? "is-active" : undefined}
-            >
-              {onSelectTag ? (
-                <button
-                  type="button"
-                  className="legend-row"
-                  onClick={() => onSelectTag(entry.tagId)}
-                  {...highlight}
-                >
-                  {row}
-                </button>
-              ) : (
-                <div className="legend-row" {...highlight}>
-                  {row}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
   );
 }
 

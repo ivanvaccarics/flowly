@@ -123,6 +123,9 @@ you should see.
 | Filter by account, date range, tag, status or free text | The list narrows and the count updates; nothing is filtered in the browser only |
 | Look at the footer of a filtered ledger with more rows than one page | It reads `Showing 1–25 of N transactions` with `Page 1 / x`; **Next** shows the following rows and **Previous** comes back; **Rows per page** switches to 50 or 100 and starts again from page 1 |
 | Change any filter, or record a transaction, while on a later page | The ledger returns to page 1 of the new result set |
+| Pick months on the dashboard — a preset, the year strip, or single months | The selected months appear as removable chips, the KPI row, the chart and the recent table all describe exactly those months, and a month nobody selected never leaks into the totals |
+| Switch a category off in the dashboard's spending breakdown | The row dims instead of disappearing, every figure, the chart and the recent movements recompute for the tags left on, and **Include all** brings them back |
+| Press the record button at the end of a category row | The ledger opens filtered to that tag, over the same period |
 | Delete a transaction | It disappears; reloading keeps it gone |
 | Archive an account | It stays in the list marked archived, and offers **Restore** instead of **Archive** |
 | Restore that account | It is active again with the same id, balance and transactions |

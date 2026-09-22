@@ -2250,6 +2250,309 @@ button.legend-row {
 
 /* ------------------------------------------------------------ rules page */
 
+/* ------------------------------------------------------------- dashboard */
+
+.dash-filters {
+  gap: 0.9rem;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.year-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-low);
+}
+
+.year-arrow {
+  width: 26px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.year-arrow:hover {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.year {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 30px;
+  padding: 0 0.7rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.year:hover {
+  color: var(--text);
+}
+
+.year.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.year-count {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.month-strip {
+  display: inline-flex;
+  gap: 0.15rem;
+  flex-wrap: wrap;
+}
+
+.month {
+  width: 46px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.month:hover {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.month.active {
+  background: var(--primary-soft);
+  border-color: var(--primary-soft-border);
+  color: var(--primary-ink);
+}
+
+.filter-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 3px 6px 3px 12px;
+  border: 1px solid var(--primary-soft-border);
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.filter-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.filter-chip button:hover {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.kpi {
+  display: grid;
+  gap: 0.2rem;
+  align-content: start;
+  padding-left: 1rem;
+  border-left: 2px solid var(--border);
+}
+
+.kpi:first-child {
+  border-left-color: var(--primary);
+}
+
+.kpi.lead {
+  border-left-color: var(--accent-blue-graphic);
+}
+
+.kpi-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-value.income {
+  color: var(--income);
+}
+
+.kpi-value.expense {
+  color: var(--expense);
+}
+
+.kpi-value .unit {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.kpi-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.kpi-hint.income {
+  color: var(--income);
+}
+
+.kpi-hint.expense {
+  color: var(--expense);
+}
+
+.category-group {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.category-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.category-bar {
+  display: grid;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.category-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.category-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.category-open:hover {
+  border-color: var(--border);
+  background: var(--surface-low);
+  color: var(--text);
+}
+
+.category-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.category-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.category-amount {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.category-track {
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.category-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+}
+
+.category-bar.excluded {
+  opacity: 0.42;
+}
+
+.category-bar:hover .category-name {
+  text-decoration: underline;
+}
+
 /* ---------------------------------------------------------- page headings */
 
 /* Every section opens with the same strip: what it is about, what state it is

@@ -9,7 +9,7 @@ import Fastify, {
 } from "fastify";
 import { validateContract, type VaultStatus } from "@flowly/web-contracts";
 import { ImportExportService } from "../application/import-export-service.js";
-import { AnalyticsService } from "../application/analytics.js";
+import { AnalyticsService, monthEnd, parseMonthKeys } from "../application/analytics.js";
 import { parseTransactionQuery, TransactionSearchService } from "../application/search.js";
 import { TaggingRuleService } from "../application/tagging-rule-service.js";
 import { BankingService } from "../banking/banking-service.js";
@@ -413,13 +413,42 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     if (!context) return errorBody(reply);
     const query = request.query as Record<string, unknown>;
     const today = new Date().toISOString().slice(0, 10);
-    const from = typeof query["from"] === "string" ? query["from"] : `${today.slice(0, 7)}-01`;
-    const to = typeof query["to"] === "string" ? query["to"] : today;
+    const months = parseMonthKeys(query["months"]);
+    if (months === undefined) {
+      reply.code(400);
+      return { error: "invalid_date_range", message: "months must be YYYY-MM values" };
+    }
+    // An explicit month set defines the window, so a scattered selection never
+    // pulls in the months between its first and its last.
+    const from =
+      months.length > 0
+        ? `${months[0]}-01`
+        : typeof query["from"] === "string"
+          ? query["from"]
+          : `${today.slice(0, 7)}-01`;
+    const to =
+      months.length > 0
+        ? monthEnd(months[months.length - 1]!)
+        : typeof query["to"] === "string"
+          ? query["to"]
+          : today;
+    const tagIds =
+      typeof query["tags"] === "string"
+        ? query["tags"]
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : [];
     if (!isIsoDate(from) || !isIsoDate(to) || from > to) {
       reply.code(400);
       return { error: "invalid_date_range" };
     }
-    const dashboard = await new AnalyticsService(context.vault).dashboard({ from, to });
+    const dashboard = await new AnalyticsService(context.vault).dashboard({
+      from,
+      to,
+      months,
+      tagIds,
+    });
     const validation = validateContract("dashboard", dashboard);
     if (!validation.valid) {
       reply.code(500);

@@ -300,7 +300,11 @@ connection and then carries the passphrase change plus export and import. The
 shell's top bar carries the section title, the vault state and the session
 controls; cards are white with a hairline outline over a slate canvas, tinted
 panels carry nested controls, and the dashboard charts cash flow per week and
-spending by tag as a pie chart per currency. The transactions ledger reads its
+spending as bars per category and per currency. The dashboard is scoped by the
+months and the categories the reader selects: a preset, a year strip or any
+combination of months as removable chips pick the period, and switching a
+category off recomputes the totals, the chart and the recent movements for the
+tags left on while the categories themselves stay visible. The transactions ledger reads its
 rows from the server one page at a time — 25 by default, with a page-size
 selector, the visible range and Previous/Next — so a vault with thousands of
 movements is browsable instead of truncated. Only implemented features are
@@ -1545,6 +1549,30 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0032`.
   types from `contracts/`, and Touch ID / Windows Hello as the optional
   biometric shortcuts. The browser UI stays responsive — it is served to
   desktop browsers, not phones.
+
+#### Task `scope-the-dashboard-by-months-and-tags`
+
+Status: **complete** (2026-09-22), decision in `docs/adr/0033`.
+
+- The dashboard's period is a **set of months**, not a range: the picker offers a
+  preset (month, 3 months, year, custom), a year strip with the count of that
+  year's selected months, the twelve months of the year the strip points at,
+  **All &lt;year&gt;** and **Clear**, and the selected months as removable chips.
+  `GET /api/dashboard` accepts `months=YYYY-MM,…` and considers exactly those
+  months, so a scattered selection never pulls in the months between.
+- The chart buckets by month for a month set — one bucket per selected month and
+  currency, empty months included — instead of the old fixed week.
+- The spending breakdown is now a list of **category bars** and doubles as the
+  tag filter: switching a category off dims its row, keeps it visible, and
+  recomputes the totals, the chart and the recent movements for the tags left on;
+  **Include all** (or another click) brings it back. Tags are excluded, not
+  included, so anything new is part of the picture by default.
+- Balances stay the account balances — a balance of one tag is not money — while
+  income, expenses, net flow, the chart, the recent movements and the ledger link
+  follow the selection; the ledger search accepts the same `months` and `tags`,
+  so its rows are the ones the figures came from.
+- The KPI row, the filter bar, the category bars and the recent table follow the
+  redrawn dashboard; the pie chart it replaces is recorded in `docs/adr/0033`.
 
 #### Task `restyle-the-rules-page-and-count-what-rules-cover`
 

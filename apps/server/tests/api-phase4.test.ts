@@ -33,6 +33,42 @@ async function seed(harness: Awaited<ReturnType<typeof startHarness>>) {
 }
 
 describe("dashboard API", () => {
+  it("scopes the response to the selected months and tags", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    try {
+      await seed(harness);
+      // The selected month defines the window: October is never pulled in.
+      const months = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/dashboard?months=2026-09",
+      });
+      expect(months.statusCode).toBe(200);
+      expect(months.json<{ range: unknown; cashFlowBuckets: unknown[] }>()).toMatchObject({
+        range: { from: "2026-09-01", to: "2026-09-30" },
+        cashFlowBuckets: [expect.objectContaining({ label: "Sep 2026" })],
+      });
+
+      // A tag filter that matches nothing empties the flows but keeps the
+      // categories, so the reader can switch the tag back on.
+      const other = await call(harness.app, harness.client, {
+        method: "GET",
+        url: `/api/dashboard?months=2026-09&tags=${SAMPLE_TAG.id}`,
+      });
+      expect(other.json<{ cashFlow: unknown[] }>().cashFlow).toHaveLength(1);
+      expect(other.json<{ spendingByTag: unknown[] }>().spendingByTag).toHaveLength(1);
+
+      const malformed = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/dashboard?months=2026-13",
+      });
+      expect(malformed.statusCode).toBe(400);
+      expect(malformed.json<{ error: string }>().error).toBe("invalid_date_range");
+    } finally {
+      await harness.close();
+    }
+  });
+
   it("returns balances, cash flow and spending for a range", async () => {
     const { config } = makeConfig();
     const harness = await startHarness(config);

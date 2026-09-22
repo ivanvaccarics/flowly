@@ -91,6 +91,69 @@ async function setup() {
   return { dir, vault, service: new AnalyticsService(vault, CLOCK) };
 }
 
+describe("dashboard scope", () => {
+  it("counts only the selected months, and only the selected tags", async () => {
+    const { dir, vault, service } = await setup();
+    try {
+      // August holds a single tagged movement; September holds the rest.
+      const september = await service.dashboard({
+        from: "2026-09-01",
+        to: "2026-09-30",
+        months: ["2026-09"],
+      });
+      expect(september.cashFlow[0]).toMatchObject({
+        currency: "EUR",
+        incomeMinor: 250000,
+        // Rent 95000 + groceries 4000 + 1000 + 3000 = 103000 in EUR.
+        expensesMinor: 103000,
+      });
+      // A month bucket covers its own month, even where nothing happened.
+      expect(september.cashFlowBuckets.filter((bucket) => bucket.currency === "EUR")).toEqual([
+        {
+          currency: "EUR",
+          label: "Sep 2026",
+          from: "2026-09-01",
+          to: "2026-09-30",
+          incomeMinor: 250000,
+          expensesMinor: 103000,
+        },
+      ]);
+      // The categories still describe the whole period, so they can be re-picked.
+      expect(september.spendingByTag.map((entry) => entry.tagName)).toEqual(["Rent", "Groceries"]);
+
+      // Only the grocery months, with only the grocery tag selected.
+      const groceries = await service.dashboard({
+        from: "2026-08-01",
+        to: "2026-09-30",
+        months: ["2026-08", "2026-09"],
+        tagIds: [GROCERIES],
+      });
+      expect(groceries.cashFlow[0]).toMatchObject({ currency: "EUR", incomeMinor: 0 });
+      // Groceries: 4000 + 1000 + 3000 in September, 500 in August.
+      expect(groceries.cashFlow[0]?.expensesMinor).toBe(8500);
+      expect(
+        groceries.cashFlowBuckets.map((bucket) => [bucket.label, bucket.expensesMinor]),
+      ).toEqual([
+        ["Aug 2026", 500],
+        ["Sep 2026", 8000],
+      ]);
+
+      // A month nobody selected never leaks into the totals.
+      const december = await service.dashboard({
+        from: "2026-08-01",
+        to: "2026-12-31",
+        months: ["2026-12"],
+      });
+      expect(december.cashFlow).toEqual([]);
+      expect(december.spendingByTag).toEqual([]);
+      expect(december.balances.length).toBeGreaterThan(0);
+    } finally {
+      await vault.lock();
+      cleanup(dir);
+    }
+  });
+});
+
 describe("balances", () => {
   it("keeps one line per account and currency and never blends", async () => {
     const { dir, vault, service } = await setup();
