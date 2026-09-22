@@ -1,5 +1,5 @@
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "revision": 1,
   "id": "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
   "name": "Coffee and bars",
@@ -7,7 +7,8 @@
   "combinator": "or",
   "conditions": [
     { "field": "userNote", "operator": "contains", "value": "espresso" },
-    { "field": "payee", "operator": "is", "value": "Bar Centrale" }
+    { "field": "payee", "operator": "is", "value": "Bar Centrale" },
+    { "field": "amount", "operator": "lessThan", "value": "-5.10", "currency": "EUR" }
   ],
   "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
   "createdAt": "2026-09-05T09:30:00.000Z",

@@ -66,8 +66,10 @@ by a rule share the same set — a rule never removes a tag you chose.
 Write a rule once and Flowly keeps applying it. Conditions combine with AND or
 OR over your note, the payee, the imported description, the amount or the
 account — "notes contain rent", "payee is ACME, or amount is over 1000" — and
-assign one or more tags. Rules run on new transactions and imports; you can also
-apply them to what you already have, with a preview of exactly what will change.
+assign one or more tags. Amounts are written as decimals in their own currency,
+like "-5.10 EUR", never as a count of cents. Rules run on new transactions and
+imports; you can also apply them to what you already have, with a preview of
+exactly what will change.
 Edit a rule whenever the matching turns out wrong: **Edit** opens it in a dialog
 over the page, so the **New rule** card you may already be writing keeps its own
 draft, and saving keeps the rule's id, its on/off state and its place in the

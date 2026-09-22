@@ -124,7 +124,7 @@ export function sampleTransaction(
 
 export function sampleRule(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    formatVersion: 1,
+    formatVersion: 2,
     revision: 1,
     id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
     name: "Coffee",

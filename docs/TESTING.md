@@ -135,7 +135,7 @@ you should see.
 | Change the note the rule matches in the dialog and press **Save changes** | The dialog closes, the tile shows the new expression, and the rule keeps its id and on/off state |
 | Press **Edit**, then close the dialog with **Cancel**, the X or `Esc` | Nothing is written and the **New rule** card is still holding its own draft |
 | Create an OR rule with two conditions | One matching condition is enough |
-| Create an amount rule ("amount less than -5000 EUR") | It only matches transactions in EUR; USD transactions are ignored |
+| Create an amount rule ("amount less than -5.10 EUR") | It only matches transactions in EUR; USD transactions are ignored, and the amount is read as 5.10 in that currency, not as a count of cents |
 | Pause a rule, then add a matching transaction | No tag is added |
 | Press **Apply rules to existing transactions** | A report shows how many transactions were evaluated and tagged; running it again reports zero changes |
 

@@ -163,13 +163,16 @@ await step("tagging rule is created", async () => {
     method: "POST",
     body: {
       entity: {
-        formatVersion: 1,
+        formatVersion: 2,
         revision: 1,
         id: created.rule,
         name: "Acceptance espresso rule",
         enabled: true,
         combinator: "and",
-        conditions: [{ field: "userNote", operator: "contains", value: "espresso" }],
+        conditions: [
+          { field: "userNote", operator: "contains", value: "espresso" },
+          { field: "amount", operator: "lessThan", value: "-10.00", currency: "EUR" },
+        ],
         tagIds: [created.tag],
         createdAt: now,
         updatedAt: now,
@@ -177,7 +180,7 @@ await step("tagging rule is created", async () => {
     },
   });
   expect(status === 201, `rule create returned ${status}`);
-  return "note contains espresso";
+  return "note contains espresso and the amount is over 10.00 EUR";
 });
 
 await step("rule tags a new transaction", async () => {

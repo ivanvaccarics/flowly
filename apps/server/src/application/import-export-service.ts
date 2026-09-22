@@ -13,6 +13,7 @@ import {
 } from "../domain/banking.js";
 import { normalizeTagName } from "../domain/values.js";
 import { createTag, type Tag } from "../domain/tag.js";
+import { upgradeTaggingRule, type TaggingRule } from "../domain/tagging-rule.js";
 import {
   importFingerprint,
   type Transaction,
@@ -414,7 +415,11 @@ export class ImportExportService {
       files.get("transactions.csv")?.toString("utf8") ?? "",
       tagNames,
     );
-    const taggingRules = parseJsonArray(files.get("tagging_rules.json"), "tagging_rules.json");
+    // Rules in an older archive still carry `amountMinor` conditions; they are
+    // upgraded on the way in so the vault never holds a format it cannot run.
+    const taggingRules = parseJsonArray(files.get("tagging_rules.json"), "tagging_rules.json").map(
+      (rule) => upgradeTaggingRule(rule) ?? (rule as TaggingRule),
+    );
     const banking = this.parseBankingExport(files.get(BANKING_ARCHIVE_ENTRY));
 
     if (manifest.vaultId === this.vault.header.vaultId) {
@@ -445,7 +450,7 @@ export class ImportExportService {
         accounts,
         transactions,
         tags,
-        taggingRules: taggingRules as never,
+        taggingRules,
         ...(banking ? { banking } : {}),
       });
     } catch (error) {

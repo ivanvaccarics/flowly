@@ -1,4 +1,5 @@
 import { DomainError } from "./errors.js";
+import { formatMinorToAmount, parseAmountToMinor } from "./money.js";
 import type { Transaction } from "./transaction.js";
 import {
   assertIsoDateTime,
@@ -12,8 +13,14 @@ import {
 export const MAX_CONDITIONS_PER_RULE = 25;
 export const MAX_TAGS_PER_RULE = 25;
 export const RULE_NAME_MAX = 80;
+/**
+ * v1 stored amount conditions as `amountMinor`, a signed integer count of minor
+ * units. v2 calls the field `amount` and writes the condition's currency as a
+ * decimal string (`-5.10`), which the engine parses into exact minor units.
+ */
+export const TAGGING_RULE_FORMAT_VERSION = 2;
 
-export type RuleConditionField = "userNote" | "description" | "payee" | "amountMinor" | "accountId";
+export type RuleConditionField = "userNote" | "description" | "payee" | "amount" | "accountId";
 export type RuleConditionOperator = "contains" | "is" | "greaterThan" | "lessThan" | "equals";
 
 export interface RuleCondition {
@@ -24,7 +31,7 @@ export interface RuleCondition {
 }
 
 export interface TaggingRule {
-  formatVersion: 1;
+  formatVersion: typeof TAGGING_RULE_FORMAT_VERSION;
   revision: number;
   id: string;
   name: string;
@@ -42,15 +49,17 @@ export const OPERATORS_BY_FIELD: Readonly<
   userNote: ["contains"],
   description: ["contains"],
   payee: ["is", "contains"],
-  amountMinor: ["greaterThan", "lessThan", "equals"],
+  amount: ["greaterThan", "lessThan", "equals"],
   accountId: ["is"],
 };
 
 export function validateTaggingRule(rule: TaggingRule): void {
-  if (rule.formatVersion !== 1) {
-    throw new DomainError("invalid-tagging-rule", "rule formatVersion must be 1", {
-      formatVersion: rule.formatVersion,
-    });
+  if (rule.formatVersion !== TAGGING_RULE_FORMAT_VERSION) {
+    throw new DomainError(
+      "invalid-tagging-rule",
+      `rule formatVersion must be ${TAGGING_RULE_FORMAT_VERSION}`,
+      { formatVersion: rule.formatVersion },
+    );
   }
   assertRevision(rule.revision, "rule.revision");
   assertUuid(rule.id, "rule.id");
@@ -107,16 +116,20 @@ function validateCondition(condition: RuleCondition): void {
       { field: condition.field, operator: condition.operator },
     );
   }
-  const expectsNumber = condition.field === "amountMinor";
+  const expectsNumber = condition.field === "amount";
   if (expectsNumber) {
-    if (typeof condition.value !== "number" || !Number.isSafeInteger(condition.value)) {
-      throw new DomainError("invalid-tagging-rule", "amount conditions need an integer value", {
-        value: condition.value,
-      });
+    if (typeof condition.value !== "string" || condition.value.trim() === "") {
+      throw new DomainError(
+        "invalid-tagging-rule",
+        "amount conditions need the amount as a decimal string, like -5.10",
+        { value: condition.value },
+      );
     }
     if (!condition.currency) {
       throw new DomainError("invalid-tagging-rule", "amount conditions need a currency", {});
     }
+    // Rejects an unsupported currency and amounts it cannot hold exactly.
+    parseAmountToMinor(condition.value, condition.currency);
   } else if (typeof condition.value !== "string" || condition.value.trim() === "") {
     throw new DomainError("invalid-tagging-rule", "text conditions need a non-empty value", {
       field: condition.field,
@@ -162,9 +175,9 @@ function conditionMatches(condition: RuleCondition, target: RuleTarget | Transac
     case "accountId": {
       return target.accountId === condition.value;
     }
-    case "amountMinor": {
+    case "amount": {
       if (condition.currency !== target.currency) return false;
-      const value = condition.value as number;
+      const value = parseAmountToMinor(condition.value as string, target.currency);
       if (condition.operator === "greaterThan") return target.amountMinor > value;
       if (condition.operator === "lessThan") return target.amountMinor < value;
       return target.amountMinor === value;
@@ -205,4 +218,52 @@ export function evaluateTaggingRules(
     }
   }
   return tags;
+}
+
+/**
+ * Rewrites a stored v1 rule into the current format: the condition field moves
+ * from `amountMinor` to `amount`, and its value from signed minor units
+ * (`-510`) to the condition's currency (`-5.10`), so the money is the same.
+ * Returns undefined when there is nothing to upgrade or a legacy amount cannot
+ * be converted, so a vault with an odd record still opens.
+ */
+export function upgradeTaggingRule(raw: unknown): TaggingRule | undefined {
+  if (!isRecord(raw)) return undefined;
+  if (raw["formatVersion"] !== 1) return undefined;
+  const rawConditions = raw["conditions"];
+  if (!Array.isArray(rawConditions)) return undefined;
+  const conditions: RuleCondition[] = [];
+  for (const rawCondition of rawConditions) {
+    const condition = upgradeCondition(rawCondition);
+    if (!condition) return undefined;
+    conditions.push(condition);
+  }
+  return {
+    ...raw,
+    formatVersion: TAGGING_RULE_FORMAT_VERSION,
+    conditions,
+  } as unknown as TaggingRule;
+}
+
+function upgradeCondition(raw: unknown): RuleCondition | undefined {
+  if (!isRecord(raw)) return undefined;
+  if (raw["field"] !== "amountMinor") return raw as unknown as RuleCondition;
+  const currency = raw["currency"];
+  const minor = raw["value"];
+  if (typeof currency !== "string" || typeof minor !== "number" || !Number.isSafeInteger(minor)) {
+    return undefined;
+  }
+  let amount: string;
+  try {
+    amount = formatMinorToAmount(minor, currency);
+  } catch {
+    return undefined;
+  }
+  const rest: Record<string, unknown> = { ...raw };
+  delete rest["field"];
+  return { ...rest, field: "amount", value: amount } as RuleCondition;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

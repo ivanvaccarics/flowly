@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "description": "Golden outcomes for tagging rule evaluation. Text is NFKC-normalized and lowercased; whitespace is collapsed. An amount condition only matches transactions in its own currency. All enabled rules that match contribute their tags, and the result is a deduplicated set in rule order.",
+  "version": 2,
+  "description": "Golden outcomes for tagging rule evaluation. Text is NFKC-normalized and lowercased; whitespace is collapsed. An `amount` condition carries a canonical decimal string in its own currency (`-5.10` means an outflow of 5.10) and only matches transactions in that currency, compared as exact minor units. All enabled rules that match contribute their tags, and the result is a deduplicated set in rule order.",
   "tags": {
     "coffee": "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081",
     "rent": "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082",
@@ -105,11 +105,53 @@
           "enabled": true,
           "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"],
           "conditions": [
-            { "field": "amountMinor", "operator": "lessThan", "value": -50000, "currency": "EUR" }
+            { "field": "amount", "operator": "lessThan", "value": "-500.00", "currency": "EUR" }
           ]
         }
       ],
       "expectedTagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"]
+    },
+    {
+      "name": "a decimal amount condition matches the same money in minor units",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-04",
+        "amountMinor": -510,
+        "currency": "EUR",
+        "userNote": "espresso and a pastry"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
+          "conditions": [
+            { "field": "amount", "operator": "equals", "value": "-5.10", "currency": "EUR" }
+          ]
+        }
+      ],
+      "expectedTagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"]
+    },
+    {
+      "name": "amount equality stays exact in minor units",
+      "transaction": {
+        "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+        "bookingDate": "2026-09-04",
+        "amountMinor": -511,
+        "currency": "EUR",
+        "userNote": "espresso and a pastry"
+      },
+      "rules": [
+        {
+          "combinator": "and",
+          "enabled": true,
+          "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
+          "conditions": [
+            { "field": "amount", "operator": "equals", "value": "-5.10", "currency": "EUR" }
+          ]
+        }
+      ],
+      "expectedTagIds": []
     },
     {
       "name": "amount conditions never cross currencies",
@@ -126,7 +168,7 @@
           "enabled": true,
           "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082"],
           "conditions": [
-            { "field": "amountMinor", "operator": "lessThan", "value": -50000, "currency": "EUR" }
+            { "field": "amount", "operator": "lessThan", "value": "-500.00", "currency": "EUR" }
           ]
         }
       ],
@@ -175,9 +217,9 @@
           "conditions": [
             { "field": "payee", "operator": "is", "value": "acme property" },
             {
-              "field": "amountMinor",
+              "field": "amount",
               "operator": "greaterThan",
-              "value": 1000000,
+              "value": "10000.00",
               "currency": "EUR"
             }
           ]

@@ -374,7 +374,7 @@ export const schemas = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowly.local/contracts/schemas/tagging-rule.schema.json",
     "title": "TaggingRule",
-    "description": "User-authored rule that adds tags to matching transactions. Conditions in one rule join with a single AND or OR. Amount conditions must also carry a `currency`, which the domain validator enforces.",
+    "description": "User-authored rule that adds tags to matching transactions. Conditions in one rule join with a single AND or OR. An `amount` condition carries a canonical decimal string in its own `currency` (`-5.10` means an outflow of 5.10), not a count of minor units, and only matches transactions in that currency.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -391,7 +391,7 @@ export const schemas = {
     ],
     "properties": {
       "formatVersion": {
-        "const": 1
+        "const": 2
       },
       "revision": {
         "type": "integer",
@@ -457,7 +457,7 @@ export const schemas = {
               "userNote",
               "description",
               "payee",
-              "amountMinor",
+              "amount",
               "accountId"
             ]
           },
@@ -527,7 +527,7 @@ export const schemas = {
           {
             "properties": {
               "field": {
-                "const": "amountMinor"
+                "const": "amount"
               },
               "operator": {
                 "enum": [
@@ -537,7 +537,8 @@ export const schemas = {
                 ]
               },
               "value": {
-                "type": "number"
+                "type": "string",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
               },
               "currency": {
                 "type": "string",

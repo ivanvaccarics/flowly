@@ -38,7 +38,7 @@ async function setupVault(): Promise<{ vault: Vault; dir: string; service: Taggi
 
 function coffeeRule(overrides: Partial<TaggingRule> = {}): TaggingRule {
   return {
-    formatVersion: 1,
+    formatVersion: 2,
     revision: 1,
     id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
     name: "Coffee",
@@ -112,7 +112,7 @@ describe("tagging rules in the vault", () => {
           id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7082",
           name: "Rent",
           conditions: [
-            { field: "amountMinor", operator: "lessThan", value: -50000, currency: "EUR" },
+            { field: "amount", operator: "lessThan", value: "-500.00", currency: "EUR" },
           ],
           tagIds: [RENT_TAG],
         }),

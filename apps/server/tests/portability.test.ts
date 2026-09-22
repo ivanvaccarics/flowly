@@ -38,7 +38,7 @@ async function seed(service: ImportExportService, vault: Vault): Promise<void> {
   );
   await vault.tags.create(createTag({ name: "Coffee" }, { id: COFFEE_TAG, now: NOW }));
   await vault.taggingRules.create({
-    formatVersion: 1,
+    formatVersion: 2,
     revision: 1,
     id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
     name: "Coffee",
@@ -277,6 +277,61 @@ describe("complete portable archive", () => {
       expect(report.accounts).toBe(1);
       expect(report.transactions).toBe(1);
       expect(report.taggingRules).toBe(1);
+    } finally {
+      await source.vault.lock();
+      await target.vault.lock();
+      cleanup(source.dir);
+      cleanup(target.dir);
+    }
+  });
+
+  it("upgrades the rules an older archive still stores as amountMinor", async () => {
+    const source = await setupVault("flowly-archive-v1-rules-");
+    const target = await setupVault("flowly-archive-v1-rules-target-");
+    const archivePath = join(source.dir, "legacy-rules.flowly");
+    try {
+      await seed(source.service, source.vault);
+      await source.service.exportArchive(archivePath, ARCHIVE_PASSWORD);
+
+      // Archives written before format version 2 held `amountMinor` in minors.
+      const { files, manifest } = await readArchive(archivePath, ARCHIVE_PASSWORD);
+      const legacyRule = {
+        formatVersion: 1,
+        revision: 1,
+        id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7082",
+        name: "Rent",
+        enabled: true,
+        combinator: "and",
+        conditions: [
+          { field: "amountMinor", operator: "lessThan", value: -50000, currency: "EUR" },
+        ],
+        tagIds: [COFFEE_TAG],
+        createdAt: NOW,
+        updatedAt: NOW,
+      };
+      await writeArchive(
+        archivePath,
+        ARCHIVE_PASSWORD,
+        manifest.vaultId,
+        [
+          ...[...files.entries()]
+            .filter(([name]) => name !== "tagging_rules.json")
+            .map(([name, content]) => ({ name, content })),
+          {
+            name: "tagging_rules.json",
+            content: Buffer.from(JSON.stringify([legacyRule]), "utf8"),
+          },
+        ],
+        TEST_KDF,
+      );
+
+      const report = await target.service.importArchive(archivePath, ARCHIVE_PASSWORD);
+      expect(report.taggingRules).toBe(1);
+      const [rule] = await target.vault.taggingRules.list();
+      expect(rule?.formatVersion).toBe(2);
+      expect(rule?.conditions).toEqual([
+        { field: "amount", operator: "lessThan", value: "-500.00", currency: "EUR" },
+      ]);
     } finally {
       await source.vault.lock();
       await target.vault.lock();

@@ -413,9 +413,11 @@ Supported condition fields and operators:
 - `userNote contains`, `description contains` — Unicode-normalized,
   case-insensitive substring match
 - `payee is`, `payee contains` — normalized equality or substring match
-- `amountMinor greater than`, `less than`, `equals` — signed minor units, where
-  inflows are positive and outflows are negative; each amount condition carries
-  a currency and matches only transactions in that currency, with no implicit
+- `amount greater than`, `less than`, `equals` — the amount written as a
+  canonical decimal string in the condition's own currency (`-5.10` is an
+  outflow of 5.10), where inflows are positive and outflows are negative; the
+  server parses it into exact minor units, and each amount condition carries a
+  currency and matches only transactions in that currency, with no implicit
   conversion
 - `accountId is` — exact account identifier
 
@@ -631,7 +633,9 @@ Provide three workflows:
 
 The complete export is the supported device-to-device transfer format. The
 archive contents remain CSV-oriented while preserving normalized relationships.
-Tagging rules are part of format version 1 because they ship in the Server MVP.
+Tagging rules ship inside archive format version 1 because they land in the
+Server MVP; the rule record itself is at format version 2 (ADR 0026), and the
+server upgrades version 1 rules on unlock and on archive import.
 
 ### 10.2 Encoding and representation
 
@@ -1425,6 +1429,28 @@ Status: **complete** (2026-09-21).
   which opens with them in its filter form. Opening the ledger from the sidebar
   or the dashboard's **See all** clears the seed, so a filtered view is never
   mistaken for the whole ledger.
+
+#### Task `write-rule-amounts-as-decimals`
+
+Status: **complete** (2026-09-22), decision in `docs/adr/0026`.
+
+- An amount condition is `amount`, not `amountMinor`, and its value is a
+  canonical decimal string in the condition's own currency: "amount less than
+  -5.10 EUR" is written as `{ "field": "amount", "operator": "lessThan",
+  "value": "-5.10", "currency": "EUR" }`. The rule now reads like the ledger,
+  and the editor accepts decimals instead of whole minor units only.
+- The engine still compares exact minor units: both sides go through the
+  currency-aware `parseAmountToMinor`, so a rule can never match half a cent,
+  "-5.10" and 510 minor units are the same money, and an unsupported currency or
+  an amount the currency cannot hold (`-5.105` EUR, `5.5` JPY) is rejected.
+- The editor keeps the text that was typed, turns a decimal comma into a dot,
+  checks the currency's decimal places and refuses a non-numeric amount before
+  calling the API; the edit dialog round-trips the stored value unchanged.
+- Tagging rules move to `formatVersion` 2, with the schema, the fixture, the
+  generated web contracts and the golden evaluation vectors (which gained a
+  decimal case and an exactness case). Rules stored at version 1 are upgraded
+  on unlock and on archive import, field and value together, and the rewrite
+  bumps each rule's revision like any other write.
 
 ### Phase 6 - Enable Banking for Server
 

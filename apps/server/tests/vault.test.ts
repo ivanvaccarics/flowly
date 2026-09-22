@@ -2,10 +2,12 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { VaultKeyError } from "../src/crypto/errors.js";
+import { isVaultHeader, unlockVaultHeader, zeroize } from "../src/crypto/envelope.js";
 import { createAccount } from "../src/domain/account.js";
 import { createTag } from "../src/domain/tag.js";
 import { createTransaction } from "../src/domain/transaction.js";
 import { ConflictError, RecordNotFoundError } from "../src/storage/errors.js";
+import { openStore } from "../src/storage/store.js";
 import {
   Vault,
   VaultExistsError,
@@ -52,6 +54,48 @@ describe.each(["sqlcipher", "record-encryption"] as const)("vault lifecycle (%s)
       await Vault.destroy(dir);
       expect(Vault.exists(dir)).toBe(false);
       await expect(Vault.open(dir, PASSPHRASE, { engine })).rejects.toThrow(VaultNotFoundError);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it("upgrades tagging rules stored before format version 2", async () => {
+    const dir = tempDir();
+    const ruleId = "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081";
+    try {
+      const created = await Vault.create(dir, PASSPHRASE, { engine, kdf: TEST_KDF });
+      await created.lock();
+
+      // The v1 record goes in behind the validator, exactly as an old vault holds it.
+      const header = JSON.parse(readFileSync(join(dir, Vault.headerFile), "utf8")) as unknown;
+      if (!isVaultHeader(header)) throw new Error("the test vault header is not a header");
+      const dek = await unlockVaultHeader(header, PASSPHRASE);
+      const store = await openStore(engine, join(dir, Vault.databaseFile), dek);
+      await store.insert("tagging_rules", ruleId, {
+        formatVersion: 1,
+        revision: 1,
+        id: ruleId,
+        name: "Rent",
+        enabled: true,
+        combinator: "and",
+        conditions: [
+          { field: "amountMinor", operator: "lessThan", value: -50000, currency: "EUR" },
+        ],
+        tagIds: ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
+        createdAt: NOW,
+        updatedAt: NOW,
+      });
+      await store.close();
+      zeroize(dek);
+
+      const reopened = await Vault.open(dir, PASSPHRASE, { engine });
+      const [rule] = await reopened.taggingRules.list();
+      expect(rule?.formatVersion).toBe(2);
+      expect(rule?.conditions).toEqual([
+        { field: "amount", operator: "lessThan", value: "-500.00", currency: "EUR" },
+      ]);
+      expect(rule?.revision).toBe(2);
+      await reopened.lock();
     } finally {
       cleanup(dir);
     }

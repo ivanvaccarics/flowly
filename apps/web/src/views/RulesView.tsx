@@ -5,6 +5,7 @@ import { Modal } from "../components/Modal.js";
 import {
   RuleFields,
   conditionsOf,
+  draftProblem,
   draftFromRule,
   emptyDraft,
   type RuleDraft,
@@ -13,6 +14,15 @@ import { Icon } from "../components/icons.js";
 import { Banner, Chip, Empty, PageHeader } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
+
+/** One condition as the rule tile reads it; amounts carry their currency. */
+function describeCondition(condition: TaggingRule["conditions"][number]): string {
+  const value =
+    condition.field === "amount"
+      ? `${condition.value} ${condition.currency ?? "EUR"}`
+      : String(condition.value);
+  return `${condition.field} ${condition.operator.toUpperCase()} "${value}"`;
+}
 
 export function RulesView({ csrf }: { csrf: string }) {
   const rules = useCollection<TaggingRule>("tagging-rules", csrf, true);
@@ -53,9 +63,14 @@ export function RulesView({ csrf }: { csrf: string }) {
       setActionError("Pick at least one tag to apply.");
       return;
     }
+    const problem = draftProblem(draft);
+    if (problem) {
+      setActionError(problem);
+      return;
+    }
     const now = new Date().toISOString();
     const created = await rules.create({
-      formatVersion: 1,
+      formatVersion: 2,
       revision: 1,
       id: crypto.randomUUID(),
       name: draft.name,
@@ -78,6 +93,11 @@ export function RulesView({ csrf }: { csrf: string }) {
     setEditorError(undefined);
     if (editor.draft.tagIds.length === 0) {
       setEditorError("Pick at least one tag to apply.");
+      return;
+    }
+    const problem = draftProblem(editor.draft);
+    if (problem) {
+      setEditorError(problem);
       return;
     }
     const saved = await rules.update({
@@ -181,10 +201,7 @@ export function RulesView({ csrf }: { csrf: string }) {
                     <code>
                       IF{" "}
                       {rule.conditions
-                        .map(
-                          (condition) =>
-                            `${condition.field} ${condition.operator.toUpperCase()} "${condition.value}"`,
-                        )
+                        .map(describeCondition)
                         .join(` ${rule.combinator.toUpperCase()} `)}
                     </code>
                     <div className="hero-facts" style={{ justifyContent: "flex-start" }}>

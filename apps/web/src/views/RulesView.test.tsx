@@ -17,7 +17,7 @@ const tag = {
 };
 
 const rule = {
-  formatVersion: 1,
+  formatVersion: 2,
   revision: 1,
   id: RULE_ID,
   name: "Coffee rule",
@@ -43,7 +43,7 @@ interface Call {
 }
 
 /** The rules API, recording what the view sent so the PUT can be inspected. */
-function mockApi(): Call[] {
+function mockApi(stored: typeof rule = rule): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
@@ -58,12 +58,12 @@ function mockApi(): Call[] {
         ...(body?.entity ? { entity: body.entity as Record<string, unknown> } : {}),
       });
       if (path === "/api/tagging-rules" && method === "POST") {
-        return json({ entity: { ...rule, ...(body?.entity ?? {}) } }, 201);
+        return json({ entity: { ...stored, ...(body?.entity ?? {}) } }, 201);
       }
-      if (path === "/api/tagging-rules") return json({ items: [rule] });
+      if (path === "/api/tagging-rules") return json({ items: [stored] });
       if (path === "/api/tags") return json({ items: [tag] });
       if (path === `/api/tagging-rules/${RULE_ID}` && method === "PUT") {
-        return json({ entity: { ...rule, ...(body?.entity ?? {}) } });
+        return json({ entity: { ...stored, ...(body?.entity ?? {}) } });
       }
       return json({ error: "not_found" }, 404);
     }),
@@ -175,5 +175,69 @@ describe("rules view", () => {
       tagIds: [TAG_ID],
     });
     expect((within(card).getByLabelText("Rule name") as HTMLInputElement).value).toBe("");
+  });
+
+  it("keeps a decimal amount condition in its currency", async () => {
+    const calls = mockApi();
+    render(<RulesView csrf="csrf-token" />);
+    const card = await screen.findByRole("form", { name: "New rule" });
+
+    fireEvent.change(within(card).getByLabelText("Rule name"), { target: { value: "Rent" } });
+    fireEvent.change(within(card).getByLabelText("Field 1"), { target: { value: "amount" } });
+    fireEvent.change(within(card).getByLabelText("Value 1"), { target: { value: "-5.10" } });
+    fireEvent.change(within(card).getByLabelText("Currency 1"), { target: { value: "EUR" } });
+    fireEvent.click(within(card).getByRole("checkbox", { name: "Coffee" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Save rule" }));
+
+    await waitFor(() => expect(screen.getByText('Created "Rent".')).toBeTruthy());
+    const posted = calls.find((call) => call.method === "POST");
+    expect(posted?.entity).toMatchObject({
+      formatVersion: 2,
+      conditions: [{ field: "amount", operator: "greaterThan", value: "-5.10", currency: "EUR" }],
+    });
+  });
+
+  it("round-trips a stored amount condition through the edit dialog", async () => {
+    const amountRule = {
+      ...rule,
+      conditions: [
+        { field: "amount", operator: "lessThan", value: "-5.10", currency: "EUR" as const },
+      ],
+    };
+    const calls = mockApi(amountRule);
+    render(<RulesView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByRole("heading", { name: "New rule" })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit rule Coffee rule" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit rule Coffee rule" });
+    expect((within(dialog).getByLabelText("Field 1") as HTMLSelectElement).value).toBe("amount");
+    expect((within(dialog).getByLabelText("Value 1") as HTMLInputElement).value).toBe("-5.10");
+    expect((within(dialog).getByLabelText("Currency 1") as HTMLSelectElement).value).toBe("EUR");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const saved = calls.find((call) => call.method === "PUT");
+    expect(saved?.entity?.conditions).toEqual([
+      { field: "amount", operator: "lessThan", value: "-5.10", currency: "EUR" },
+    ]);
+  });
+
+  it("refuses an amount that is not a number before calling the API", async () => {
+    const calls = mockApi();
+    render(<RulesView csrf="csrf-token" />);
+    const card = await screen.findByRole("form", { name: "New rule" });
+
+    fireEvent.change(within(card).getByLabelText("Rule name"), { target: { value: "Rent" } });
+    fireEvent.change(within(card).getByLabelText("Field 1"), { target: { value: "amount" } });
+    fireEvent.change(within(card).getByLabelText("Value 1"), { target: { value: "cinque" } });
+    fireEvent.click(within(card).getByRole("checkbox", { name: "Coffee" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Save rule" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Condition 1: write the amount as a number, like -5.10."),
+      ).toBeTruthy(),
+    );
+    expect(calls.filter((call) => call.method === "POST")).toEqual([]);
   });
 });

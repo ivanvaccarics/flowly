@@ -41,7 +41,11 @@ import {
   type BankPayload,
 } from "../domain/banking.js";
 import { validateTag, type Tag } from "../domain/tag.js";
-import { validateTaggingRule, type TaggingRule } from "../domain/tagging-rule.js";
+import {
+  upgradeTaggingRule,
+  validateTaggingRule,
+  type TaggingRule,
+} from "../domain/tagging-rule.js";
 import { validateTransaction, type Transaction } from "../domain/transaction.js";
 import { EXPORT_FORMAT_VERSION, VAULT_FORMAT_VERSION } from "../version.js";
 
@@ -238,6 +242,7 @@ export class Vault {
     }
     const vault = new Vault(path, parsed, dek, store, engine, clock);
     vault.lastUnlockedAt = clock.nowIso();
+    await vault.upgradeTaggingRules();
     return vault;
   }
 
@@ -295,6 +300,36 @@ export class Vault {
 
   async migrate(hooks: MigrationHooks = {}): Promise<number[]> {
     return this.store().migrate(hooks);
+  }
+
+  /**
+   * Forward-only record migration: rules stored before format version 2 carry
+   * `amountMinor` conditions in minor units. They are rewritten in place on
+   * unlock so they keep matching, and each rewrite bumps the rule's revision
+   * like any other write. Current rules are left untouched.
+   */
+  async upgradeTaggingRules(): Promise<number> {
+    const store = this.store();
+    const stored = await store.list<TaggingRule>("tagging_rules");
+    const pending = stored.flatMap((rule) => {
+      const upgraded = upgradeTaggingRule(rule);
+      if (!upgraded) return [];
+      try {
+        // A record the current validator still refuses stays as it was: an old
+        // vault must open even when one rule inside it is wrong.
+        validateTaggingRule(upgraded);
+      } catch {
+        return [];
+      }
+      return [{ rule, upgraded }];
+    });
+    if (pending.length === 0) return 0;
+    await store.transaction(async () => {
+      for (const { rule, upgraded } of pending) {
+        await store.replace("tagging_rules", upgraded.id, upgraded, rule.revision);
+      }
+    });
+    return pending.length;
   }
 
   /** Runs a multi-record write atomically; used by imports and cascades. */

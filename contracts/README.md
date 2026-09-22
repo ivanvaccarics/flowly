@@ -16,7 +16,11 @@ storage engine, a framework or a language runtime.
 ## Versioning
 
 - Every persisted schema carries an integer `formatVersion`; `1` covers the
-  Server MVP entities.
+  Server MVP entities, except tagging rules, which are at `2`: version 1 wrote
+  amount conditions as `amountMinor`, a signed count of minor units, and
+  version 2 writes them as `amount`, a decimal string in the condition's own
+  currency (ADR 0026). The server upgrades version 1 rules on unlock and on
+  archive import.
 - A breaking change requires a new format version plus a migration in the server
   and the native application. Adding an optional field is not breaking.
 - Export formats are versioned separately: the transaction CSV and the complete
@@ -35,6 +39,7 @@ storage engine, a framework or a language runtime.
 - Timestamps are ISO 8601 UTC strings; transaction dates are ISO 8601 calendar
   dates (`YYYY-MM-DD`).
 - Money is a signed integer count of minor units plus an ISO 4217 currency
-  code. Amounts are never binary floating point.
+  code. Amounts are never binary floating point: a rule's `amount` condition
+  carries a canonical decimal string, which the server parses into minor units.
 - Text comparison is Unicode NFKC-normalized and case-insensitive; display
   casing is preserved.

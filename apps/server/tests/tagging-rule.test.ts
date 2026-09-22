@@ -4,6 +4,7 @@ import {
   OPERATORS_BY_FIELD,
   evaluateTaggingRules,
   ruleMatches,
+  upgradeTaggingRule,
   validateTaggingRule,
   type RuleCondition,
   type TaggingRule,
@@ -39,7 +40,7 @@ const golden = readGolden<TaggingGolden>("tagging-rule-evaluation");
 
 function toRule(partial: GoldenCase["rules"][number], index: number): TaggingRule {
   return {
-    formatVersion: 1,
+    formatVersion: 2,
     revision: 1,
     id: `018f2c1e-6d5b-7c3a-9f2e-9a2b3c4d5e${(60 + index).toString().padStart(2, "0")}`,
     name: `Rule ${index + 1}`,
@@ -77,7 +78,7 @@ describe("tagging rule evaluation", () => {
 
 describe("tagging rule invariants", () => {
   const base: TaggingRule = {
-    formatVersion: 1,
+    formatVersion: 2,
     revision: 1,
     id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
     name: "Coffee",
@@ -102,17 +103,74 @@ describe("tagging rule invariants", () => {
     expect(() =>
       validateTaggingRule({
         ...base,
-        conditions: [{ field: "amountMinor", operator: "greaterThan", value: 1000 }],
+        conditions: [{ field: "amount", operator: "greaterThan", value: "10.00" }],
       }),
     ).toThrow(/currency/i);
     expect(() =>
       validateTaggingRule({
         ...base,
-        conditions: [
-          { field: "amountMinor", operator: "greaterThan", value: 1000, currency: "EUR" },
-        ],
+        conditions: [{ field: "amount", operator: "greaterThan", value: "10.00", currency: "EUR" }],
       }),
     ).not.toThrow();
+  });
+
+  it("accepts decimal amounts and rejects ones the currency cannot hold", () => {
+    expect(() =>
+      validateTaggingRule({
+        ...base,
+        conditions: [{ field: "amount", operator: "lessThan", value: "-5.10", currency: "EUR" }],
+      }),
+    ).not.toThrow();
+    // EUR has two decimals; JPY none.
+    expect(() =>
+      validateTaggingRule({
+        ...base,
+        conditions: [{ field: "amount", operator: "lessThan", value: "-5.105", currency: "EUR" }],
+      }),
+    ).toThrow(/decimal places|invalid/i);
+    expect(() =>
+      validateTaggingRule({
+        ...base,
+        conditions: [{ field: "amount", operator: "greaterThan", value: "5.5", currency: "JPY" }],
+      }),
+    ).toThrow(/decimal places|invalid/i);
+    expect(() =>
+      validateTaggingRule({
+        ...base,
+        conditions: [{ field: "amount", operator: "equals", value: "-5.10", currency: "XYZ" }],
+      }),
+    ).toThrow(/currency/i);
+  });
+
+  it("compares a decimal amount condition as exact minor units", () => {
+    const rule: TaggingRule = {
+      ...base,
+      conditions: [{ field: "amount", operator: "equals", value: "-5.10", currency: "EUR" }],
+    };
+    const target = { accountId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f", currency: "EUR" };
+    expect(ruleMatches(rule, { ...target, amountMinor: -510 })).toBe(true);
+    expect(ruleMatches(rule, { ...target, amountMinor: -511 })).toBe(false);
+    expect(ruleMatches(rule, { ...target, amountMinor: -510, currency: "USD" })).toBe(false);
+  });
+
+  it("upgrades a stored v1 amount condition into the current format", () => {
+    const legacy = {
+      ...base,
+      formatVersion: 1,
+      conditions: [
+        { field: "userNote", operator: "contains", value: "espresso" },
+        { field: "amountMinor", operator: "lessThan", value: -510, currency: "EUR" },
+      ],
+    };
+    const upgraded = upgradeTaggingRule(legacy);
+    expect(upgraded?.formatVersion).toBe(2);
+    expect(upgraded?.conditions).toEqual([
+      { field: "userNote", operator: "contains", value: "espresso" },
+      { field: "amount", operator: "lessThan", value: "-5.10", currency: "EUR" },
+    ]);
+    expect(() => validateTaggingRule(upgraded as TaggingRule)).not.toThrow();
+    // A current rule is left alone, so unlock never rewrites it.
+    expect(upgradeTaggingRule(base)).toBeUndefined();
   });
 
   it("rejects operators that do not belong to the field", () => {

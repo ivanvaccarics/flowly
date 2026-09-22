@@ -1,21 +1,24 @@
 import type { Tag, TaggingRule } from "@flowly/web-contracts";
 import { Icon } from "./icons.js";
-import { CURRENCIES } from "../lib/money.js";
+import { CURRENCIES, minorUnitsFor } from "../lib/money.js";
 import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
 
 /** Local builder shape: the contract narrows operators per field. */
 export interface Condition {
-  field: "userNote" | "description" | "payee" | "amountMinor" | "accountId";
+  field: "userNote" | "description" | "payee" | "amount" | "accountId";
   operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
-  value: string | number;
+  /** The raw text while the rule is written; `conditionsOf` types it for the API. */
+  value: string;
   currency?: string;
 }
+
+const DEFAULT_CURRENCY = "EUR";
 
 const FIELDS: Array<Condition["field"]> = [
   "userNote",
   "description",
   "payee",
-  "amountMinor",
+  "amount",
   "accountId",
 ];
 
@@ -23,7 +26,7 @@ const OPERATORS_BY_FIELD: Record<Condition["field"], Array<Condition["operator"]
   userNote: ["contains"],
   description: ["contains"],
   payee: ["is", "contains"],
-  amountMinor: ["greaterThan", "lessThan", "equals"],
+  amount: ["greaterThan", "lessThan", "equals"],
   accountId: ["is"],
 };
 
@@ -46,13 +49,51 @@ export function draftFromRule(rule: TaggingRule): RuleDraft {
   return {
     name: rule.name,
     combinator: rule.combinator,
-    conditions: rule.conditions as unknown as Condition[],
+    conditions: rule.conditions.map((condition) => ({
+      field: condition.field,
+      operator: condition.operator,
+      value: String(condition.value),
+      ...(condition.currency ? { currency: condition.currency } : {}),
+    })) as Condition[],
     tagIds: [...rule.tagIds],
   };
 }
 
 export function conditionsOf(draft: RuleDraft): TaggingRule["conditions"] {
-  return draft.conditions as unknown as TaggingRule["conditions"];
+  return draft.conditions.map((condition) =>
+    condition.field === "amount"
+      ? {
+          field: condition.field,
+          operator: condition.operator,
+          value: canonicalAmount(condition.value),
+          currency: condition.currency ?? DEFAULT_CURRENCY,
+        }
+      : { field: condition.field, operator: condition.operator, value: condition.value },
+  ) as unknown as TaggingRule["conditions"];
+}
+
+/** A dot separates the decimals in the contract, whatever the person typed. */
+function canonicalAmount(value: string): string {
+  return value.trim().replace(",", ".");
+}
+
+/** The first problem a draft has, phrased for the banner; undefined when it can be sent. */
+export function draftProblem(draft: RuleDraft): string | undefined {
+  for (const [index, condition] of draft.conditions.entries()) {
+    if (condition.field === "amount") {
+      const amount = canonicalAmount(condition.value);
+      if (!/^-?\d+(\.\d+)?$/.test(amount)) {
+        return `Condition ${index + 1}: write the amount as a number, like -5.10.`;
+      }
+      const currency = condition.currency ?? DEFAULT_CURRENCY;
+      const allowed = minorUnitsFor(currency);
+      const decimals = amount.split(".")[1]?.length ?? 0;
+      if (decimals > allowed) {
+        return `Condition ${index + 1}: ${currency} allows at most ${allowed} decimals.`;
+      }
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -117,8 +158,8 @@ export function RuleFields({
                 updateCondition(index, {
                   field,
                   operator,
-                  value: field === "amountMinor" ? 0 : "",
-                  ...(field === "amountMinor" ? { currency: "EUR" } : {}),
+                  value: "",
+                  ...(field === "amount" ? { currency: DEFAULT_CURRENCY } : {}),
                 });
               }}
             >
@@ -152,24 +193,20 @@ export function RuleFields({
             Value
             <input
               aria-label={`Value ${index + 1}`}
-              value={String(condition.value)}
+              value={condition.value}
+              inputMode={condition.field === "amount" ? "decimal" : undefined}
+              placeholder={condition.field === "amount" ? "-5.10" : undefined}
               onChange={(event) =>
-                updateCondition(index, {
-                  ...condition,
-                  value:
-                    condition.field === "amountMinor"
-                      ? Number(event.target.value)
-                      : event.target.value,
-                })
+                updateCondition(index, { ...condition, value: event.target.value })
               }
             />
           </label>
-          {condition.field === "amountMinor" ? (
+          {condition.field === "amount" ? (
             <label>
               Currency
               <select
                 aria-label={`Currency ${index + 1}`}
-                value={condition.currency ?? "EUR"}
+                value={condition.currency ?? DEFAULT_CURRENCY}
                 onChange={(event) =>
                   updateCondition(index, { ...condition, currency: event.target.value })
                 }

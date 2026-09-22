@@ -105,12 +105,12 @@ export interface Tag {
 }
 
 export type Condition = {
-  field: "userNote" | "description" | "payee" | "amountMinor" | "accountId";
+  field: "userNote" | "description" | "payee" | "amount" | "accountId";
   operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
   value: string | number;
   currency?: string;
 } & Condition1 & {
-    field: "userNote" | "description" | "payee" | "amountMinor" | "accountId";
+    field: "userNote" | "description" | "payee" | "amount" | "accountId";
     operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
     value: string | number;
     currency?: string;
@@ -135,9 +135,9 @@ export type Condition1 =
       [k: string]: unknown;
     }
   | {
-      field?: "amountMinor";
+      field?: "amount";
       operator?: "greaterThan" | "lessThan" | "equals";
-      value?: number;
+      value?: string;
       currency: string;
       [k: string]: unknown;
     }
@@ -149,10 +149,10 @@ export type Condition1 =
     };
 
 /**
- * User-authored rule that adds tags to matching transactions. Conditions in one rule join with a single AND or OR. Amount conditions must also carry a `currency`, which the domain validator enforces.
+ * User-authored rule that adds tags to matching transactions. Conditions in one rule join with a single AND or OR. An `amount` condition carries a canonical decimal string in its own `currency` (`-5.10` means an outflow of 5.10), not a count of minor units, and only matches transactions in that currency.
  */
 export interface TaggingRule {
-  formatVersion: 1;
+  formatVersion: 2;
   revision: number;
   id: string;
   name: string;
