@@ -1947,8 +1947,8 @@ button.tag-pill:hover {
 
 .legend-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 0.6rem;
   align-items: center;
   width: 100%;
   margin: 0;
@@ -2462,38 +2462,20 @@ button.legend-row {
   color: var(--expense);
 }
 
-.category-group {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.category-bars {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.6rem;
-}
-
-.category-bar {
-  display: grid;
-  gap: 0.3rem;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-}
-
-.category-row {
+/* The legend is the tag filter: a checkbox per category, plus a button that
+   opens the ledger on that tag. */
+.legend-rows li.legend-row-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
-.category-open {
+.legend-row-item.excluded .legend-row {
+  opacity: 0.45;
+}
+
+.legend-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2506,51 +2488,10 @@ button.legend-row {
   cursor: pointer;
 }
 
-.category-open:hover {
+.legend-open:hover {
   border-color: var(--border);
   background: var(--surface-low);
   color: var(--text);
-}
-
-.category-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.category-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.category-amount {
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.category-track {
-  display: block;
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-sunken);
-  overflow: hidden;
-}
-
-.category-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-pill);
-}
-
-.category-bar.excluded {
-  opacity: 0.42;
-}
-
-.category-bar:hover .category-name {
-  text-decoration: underline;
 }
 
 /* ---------------------------------------------------------- page headings */

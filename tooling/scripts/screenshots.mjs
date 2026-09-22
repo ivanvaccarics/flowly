@@ -24,6 +24,8 @@ const baseUrl = args.find((argument) => argument.startsWith("http")) ?? "http://
 const chromeArgument = args.find((argument) => argument.startsWith("--chrome="));
 const passphrase = process.env.FLOWLY_DEMO_PASSPHRASE ?? "flowly demo passphrase 2026";
 const port = Number(process.env.FLOWLY_SCREENSHOT_PORT ?? 9333);
+/** Viewport height; taller is handy when reviewing a long page by hand. */
+const height = Number(process.env.FLOWLY_SCREENSHOT_HEIGHT ?? 900);
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 const outDir = join(here, "..", "..", "docs", "images");
@@ -166,7 +168,7 @@ async function main() {
       "--no-default-browser-check",
       `--remote-debugging-port=${port}`,
       `--user-data-dir=${profile}`,
-      "--window-size=1440,900",
+      `--window-size=1440,${height}`,
       "about:blank",
     ],
     { stdio: "ignore" },
@@ -179,7 +181,7 @@ async function main() {
     await devtools.send("Runtime.enable");
     await devtools.send("Emulation.setDeviceMetricsOverride", {
       width: 1440,
-      height: 900,
+      height,
       deviceScaleFactor: 1,
       mobile: false,
     });

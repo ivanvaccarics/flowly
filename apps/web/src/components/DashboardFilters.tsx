@@ -110,7 +110,30 @@ export function DashboardFilters({
             );
           })}
         </div>
+      </div>
 
+      {/* The actions live on the row of the selected months, so "Clear" lines up
+          with the chips it clears instead of floating at the end of the grid. */}
+      <div className="filter-chips">
+        {months.length > 0 ? (
+          <>
+            <span className="eyebrow">Active</span>
+            {months.map((month) => (
+              <span key={month} className="filter-chip">
+                {monthLabel(month)}
+                <button
+                  type="button"
+                  aria-label={`Remove ${monthLabel(month)}`}
+                  onClick={() => onRemoveMonth(month)}
+                >
+                  <Icon name="close" size={12} />
+                </button>
+              </span>
+            ))}
+          </>
+        ) : (
+          <span className="sub">No month selected</span>
+        )}
         <div className="filter-actions">
           <button
             type="button"
@@ -133,24 +156,6 @@ export function DashboardFilters({
           </span>
         </div>
       </div>
-
-      {months.length > 0 ? (
-        <div className="filter-chips">
-          <span className="eyebrow">Active</span>
-          {months.map((month) => (
-            <span key={month} className="filter-chip">
-              {monthLabel(month)}
-              <button
-                type="button"
-                aria-label={`Remove ${monthLabel(month)}`}
-                onClick={() => onRemoveMonth(month)}
-              >
-                <Icon name="close" size={12} />
-              </button>
-            </span>
-          ))}
-        </div>
-      ) : null}
     </section>
   );
 }

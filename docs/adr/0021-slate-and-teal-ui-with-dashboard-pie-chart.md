@@ -5,9 +5,11 @@ Status: Accepted (2026-09-16)
 Supersedes the palette, shape, page-header and panel decisions of
 [ADR 0012](./0012-align-web-ui-with-sovereign-ledger-mockups.md).
 
-The spending pie decided below is superseded by
-[ADR 0033](./0033-the-dashboard-is-scoped-by-months-and-tags.md): the breakdown
-is a list of category bars that doubles as the tag filter.
+The spending pie decided below is scoped by
+[ADR 0033](./0033-the-dashboard-is-scoped-by-months-and-tags.md) and kept as the
+breakdown's shape by
+[ADR 0034](./0034-the-spending-breakdown-stays-a-donut.md), where its legend is
+the tag filter.
 
 ## Context
 

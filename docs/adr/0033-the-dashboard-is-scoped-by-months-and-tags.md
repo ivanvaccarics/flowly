@@ -1,6 +1,8 @@
 # ADR 0033 — The dashboard is scoped by months and by tags
 
-Status: Accepted (2026-09-22)
+Status: Accepted (2026-09-22). The breakdown's shape below is superseded by
+[ADR 0034](./0034-the-spending-breakdown-stays-a-donut.md): the per-category
+list is the donut's legend, not a set of bars.
 
 ## Context
 
@@ -34,9 +36,10 @@ September would drag March to August in with it — and a pie has no room to say
   flow, the chart, the recent movements and the ledger link follow the selection.
   The ledger's own search accepts the same `months` and `tags` values, so "see
   these rows" means the same rows the figures were computed from.
-- **The pie is retired.** Its job — spending by tag, per currency — is the
-  category bars, which also carry the filter and the per-row link to the ledger.
-  Nothing else about the charts changes.
+- **The breakdown keeps a per-category row per tag, per currency**, which
+  carries the filter and the link to the ledger. (Its shape — bars or the donut
+  it started as — is settled in
+  [ADR 0034](./0034-the-spending-breakdown-stays-a-donut.md).)
 
 ## Consequences
 
@@ -46,6 +49,8 @@ September would drag March to August in with it — and a pie has no room to say
   previous answer.
 - `docs/DESIGN.md`, `docs/TESTING.md`, `docs/PLAN.md` and `README.md` describe
   the period picker, the category filter and the monthly chart; ADR 0021 keeps
-  its pie decision as history and points here.
+  its pie decision as history and points here for the scoping, and
+  [ADR 0034](./0034-the-spending-breakdown-stays-a-donut.md) supersedes only the
+  breakdown's shape.
 - A future native client gets the same scoping from the same endpoint instead of
   re-implementing "which months did the reader pick".

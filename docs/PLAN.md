@@ -299,8 +299,8 @@ Transactions, Tags, Rules and Settings. Settings opens with the Enable Banking
 connection and then carries the passphrase change plus export and import. The
 shell's top bar carries the section title, the vault state and the session
 controls; cards are white with a hairline outline over a slate canvas, tinted
-panels carry nested controls, and the dashboard charts cash flow per week and
-spending as bars per category and per currency. The dashboard is scoped by the
+panels carry nested controls, and the dashboard charts cash flow per month and
+spending as a donut per currency. The dashboard is scoped by the
 months and the categories the reader selects: a preset, a year strip or any
 combination of months as removable chips pick the period, and switching a
 category off recomputes the totals, the chart and the recent movements for the
@@ -1557,22 +1557,25 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0033`.
 - The dashboard's period is a **set of months**, not a range: the picker offers a
   preset (month, 3 months, year, custom), a year strip with the count of that
   year's selected months, the twelve months of the year the strip points at,
-  **All &lt;year&gt;** and **Clear**, and the selected months as removable chips.
+  and the selected months as removable chips with **All &lt;year&gt;**,
+  **Clear** and the count on that same row.
   `GET /api/dashboard` accepts `months=YYYY-MM,…` and considers exactly those
   months, so a scattered selection never pulls in the months between.
 - The chart buckets by month for a month set — one bucket per selected month and
   currency, empty months included — instead of the old fixed week.
-- The spending breakdown is now a list of **category bars** and doubles as the
-  tag filter: switching a category off dims its row, keeps it visible, and
-  recomputes the totals, the chart and the recent movements for the tags left on;
-  **Include all** (or another click) brings it back. Tags are excluded, not
-  included, so anything new is part of the picture by default.
+- The spending breakdown is a **donut per currency whose legend is the tag
+  filter**: a checkbox per category, every tag of the period always listed, an
+  unticked one dimmed but never hidden. Unticking a category redraws the donut
+  for the tags left ticked and recomputes the totals, the chart and the recent
+  movements; **Include all** (or ticking it again) brings it back. Tags are
+  excluded, not included, so anything new is part of the picture by default.
 - Balances stay the account balances — a balance of one tag is not money — while
   income, expenses, net flow, the chart, the recent movements and the ledger link
   follow the selection; the ledger search accepts the same `months` and `tags`,
   so its rows are the ones the figures came from.
-- The KPI row, the filter bar, the category bars and the recent table follow the
-  redrawn dashboard; the pie chart it replaces is recorded in `docs/adr/0033`.
+- The KPI row, the filter bar, the donut and its legend and the recent table
+  follow the redrawn dashboard; the scoping decision is `docs/adr/0033`, and the
+  donut's return as the breakdown's shape is `docs/adr/0034`.
 
 #### Task `restyle-the-rules-page-and-count-what-rules-cover`
 

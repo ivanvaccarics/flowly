@@ -501,11 +501,11 @@ export function DashboardView({
             <header>
               <div>
                 <p className="eyebrow">Categories</p>
-                <h2>Spending by category</h2>
+                <h2>Spending breakdown</h2>
                 <span className="sub">
                   {periodTagIds.length === 0
                     ? "No tagged spending in this period"
-                    : `${includedTags.length} of ${periodTagIds.length} tags included · click a category to filter the dashboard`}
+                    : `${includedTags.length} of ${periodTagIds.length} tags included · untick a category to leave it out of every figure`}
                 </span>
               </div>
               {excludedTags.length > 0 ? (
@@ -521,50 +521,15 @@ export function DashboardView({
             </header>
             {dashboard && dashboard.spendingByTag.length > 0 ? (
               spendingGroups.map((group) => (
-                <div className="category-group" key={group.currency}>
-                  <span className="eyebrow">
-                    Total · {formatMinorToAmount(group.totalMinor, group.currency)} {group.currency}
-                  </span>
-                  <ul className="category-bars">
-                    {group.entries.map((entry, index) => {
-                      const included = !excludedTags.includes(entry.tagId);
-                      const width = `${Math.max(2, Math.round((entry.spentMinor / (group.entries[0]?.spentMinor ?? entry.spentMinor)) * 100))}%`;
-                      return (
-                        <li key={`${entry.tagId}-${entry.currency}`} className="category-row">
-                          <button
-                            type="button"
-                            className={included ? "category-bar" : "category-bar excluded"}
-                            aria-pressed={included}
-                            aria-label={`${included ? "Exclude" : "Include"} ${entry.tagName}`}
-                            onClick={() => toggleTag(entry.tagId)}
-                          >
-                            <span className="category-head">
-                              <span className="category-name">{entry.tagName}</span>
-                              <span className="category-amount mono">
-                                {formatMinorToAmount(entry.spentMinor, entry.currency)}
-                              </span>
-                            </span>
-                            <span className="category-track">
-                              <span
-                                className="category-fill"
-                                style={{ width, background: colourOf(entry.tagId, index) }}
-                              />
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            className="category-open"
-                            aria-label={`Show ${entry.tagName} in the ledger`}
-                            title={`Show ${entry.tagName} in the ledger`}
-                            onClick={() => onSeeAllTransactions({ tagId: entry.tagId, from, to })}
-                          >
-                            <Icon name="transactions" size={14} />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
+                <SpendingPie
+                  key={group.currency}
+                  currency={group.currency}
+                  entries={group.entries}
+                  colourOf={colourOf}
+                  included={(tagId) => !excludedTags.includes(tagId)}
+                  onToggle={toggleTag}
+                  onOpen={(tagId) => onSeeAllTransactions({ tagId, from, to })}
+                />
               ))
             ) : (
               <Empty>No tagged spending in this period.</Empty>
@@ -611,6 +576,167 @@ export function DashboardView({
         only and never convert between currencies.
       </p>
     </section>
+  );
+}
+
+/**
+ * The dashboard's spending breakdown: one donut per currency, an arc per
+ * *included* tag, with the drawn total in the hole. The legend is the tag
+ * filter — a checkbox per row, always listing every category of the period so
+ * one that was switched off can be switched back on — and each row can also
+ * open the ledger on its tag. Hand-rolled, like the cash-flow chart: Flowly
+ * ships no charting dependency.
+ */
+function SpendingPie({
+  entries,
+  currency,
+  colourOf,
+  included,
+  onToggle,
+  onOpen,
+}: {
+  entries: Array<{ tagId: string; tagName: string; currency: string; spentMinor: number }>;
+  currency: string;
+  colourOf: (tagId: string, index: number) => string;
+  included: (tagId: string) => boolean;
+  onToggle: (tagId: string) => void;
+  onOpen: (tagId: string) => void;
+}) {
+  const [activeTagId, setActiveTagId] = useState<string | undefined>(undefined);
+  const drawn = entries.filter((entry) => included(entry.tagId));
+  const drawnTotal = drawn.reduce((total, entry) => total + entry.spentMinor, 0);
+  const size = 168;
+  const centre = size / 2;
+  const radius = 66;
+  const circumference = 2 * Math.PI * radius;
+  // A hair of space between slices keeps neighbours visually separate.
+  const gap = drawn.length > 1 ? 3 : 0;
+  let consumed = 0;
+  const slices = drawn.map((entry, index) => {
+    const share = drawnTotal > 0 ? entry.spentMinor / drawnTotal : 0;
+    const length = Math.max(0, share * circumference - gap);
+    const slice = {
+      key: `${entry.tagId}-${entry.currency}`,
+      colour: colourOf(entry.tagId, index),
+      dash: `${length} ${circumference - length}`,
+      offset: -consumed,
+    };
+    consumed += share * circumference;
+    return slice;
+  });
+  const totalText = formatMinorToAmount(drawnTotal, currency);
+  const active = entries.find((entry) => entry.tagId === activeTagId);
+  const shareOf = (minor: number) => (drawnTotal > 0 ? (minor / drawnTotal) * 100 : 0);
+  const label = `Spending by tag in ${currency}: ${
+    drawn.length === 0
+      ? "no category selected"
+      : drawn
+          .map((entry) => `${entry.tagName} ${Math.round(shareOf(entry.spentMinor))}%`)
+          .join(", ")
+  }`;
+
+  return (
+    <div className="donut">
+      <div className="donut-figure">
+        <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
+          <circle className="donut-track" cx={centre} cy={centre} r={radius} />
+          {slices.map((slice, index) => {
+            const entry = drawn[index];
+            if (!entry) return null;
+            return (
+              <circle
+                key={slice.key}
+                className={activeTagId === entry.tagId ? "donut-slice is-active" : "donut-slice"}
+                cx={centre}
+                cy={centre}
+                r={radius}
+                stroke={slice.colour}
+                strokeDasharray={slice.dash}
+                strokeDashoffset={slice.offset}
+                transform={`rotate(-90 ${centre} ${centre})`}
+                style={{ cursor: "pointer" }}
+                onPointerEnter={() => setActiveTagId(entry.tagId)}
+                onPointerLeave={() =>
+                  setActiveTagId((current) => (current === entry.tagId ? undefined : current))
+                }
+                onClick={() => onOpen(entry.tagId)}
+              />
+            );
+          })}
+        </svg>
+        <div className="donut-center">
+          {active ? (
+            <>
+              <span className="eyebrow" style={{ margin: 0 }} title={active.tagName}>
+                {active.tagName}
+              </span>
+              <span className="total small">
+                {formatMinorToAmount(active.spentMinor, active.currency)}
+              </span>
+              <span className="sub">
+                {active.currency} · {formatDecimal(shareOf(active.spentMinor))}% of spending
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="eyebrow" style={{ margin: 0 }}>
+                {currency}
+              </span>
+              <span className={totalText.length > 9 ? "total small" : "total"}>{totalText}</span>
+              <span className="sub">{drawn.length === 0 ? "no category selected" : "spent"}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <ul className="legend-rows">
+        {entries.map((entry, index) => {
+          const isIncluded = included(entry.tagId);
+          return (
+            <li
+              key={`${entry.tagId}-${entry.currency}`}
+              className={isIncluded ? "legend-row-item" : "legend-row-item excluded"}
+              onPointerEnter={() => setActiveTagId(entry.tagId)}
+              onPointerLeave={() =>
+                setActiveTagId((current) => (current === entry.tagId ? undefined : current))
+              }
+            >
+              <label className="legend-row">
+                <input
+                  type="checkbox"
+                  checked={isIncluded}
+                  aria-label={`Include ${entry.tagName}`}
+                  onChange={() => onToggle(entry.tagId)}
+                  onFocus={() => setActiveTagId(entry.tagId)}
+                  onBlur={() =>
+                    setActiveTagId((current) => (current === entry.tagId ? undefined : current))
+                  }
+                />
+                <span className="legend-item">
+                  <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
+                  {entry.tagName}
+                </span>
+                <span className="mono">
+                  {formatMinorToAmount(entry.spentMinor, entry.currency)}
+                </span>
+                <span className="muted mono">
+                  {isIncluded ? `${formatDecimal(shareOf(entry.spentMinor))}%` : "—"}
+                </span>
+              </label>
+              <button
+                type="button"
+                className="legend-open"
+                aria-label={`Show ${entry.tagName} in the ledger`}
+                title={`Show ${entry.tagName} in the ledger`}
+                onClick={() => onOpen(entry.tagId)}
+              >
+                <Icon name="transactions" size={14} />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

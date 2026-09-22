@@ -186,16 +186,19 @@ not shift.
   row. The window comes from the server (`limit`/`offset`/`total`), so the range
   and the page count are always the real ones; the buttons disable at the ends
   instead of hiding (ADR 0024).
-- **Category bars:** the dashboard's spending breakdown, one group per currency,
-  each row a category's own colour, its name and its amount over a proportional
-  bar. The rows are the tag filter: clicking one takes it out of the figures
-  (dimmed, never hidden, so it can be switched back on), and the small record
-  button at the end opens the ledger filtered to that tag.
+- **Donut and checkbox legend:** the dashboard's spending breakdown, one donut
+  per currency, an arc per included tag in the tag's own colour with the drawn
+  total in the hole (the hovered or focused tag's amount and share replace it).
+  The legend is the tag filter: a checkbox per category, always listing every
+  tag of the period, with the amount and the share of what is drawn — an
+  excluded tag keeps its row, dimmed, so it can be switched back on. The record
+  button at the end of a row opens the ledger filtered to that tag.
 - **Period picker:** the dashboard's own bar — a preset (month, 3 months, year,
-  custom), a year strip with a count of that year's selected months, the twelve
-  months of the year the strip points at, **All &lt;year&gt;** and **Clear**, and
-  the selected months as removable chips. Clicking a month is what "custom"
-  means, and the preset follows the click.
+  custom), a year strip with a count of that year's selected months, and the
+  twelve months of the year the strip points at. Under them sit the selected
+  months as removable chips, with **All &lt;year&gt;**, **Clear** and the count
+  at the end of that same row. Clicking a month is what "custom" means, and the
+  preset follows the click.
 - **KPI row:** the four figures a period is read by — total balance, income,
   expenses and net flow — each with its unit and a one-line hint, separated by
   the same hairline the mockups use. One row per currency, because unlike
@@ -242,7 +245,7 @@ Only shipping functionality is on screen; every figure comes from the API.
 
 | Section | Contents |
 | --- | --- |
-| Dashboard | Green banner (encrypted ledger, accounts, currencies and the selected months) and the headline with Export data and New transaction; the **period picker** (preset, year strip, month grid, selected months as removable chips); a **KPI row per currency** (total balance, income, expenses, net flow) with deltas against the previous equal-length period and the savings rate; an **interactive** cash-flow chart (monthly income/expense bars with a net line, inline SVG) whose hovered month is lit, guided and read out in a tooltip, one keyboard stop walked with the arrow keys, and clickable to open that month in the ledger; the spending breakdown as **category bars per currency**, each row a toggle that takes its tag out of every figure (and a record button that opens the ledger filtered to that tag); recent transactions table, paged ten rows at a time on the server with the window and its own Previous/Next; accounts summary and the bank sync card (last sync, **Sync now**, reconnect warnings) |
+| Dashboard | Green banner (encrypted ledger, accounts, currencies and the selected months) and the headline with Export data and New transaction; the **period picker** (preset, year strip, month grid, and the selected months as removable chips with **All &lt;year&gt;**, **Clear** and the count on the same row); a **KPI row per currency** (total balance, income, expenses, net flow) with deltas against the previous equal-length period and the savings rate; an **interactive** cash-flow chart (monthly income/expense bars with a net line, inline SVG) whose hovered month is lit, guided and read out in a tooltip, one keyboard stop walked with the arrow keys, and clickable to open that month in the ledger; the spending breakdown as **one donut per currency** whose legend is the tag filter — a checkbox per category, every tag of the period always listed, an unticked one dimmed but never hidden, and a record button that opens the ledger filtered to that tag; recent transactions table, paged ten rows at a time on the server with the window and its own Previous/Next; accounts summary and the bank sync card (last sync, **Sync now**, reconnect warnings) |
 | Accounts | Green banner with the account count and the booked balance per currency, the headline with the currency chip, the create form, and one card per account with its real balance per currency and booked-movement count, archive, restore an archived account, and cascade delete |
 | Transactions | Green banner naming the encrypted ledger with this month's income, expenses and net, the headline with **Add transaction** (the record form opens in a dialog over the page, with the tag picker and the tagging-rules note), and one ledger card holding the server-side filters (text, account, tag, status, date range), the **View** pills (all movements, then one pill per tag in its own colour), the table — a row opens the movement in the same dialog with one **click** on a cell or on the row's **Edit** button, with account, booking date, amount, payee, note, status and tags — a status chip that switches booked ↔ pending, the source as an offline-AES chip, a **Raw** toggle per row that opens the provider record behind it (the stored fields and the bank's own fields side by side, flattened one per row, with the exact JSON one click away) and delete — and the pager footer |
 | Tags | Violet banner with the tag count, the headline, create with a palette colour or a free colour from the browser picker, **inline rename and recolour** of an existing tag, and cascade delete |

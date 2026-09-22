@@ -249,15 +249,16 @@ describe("dashboard charts", () => {
     );
     renderDashboard();
 
-    // Every category starts included: the reads ask for the months only.
-    await waitFor(() => expect(screen.getByRole("button", { name: "Exclude Rent" })).toBeTruthy());
+    // Every category starts ticked: the reads ask for the months only.
+    const rent = await screen.findByRole("checkbox", { name: "Include Rent" });
+    expect((rent as HTMLInputElement).checked).toBe(true);
     expect(
       queries.some((query) => query.includes("/api/dashboard?") && query.includes("months=")),
     ).toBe(true);
     expect(queries.some((query) => query.includes("tags="))).toBe(false);
 
-    // Switching a category off narrows the dashboard call and the ledger alike.
-    fireEvent.click(screen.getByRole("button", { name: "Exclude Rent" }));
+    // Unticking a category narrows the dashboard call and the ledger alike.
+    fireEvent.click(rent);
     await waitFor(() =>
       expect(
         queries.some(
@@ -270,13 +271,23 @@ describe("dashboard charts", () => {
         (query) => query.includes("/api/transactions?") && query.includes(`tags=${GROCERIES_TAG}`),
       ),
     ).toBe(true);
-    expect(screen.getByRole("button", { name: "Include Rent" })).toBeTruthy();
+    expect(
+      (screen.getByRole("checkbox", { name: "Include Rent" }) as HTMLInputElement).checked,
+    ).toBe(false);
+    // The donut now draws only what is left, so the reader sees what they asked.
+    expect(
+      screen.getByRole("img", { name: "Spending by tag in EUR: Groceries 100%" }),
+    ).toBeTruthy();
 
     // And it can always be switched back on.
-    fireEvent.click(screen.getByRole("button", { name: "Include Rent" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Exclude Rent" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("checkbox", { name: "Include Rent" }));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("checkbox", { name: "Include Rent" }) as HTMLInputElement).checked,
+      ).toBe(true),
+    );
     expect(
-      screen.getByText("2 of 2 tags included · click a category to filter the dashboard"),
+      screen.getByText("2 of 2 tags included · untick a category to leave it out of every figure"),
     ).toBeTruthy();
   });
 });

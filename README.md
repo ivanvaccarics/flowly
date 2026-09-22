@@ -133,9 +133,10 @@ vault has more — all computed on your self-hosted server, without an Internet
 dependency. Totals always carry their currency, and only booked transactions
 move a balance. **Pick the months you care about** — a preset, a year strip, or
 any combination of months as removable chips — and the whole page follows.
-**Switch categories on and off** to ask "what if I ignore the rent?": every
-figure, the chart and the recent movements recompute for the tags you left on,
-and the categories you switched off stay visible so you can bring them back.
+**Untick categories** in the spending donut's legend to ask "what if I ignore
+the rent?": the donut redraws for the tags you left ticked, every figure, the
+chart and the recent movements recompute, and an unticked category stays in the
+legend so you can bring it back.
 The cash-flow chart is meant to be touched: each month lights up under the
 pointer or the arrow keys and reads out its income, expenses and net, and each
 category row opens the ledger filtered to that tag.
@@ -277,8 +278,9 @@ tags or the amount, or press the row's **Edit** button, and the same form the
 composer uses opens with everything prefilled. The dashboard's recent
 transactions page the same way, ten rows at a time. The dashboard scopes every
 figure to the months and the categories you select, charts cash flow month by
-month and draws spending as bars per category and per currency, so no total ever
-blends currencies. Accounts can be archived and restored, tags can be
+month and draws spending as a donut per currency whose legend switches
+categories in and out, so no total ever blends currencies. Accounts can be
+archived and restored, tags can be
 renamed and recoloured in place, and Settings holds the passphrase change plus
 export and import, after the Enable Banking connection. Export comes in three
 shapes: the single transaction CSV, a plain ZIP with one CSV per table (and a
