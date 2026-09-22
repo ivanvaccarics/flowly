@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { Account, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
@@ -25,6 +25,19 @@ const EMPTY_FILTERS: Filters = { accountId: "", from: "", to: "", tagId: "", sta
 /** Row counts the ledger offers per page. The API accepts up to 500. */
 const PAGE_SIZES = [25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 25;
+
+/** Cells a double-click can carry the row into edit mode through. */
+type EditableField = "payee" | "note" | "tags" | "amount";
+
+interface EditingRow {
+  id: string;
+  payee: string;
+  amount: string;
+  note: string;
+  tagIds: string[];
+  /** The cell the double-click came from, focused once the row is editable. */
+  focus?: EditableField;
+}
 
 export function TransactionsView({
   csrf,
@@ -58,11 +71,15 @@ export function TransactionsView({
   const [userNote, setUserNote] = useState("");
   const [status, setStatus] = useState<"booked" | "pending">("booked");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [editing, setEditing] = useState<
-    { id: string; payee: string; amount: string; note: string; tagIds: string[] } | undefined
-  >(undefined);
+  const [editing, setEditing] = useState<EditingRow | undefined>(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
   const [rawOpen, setRawOpen] = useState<string | undefined>(undefined);
+  /** The three text inputs a double-click may have to focus. */
+  const editInputs = useRef<Record<"payee" | "note" | "amount", HTMLInputElement | null>>({
+    payee: null,
+    note: null,
+    amount: null,
+  });
 
   const account = accounts.items.find((candidate) => candidate.id === accountId);
   const currency = account?.defaultCurrency ?? "EUR";
@@ -114,6 +131,34 @@ export function TransactionsView({
   useEffect(() => {
     void load();
   }, [load]);
+
+  // A double-click on a cell opens the row with the caret in that cell, not
+  // merely at the first input of the row. The Edit button opens without focus.
+  const focus = editing?.focus;
+  const editingId = editing?.id;
+  useEffect(() => {
+    if (!focus || focus === "tags") return;
+    const input = editInputs.current[focus];
+    input?.focus();
+    input?.select();
+  }, [editingId, focus]);
+
+  function startEditing(transaction: Transaction, field?: EditableField) {
+    // Moving between cells of the row being edited keeps what was typed; it
+    // only moves the caret.
+    if (editing?.id === transaction.id) {
+      setEditing({ ...editing, ...(field ? { focus: field } : {}) });
+      return;
+    }
+    setEditing({
+      id: transaction.id,
+      payee: transaction.payee ?? "",
+      amount: formatMinorToAmount(transaction.amountMinor, transaction.currency),
+      note: transaction.userNote ?? "",
+      tagIds: transaction.tagIds,
+      ...(field ? { focus: field } : {}),
+    });
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -406,6 +451,15 @@ export function TransactionsView({
       {loading ? <Banner>Searching…</Banner> : null}
 
       <div className="card">
+        <header>
+          <div>
+            <h2>Transactions</h2>
+            <span className="sub">
+              Double-click payee, note, tags or amount to edit the row in place; the Edit button
+              does the same.
+            </span>
+          </div>
+        </header>
         <div className="table-wrap">
           <table>
             <thead>
@@ -427,10 +481,13 @@ export function TransactionsView({
                 <Fragment key={transaction.id}>
                   <tr>
                     <td className="mono cell-nowrap">{transaction.bookingDate}</td>
-                    <td>
+                    <td onDoubleClick={() => startEditing(transaction, "payee")}>
                       {editing?.id === transaction.id ? (
                         <input
                           aria-label={`Payee for ${transaction.id}`}
+                          ref={(node) => {
+                            editInputs.current.payee = node;
+                          }}
                           value={editing.payee}
                           onChange={(event) =>
                             setEditing({ ...editing, payee: event.target.value })
@@ -455,10 +512,13 @@ export function TransactionsView({
                         </span>
                       )}
                     </td>
-                    <td>
+                    <td onDoubleClick={() => startEditing(transaction, "note")}>
                       {editing?.id === transaction.id ? (
                         <input
                           aria-label={`Note for ${transaction.payee ?? transaction.id}`}
+                          ref={(node) => {
+                            editInputs.current.note = node;
+                          }}
                           value={editing.note}
                           onChange={(event) => setEditing({ ...editing, note: event.target.value })}
                         />
@@ -466,7 +526,7 @@ export function TransactionsView({
                         (transaction.userNote ?? "—")
                       )}
                     </td>
-                    <td>
+                    <td onDoubleClick={() => startEditing(transaction, "tags")}>
                       {editing?.id === transaction.id ? (
                         <TagPicker
                           tags={tags.items}
@@ -506,11 +566,17 @@ export function TransactionsView({
                         {transaction.source}
                       </span>
                     </td>
-                    <td className="cell-amount">
+                    <td
+                      className="cell-amount"
+                      onDoubleClick={() => startEditing(transaction, "amount")}
+                    >
                       {editing?.id === transaction.id ? (
                         <span className="amount-edit">
                           <input
                             aria-label={`Amount in ${transaction.currency}`}
+                            ref={(node) => {
+                              editInputs.current.amount = node;
+                            }}
                             value={editing.amount}
                             onChange={(event) =>
                               setEditing({ ...editing, amount: event.target.value })
@@ -556,18 +622,7 @@ export function TransactionsView({
                           <button
                             type="button"
                             className="btn small"
-                            onClick={() =>
-                              setEditing({
-                                id: transaction.id,
-                                payee: transaction.payee ?? "",
-                                amount: formatMinorToAmount(
-                                  transaction.amountMinor,
-                                  transaction.currency,
-                                ),
-                                note: transaction.userNote ?? "",
-                                tagIds: transaction.tagIds,
-                              })
-                            }
+                            onClick={() => startEditing(transaction)}
                           >
                             Edit
                           </button>

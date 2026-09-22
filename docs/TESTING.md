@@ -115,6 +115,7 @@ you should see.
 | Rename a tag and pick another colour, then save | The row shows the new name once; transactions and rules that use the tag keep it |
 | Add a transaction with payee, note and a tag | It appears in the table with the amount formatted in its currency |
 | Edit the note of a transaction | The change is saved; the revision increases |
+| Double-click the payee (or the note, the tags, the amount) of a row | The row becomes editable with the caret in the cell you double-clicked; **Cancel** returns it to read-only, and the row's **Edit** button still opens the same editor |
 | Open the same transaction in two tabs and save both | The second save reports a revision conflict instead of overwriting |
 | Filter by account, date range, tag, status or free text | The list narrows and the count updates; nothing is filtered in the browser only |
 | Look at the footer of a filtered ledger with more rows than one page | It reads `Showing 1–25 of N transactions` with `Page 1 / x`; **Next** shows the following rows and **Previous** comes back; **Rows per page** switches to 50 or 100 and starts again from page 1 |

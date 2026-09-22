@@ -329,6 +329,55 @@ describe("transactions view", () => {
     expect(calls[0]?.body).toContain('"payee":"Bar Centrale Roma"');
   });
 
+  it("opens a row for editing on a double-click, and keeps the Edit button", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const parsed = new URL(raw, "http://localhost");
+        if (parsed.pathname === "/api/accounts") return json({ items: [account] });
+        if (parsed.pathname === "/api/tags") return json({ items: [tag] });
+        if (parsed.pathname === "/api/transactions") {
+          return json({ items: [transaction], total: 1, limit: 100, offset: 0 });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
+
+    // The hint says the cells are the shortcut, not another control to find.
+    expect(screen.getByText(/Double-click payee, note, tags or amount/)).toBeTruthy();
+
+    // A double-click on the payee opens the whole row and puts the caret there.
+    const payeeCell = screen.getByText("Bar Centrale");
+    fireEvent.doubleClick(payeeCell);
+    const payeeInput = (await screen.findByLabelText(
+      `Payee for ${transaction.id}`,
+    )) as HTMLInputElement;
+    expect(payeeInput.value).toBe("Bar Centrale");
+    expect(document.activeElement).toBe(payeeInput);
+    // The rest of the row is editable in the same pass.
+    expect((screen.getByLabelText("Amount in EUR") as HTMLInputElement).value).toBe("-12,30");
+    expect(screen.getByRole("button", { name: /Edit tags for Bar Centrale/ })).toBeTruthy();
+
+    // Moving to another cell keeps what was typed, it does not reload the row.
+    fireEvent.change(payeeInput, { target: { value: "Bar Centrale Roma" } });
+    fireEvent.doubleClick(screen.getByLabelText("Note for Bar Centrale"));
+    expect(document.activeElement).toBe(screen.getByLabelText(`Note for Bar Centrale`));
+    expect((screen.getByLabelText(`Payee for ${transaction.id}`) as HTMLInputElement).value).toBe(
+      "Bar Centrale Roma",
+    );
+
+    // Cancel returns the read-only row, and the button still opens the editor.
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByLabelText(`Payee for ${transaction.id}`)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(await screen.findByLabelText(`Payee for ${transaction.id}`)).toBeTruthy();
+  });
+
   it("pages through the ledger on the server and starts over when the filters change", async () => {
     const requests: string[] = [];
     const rows = ledgerRows(60);

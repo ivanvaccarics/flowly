@@ -221,14 +221,16 @@ editing — each one opens in a dialog, so the card building a new rule is never
 taken over — and the ledger's filters include quick tag pills. The ledger pages
 through its matching rows on the server — 25 per page by default, 50 or 100
 from the selector — and always says which window it is showing, so a vault with
-thousands of movements is never silently truncated; the dashboard's recent
-transactions do the same ten rows at a time. The dashboard charts weekly cash
-flow and draws spending by tag as a pie chart per currency, so no chart ever
-blends currencies. Accounts can be
-archived and restored, tags can be renamed and recoloured in place, and Settings
-holds the passphrase change plus export and import, after the Enable Banking
-connection. Export comes in three shapes: the single transaction CSV, a plain ZIP
-with one CSV per table (and a manifest) for taking everything elsewhere, and the
+thousands of movements is never silently truncated. A row is edited in place:
+double-click the payee, the note, the tags or the amount, or press the row's
+**Edit** button, and the caret lands in the cell you clicked. The dashboard's
+recent transactions page the same way, ten rows at a time. The dashboard charts
+weekly cash flow and draws spending by tag as a pie chart per currency, so no
+chart ever blends currencies. Accounts can be archived and restored, tags can be
+renamed and recoloured in place, and Settings holds the passphrase change plus
+export and import, after the Enable Banking connection. Export comes in three
+shapes: the single transaction CSV, a plain ZIP with one CSV per table (and a
+manifest) for taking everything elsewhere, and the
 password-encrypted complete archive. Import is additive for a CSV merge and
 replaces the vault for a complete archive, after an explicit confirmation and an
 encrypted safety snapshot. Deleting an account or a tag asks for a cascade and

@@ -1452,6 +1452,23 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0026`.
   on unlock and on archive import, field and value together, and the rewrite
   bumps each rule's revision like any other write.
 
+#### Task `edit-the-ledger-by-double-click`
+
+Status: **complete** (2026-09-22).
+
+- A row in the ledger opens for editing on a double-click of an editable cell —
+  payee, note, tags or amount — as well as on its **Edit** button, which stays
+  as the explicit, keyboard-friendly way in. The editor turns the whole row
+  editable in one pass, exactly as the button always did.
+- The caret lands in the cell that was double-clicked: the drafted field is
+  focused and selected, so a value can be replaced by typing straight away
+  instead of being hunted down in the row.
+- Double-clicking another cell of the row being edited moves the caret there
+  without reloading the row, so a half-typed payee survives a trip through the
+  note; **Cancel** returns the row to its read-only cells.
+- The table card names the shortcut, so the gesture is discoverable rather than
+  hidden.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`
