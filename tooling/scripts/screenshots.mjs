@@ -40,13 +40,16 @@ const SECTIONS = [
     // and the period picker has to be opened before its presets can be clicked.
     openPicker: true,
     prepare: "3 months",
+    // The dashboard opens with its metric cards rather than a section banner.
+    ready: ".kpi-row",
     // Taller than the rest: the metric row, three card rows and the backup
     // strip all belong in one picture of the page.
     height: 2100,
   },
   { file: "accounts.png", nav: "Accounts", title: "Accounts & resources" },
   { file: "transactions.png", nav: "Transactions", title: "Transactions" },
-  { file: "tags.png", nav: "Tags", title: "Tags" },
+  // The tag directory is a workbench of its own, not a banner and an intro.
+  { file: "tags.png", nav: "Tags", title: "Tags", ready: ".tag-workbench" },
   { file: "rules.png", nav: "Rules", title: "Tagging & automation" },
   { file: "settings.png", nav: "Settings", title: "Settings & vault data" },
 ];
@@ -238,11 +241,7 @@ async function main() {
           section.title,
         )})`,
       );
-      await devtools.waitFor(
-        section.openPicker
-          ? "!!document.querySelector('.kpi-row')"
-          : "!!document.querySelector('.section-banner')",
-      );
+      await devtools.waitFor(`!!document.querySelector('${section.ready ?? ".section-banner"}')`);
       if (section.openPicker) {
         await devtools.evaluate(`document.querySelector(".period-trigger").click()`);
         await devtools.waitFor("!!document.querySelector('.period-popover')");

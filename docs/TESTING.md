@@ -113,6 +113,8 @@ you should see.
 | Add an account (name, type, currency) | It appears in the list and in the transaction form's account picker |
 | Add a tag from the colour palette | It appears with that colour and can be selected on transactions |
 | Rename a tag and pick another colour, then save | The row shows the new name once; transactions and rules that use the tag keep it |
+| Look at the **Tag directory** | One row per tag with what applies it and how many movements carry it; **All / Used / Unused**, the search field, the sort and the **Jump to** letters narrow the list, and the footer counts the rows it is showing |
+| Open a tag from the directory (a click on the row, or **Edit**) | The tag opens in a dialog over the page with its name and colour; **Cancel** leaves it untouched, **Save tag** applies the change everywhere the tag is used |
 | Add a transaction with payee, note and a tag | It appears in the table with the amount formatted in its currency |
 | Press **Add transaction** on the ledger | The record form opens in a dialog over the page; saving it closes the dialog and the new movement is at the top of the ledger |
 | Look at the top of any section | A flat banner names what the section is about with its figures, and a headline with the section's action sits under it; the top bar carries the vault's own state, not the section's |
@@ -148,6 +150,7 @@ you should see.
 | Filter the registry to **Active**, then press **Enable all** / **Disable all** | Paused rules disappear from the filtered table; the header action flips every rule and the overview follows |
 | Click a rule row (not its switch or its buttons) | The edit dialog opens for that rule; the row's own switch still only pauses it |
 | Pause a rule, then add a matching transaction | No tag is added |
+| Pause a rule from the registry | The row you clicked is the one that changes, and it stays where it is: the registry is ordered by creation, so nothing jumps to the top under the pointer |
 | Press **Apply rules to existing transactions** | A report shows how many transactions were evaluated and tagged; running it again reports zero changes |
 
 ### Dashboard and search

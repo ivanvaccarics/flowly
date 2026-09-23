@@ -39,10 +39,7 @@ export function UnlockScreen({
   return (
     <div className="unlock-layout">
       <div className="unlock-brand">
-        <span className="brand-tile" aria-hidden="true">
-          <img src="/logo-mark-mono.svg" alt="" width={9} height={17} />
-        </span>
-        <img className="brand-wordmark" src="/logo-wordmark.svg" alt="Flowly" height={19} />
+        <img className="brand-lockup" src="/logo.svg" alt="Flowly" height={34} />
       </div>
 
       <main className="unlock-card" aria-labelledby="shell-title">

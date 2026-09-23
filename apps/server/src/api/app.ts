@@ -368,12 +368,34 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     (context) => context.vault.tags,
     undefined,
     (context, id, revision, cascade) => context.vault.deleteTag(id, revision, { cascade }),
+    // A tag directory needs to say how used each tag is; the count comes from
+    // one pass over the vault rather than one read per tag. The order is by
+    // name, so renaming a tag never moves it to the top of the list.
+    async (context) => {
+      const [tags, usage] = await Promise.all([
+        context.vault.tags.list(),
+        new AnalyticsService(context.vault).tagUsage(),
+      ]);
+      return {
+        items: [...tags]
+          .sort((left, right) => left.name.localeCompare(right.name))
+          .map((tag) => ({ ...tag, usage: usage.get(tag.id) ?? { transactions: 0, rules: 0 } })),
+      };
+    },
   );
   registerCollection(
     app,
     "/api/tagging-rules",
     requireContext,
     (context) => context.vault.taggingRules,
+    undefined,
+    undefined,
+    // The registry keeps its order: `list()` sorts by last write, which made a
+    // paused or edited rule jump to the top under the pointer that clicked it.
+    // Creation order is stable, so the row someone is aiming at stays put.
+    async (context) => ({
+      items: [...(await context.vault.taggingRules.list())].sort(mostRecentFirst),
+    }),
   );
   registerBankingRoutes(app, {
     guard: (request, reply) => {
@@ -766,6 +788,15 @@ function registerCollection<T extends RepositoryEntity>(
     await resolved.repository.delete(id, revision);
     return { deleted: true };
   });
+}
+
+/**
+ * Creation order, newest first. A registry's rows keep their place when one of
+ * them is edited, so the row under the pointer never moves.
+ */
+function mostRecentFirst<T extends { id: string; createdAt: string }>(left: T, right: T): number {
+  const byCreation = right.createdAt.localeCompare(left.createdAt);
+  return byCreation !== 0 ? byCreation : left.id.localeCompare(right.id);
 }
 
 function entityFrom<T>(body: unknown): T | undefined {

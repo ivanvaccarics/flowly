@@ -8,6 +8,16 @@ the chrome; the period scoping of
 checks of [ADR 0028](./0028-every-section-opens-with-a-banner.md) on the five
 other sections stand.
 
+> **Update (2026-09-23, later the same day).** Two corrections from using it.
+> The chrome keeps the **real lockup**: `logo.svg` as it is, gradient tile and
+> all, at 30 px in the sidebar and 34 px on the unlock card — the flat chrome
+> tile and `logo-wordmark.svg` are gone, and `--brand` / `--primary` are
+> `#1e6f4e` again rather than the mockups' `#277b62`, so the product's green is
+> the one the logo is drawn with. The content column also widens from 1240 px to
+> 1560 px: on a wide screen the page read as a centred strip. The warm surfaces,
+> the serif headline, the dashboard's layout and the mockups' semantic accents
+> stand.
+
 ## Context
 
 The interface had grown a cool slate canvas, a tinted sidebar, a gradient tile
@@ -26,11 +36,12 @@ rather than with a sentence about the money.
 
 ## Decision
 
-- **The palette is the mockups' palette.** Warm off-white canvas (`#f7f8f5`),
-warm white cards (`#fffefb`), a hairline `#e1e8e3`, ink `#203032`, and one
-green, `#277b62`, for primary actions, the active navigation pill and the
-filled balance card. Inflows are `#1f7a58`, outflows a muted `#a8515d`, and the
-engine keeps its violet. `docs/DESIGN.md` carries the table.
+- **The palette is the mockups' palette, in Flowly's green.** Warm off-white
+canvas (`#f7f8f5`), warm white cards (`#fffefb`), a hairline `#e1e8e3`, ink
+`#203032`, and the brand green `#1e6f4e` for primary actions, the active
+navigation pill and the filled balance card. Inflows are `#1f7a58`, outflows a
+muted `#a8515d`, and the engine keeps its violet. `docs/DESIGN.md` carries the
+table.
 - **The dashboard opens with a sentence, not a banner.** The date, the hour's
   greeting in the page's serif, one line about what the page shows, and the
   period control — the banner and the intro pair stays on the five other
@@ -51,11 +62,8 @@ engine keeps its violet. `docs/DESIGN.md` carries the table.
   no longer printed, because the active sidebar item and each page's headline
   already name the section. The sidebar's foot holds the session card with the
   two lock controls, which is where a session-level action belongs.
-- **The chrome lockup is flat.** `apps/web/public/logo-wordmark.svg` carries the
-  wordmark alone; the tile is drawn in CSS in flat brand green. The gradient
-  lockup, `logo.svg`, stays the published asset (the README) — the gradient
-  behind the sidebar read as decoration, which is what ADR 0023 asked it never
-  to be.
+- **The chrome wears the Flowly lockup.** `logo.svg` — the gradient tile with the
+  wordmark — is what the sidebar and the unlock card show, at 30 px and 34 px.
 - **The lock screen states the door, not the engine.** The lockup, the hour's
   greeting, a serif **Welcome back.**, the passphrase field with its reveal
   button, the **Unlock vault** action and two trust statements. The storage

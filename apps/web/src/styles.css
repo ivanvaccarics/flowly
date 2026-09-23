@@ -34,22 +34,22 @@
   --text-faint: #74827e;
 
   /* Brand — the lockup in `apps/web/public`: deep green → medium green → gold.
-     `--brand` is also the product's action colour; the chrome tile is painted
-     flat with it, the gradient stays for the lockup asset. */
+     `--brand` is also the product's action colour, so the chrome and the lockup
+     are the same green. */
   --brand-deep: #0b3d2e;
-  --brand: #277b62;
+  --brand: #1e6f4e;
   --brand-gold: #d4af37;
-  --brand-gradient: linear-gradient(120deg, #0b3d2e 0%, #277b62 55%, #d4af37 100%);
-  --brand-shadow: rgba(39, 123, 98, 0.28);
-  --brand-ring: rgba(39, 123, 98, 0.18);
+  --brand-gradient: linear-gradient(120deg, #0b3d2e 0%, #1e6f4e 55%, #d4af37 100%);
+  --brand-shadow: rgba(11, 61, 46, 0.26);
+  --brand-ring: rgba(30, 111, 78, 0.18);
 
   /* Accents */
-  --primary: #277b62;
-  --primary-hover: #1f6a54;
-  --primary-soft: #e4f2eb;
-  --primary-ink: #1d5c48;
-  --primary-soft-border: rgba(39, 123, 98, 0.22);
-  --accent: #277b62;
+  --primary: #1e6f4e;
+  --primary-hover: #17593f;
+  --primary-soft: #e3f1e8;
+  --primary-ink: #17593f;
+  --primary-soft-border: rgba(30, 111, 78, 0.24);
+  --accent: #0b3d2e;
   --income: #1f7a58;
   --income-graphic: #37997a;
   --income-soft: #e4f2eb;
@@ -218,31 +218,8 @@ h3 {
   padding: 0 1.15rem;
 }
 
-/* The chrome tile: flat brand green on the squircle of `logo-mark.svg`, with
-   the keyhole knocked out in white. The tile is drawn in CSS so it follows the
-   tokens; the keyhole comes from `logo-mark-mono.svg` and the wordmark from
-   `logo-wordmark.svg`. */
-.brand-tile {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
+.brand-lockup {
   height: 30px;
-  border-radius: 9px;
-  background: var(--primary);
-  box-shadow: 0 2px 5px var(--brand-shadow);
-  flex: 0 0 auto;
-}
-
-.brand-tile img {
-  /* The keyhole keeps the share of the tile it has in `logo-mark.svg`. */
-  width: auto;
-  height: 17px;
-  display: block;
-}
-
-.brand-wordmark {
-  height: 17px;
   width: auto;
   display: block;
 }
@@ -286,7 +263,7 @@ h3 {
 }
 
 .nav button:hover {
-  background: rgba(39, 123, 98, 0.08);
+  background: rgba(30, 111, 78, 0.08);
   color: var(--text);
 }
 
@@ -325,7 +302,7 @@ h3 {
 }
 
 .user-card:hover {
-  background: rgba(39, 123, 98, 0.06);
+  background: rgba(30, 111, 78, 0.06);
 }
 
 .user-avatar {
@@ -437,7 +414,7 @@ h3 {
 
 .content {
   padding: 2rem var(--gutter) 3.5rem;
-  max-width: 1240px;
+  max-width: 1560px;
   margin: 0 auto;
 }
 
@@ -2211,10 +2188,6 @@ button.legend-row {
   gap: 0.55rem;
 }
 
-.unlock-brand .brand-wordmark {
-  height: 19px;
-}
-
 .unlock-card {
   width: min(520px, 100%);
   background: var(--surface);
@@ -2762,6 +2735,190 @@ button.legend-row {
   color: var(--text-secondary);
 }
 
+/* ------------------------------------------------------------- tag directory */
+
+.tag-workbench {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(0, 1.9fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.tag-directory {
+  gap: 0.9rem;
+}
+
+.directory-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.search-field input {
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  min-width: 11rem;
+}
+
+.search-field input:focus-visible {
+  outline: none;
+}
+
+.search-field:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.directory-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.jump-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.jump-strip .eyebrow {
+  margin: 0 0.35rem 0 0;
+}
+
+.jump-letter {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jump-letter:hover {
+  background: var(--surface-low);
+  color: var(--text);
+}
+
+.jump-letter.active {
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
+
+/* The "#" tile that opens a tag row. */
+.tag-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  color: #fff;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.usage-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.usage-pill.idle {
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+}
+
+.confirm-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--expense-graphic);
+  flex: 0 0 auto;
+}
+
+.tag-notes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.tag-notes p {
+  margin: 0.4rem 0 0;
+}
+
+.tag-notes code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* The name field wears its "#" the way the directory shows a tag. */
+.name-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-left: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.name-field-prefix {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.name-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.name-field input:focus-visible {
+  outline: none;
+}
+
+.name-field:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.stack-form {
+  display: grid;
+  gap: 1.1rem;
+}
+
 .backup-banner p {
   margin: 0;
   display: flex;
@@ -3239,6 +3396,14 @@ button.legend-row {
 
 @media (max-width: 1199px) {
   .dash {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-notes {
     grid-template-columns: 1fr;
   }
 

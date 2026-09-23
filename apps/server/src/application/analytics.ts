@@ -84,6 +84,12 @@ export interface TagSpending {
   transactionCount: number;
 }
 
+/** How much of the vault leans on a tag: movements that carry it, rules that apply it. */
+export interface TagUsage {
+  transactions: number;
+  rules: number;
+}
+
 export interface CashFlowBucket {
   currency: string;
   label: string;
@@ -343,6 +349,31 @@ export class AnalyticsService {
   async spendingByTag(range: DateRange): Promise<TagSpending[]> {
     const [tags, transactions] = await Promise.all([this.vault.tags.list(), this.inRange(range)]);
     return this.spendingOf(transactions, tags);
+  }
+
+  /**
+   * Usage per tag, keyed by tag id: every movement that carries the tag (booked
+   * or pending, any period) and every rule that applies it. The tag directory
+   * reads this once instead of asking the ledger about each tag in turn.
+   */
+  async tagUsage(): Promise<Map<string, TagUsage>> {
+    const [transactions, rules] = await Promise.all([
+      this.vault.transactions.list(),
+      this.vault.taggingRules.list(),
+    ]);
+    const usage = new Map<string, TagUsage>();
+    const of = (tagId: string): TagUsage => {
+      const entry = usage.get(tagId) ?? { transactions: 0, rules: 0 };
+      usage.set(tagId, entry);
+      return entry;
+    };
+    for (const transaction of transactions) {
+      for (const tagId of new Set(transaction.tagIds)) of(tagId).transactions += 1;
+    }
+    for (const rule of rules) {
+      for (const tagId of new Set(rule.tagIds)) of(tagId).rules += 1;
+    }
+    return usage;
   }
 
   private spendingOf(

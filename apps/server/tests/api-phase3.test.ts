@@ -439,4 +439,103 @@ describe("data portability API", () => {
       await targetHarness.close();
     }
   });
+
+  it("keeps a rule in its place when it is paused", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    const ids = [
+      "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7081",
+      "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7082",
+      "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7083",
+    ];
+    try {
+      for (const [index, id] of ids.entries()) {
+        const createdAt = `2026-09-0${index + 1}T08:00:00.000Z`;
+        await call(harness.app, harness.client, {
+          method: "POST",
+          url: "/api/tagging-rules",
+          payload: {
+            entity: sampleRule({ id, name: `Rule ${index + 1}`, createdAt, updatedAt: createdAt }),
+          },
+        });
+      }
+
+      const list = () =>
+        call(harness.app, harness.client, { method: "GET", url: "/api/tagging-rules" }).then(
+          (response) =>
+            response.json<{
+              items: Array<{ id: string; revision: number; enabled: boolean }>;
+            }>().items,
+        );
+
+      // Newest first, and the same order after a write: a pause is not a move.
+      const before = await list();
+      expect(before.map((rule) => rule.id)).toEqual([...ids].reverse());
+
+      const second = before[1]!;
+      await call(harness.app, harness.client, {
+        method: "PUT",
+        url: `/api/tagging-rules/${second.id}`,
+        // The whole record, exactly as the registry holds it: a client that
+        // invented a `createdAt` would be chasing its own list order.
+        payload: { entity: { ...second, enabled: false } },
+      });
+
+      const after = await list();
+      expect(after.map((rule) => rule.id)).toEqual(before.map((rule) => rule.id));
+      expect(after[1]?.enabled).toBe(false);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("counts what each tag is used by", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    try {
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/accounts",
+        payload: { entity: SAMPLE_ACCOUNT },
+      });
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/tags",
+        payload: { entity: SAMPLE_TAG },
+      });
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/tagging-rules",
+        payload: { entity: sampleRule() },
+      });
+      const movements: Array<[string, string]> = [
+        ["018f2c1e-6d5b-7c3a-9f2e-7c4d5e6f7001", "2026-09-03"],
+        ["018f2c1e-6d5b-7c3a-9f2e-7c4d5e6f7002", "2026-09-04"],
+      ];
+      for (const [id, bookingDate] of movements) {
+        const created = await call(harness.app, harness.client, {
+          method: "POST",
+          url: "/api/transactions",
+          payload: {
+            entity: sampleTransaction({
+              id,
+              bookingDate,
+              userNote: "lunch",
+              tagIds: [SAMPLE_TAG.id],
+            }),
+          },
+        });
+        expect(created.statusCode, created.body).toBe(201);
+      }
+
+      const tags = await call(harness.app, harness.client, { method: "GET", url: "/api/tags" });
+      const items = tags.json<{
+        items: Array<{ id: string; usage: { transactions: number; rules: number } }>;
+      }>().items;
+      expect(items).toHaveLength(1);
+      expect(items[0]?.usage).toEqual({ transactions: 2, rules: 1 });
+    } finally {
+      await harness.close();
+    }
+  });
 });

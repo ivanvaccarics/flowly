@@ -6,9 +6,8 @@ The icon list below is superseded in part by
 [ADR 0032](./0032-flowly-targets-the-desktop-only.md): the iOS touch icon was
 removed with the mobile target, so the assets are SVG only.
 
-The chrome now paints the lockup flat — a solid brand-green tile and
-`logo-wordmark.svg` in ink — while the gradient lockup below stays the published
-asset: [ADR 0037](./0037-the-web-ui-is-flat-warm-and-green.md).
+The chrome was repainted flat for part of 2026-09-23 and wears this lockup
+again, gradient included: [ADR 0037](./0037-the-web-ui-is-flat-warm-and-green.md).
 
 Supersedes the brand and accent-colour decisions of
 [ADR 0021](./0021-slate-and-teal-ui-with-dashboard-pie-chart.md) and the tag

@@ -1707,6 +1707,38 @@ Status: **complete** (2026-09-23), decision in `docs/adr/0037`.
   controls, the web tests track the new copy, and the six README screenshots were
   regenerated.
 
+#### Task `keep-the-flowly-lockup-and-rebuild-the-tag-directory`
+
+Status: **complete** (2026-09-23), corrections to `docs/adr/0037`.
+
+- The chrome wears the product's own lockup again: `logo.svg` — gradient tile
+  and wordmark — at 30 px in the sidebar and 34 px on the unlock card, and
+  `--brand`/`--primary` are `#1e6f4e` rather than the mockups' `#277b62`, so
+  nothing in the interface disagrees with the logo. The flat chrome tile and
+  `logo-wordmark.svg` are gone; the warm surfaces, the serif headline and the
+  mockups' semantic accents stay.
+- The content column widens from 1240 px to 1560 px: on a wide screen the page
+  read as a centred strip with two empty margins.
+- The tags page follows its own mockup: the serif headline with **New tag**
+  beside it, then a workbench of two cards — **New tag** (name field wearing its
+  `#`, the colour picker, the live preview) and **Tag directory**.
+- The directory carries a search field, a sort (most used, name, newest),
+  **All / Used / Unused** tabs, a **Jump to** strip of the letters in use, a
+  table of tag, what applies it and how many movements carry it, a pager eight
+  rows at a time, and three notes underneath (a taxonomy tip, the unused tags,
+  and the case-insensitive matching). A row opens the tag in a dialog; **Edit**
+  and the confirmed cascade **delete** sit beside it.
+- The tag listing now carries that usage. `AnalyticsService.tagUsage()` counts,
+  in one pass over the vault, the movements that carry each tag (a set, so a
+  tag never counts twice on one row) and the rules that apply it; `GET /api/tags`
+  returns it as `usage` on each item, sorted by name. It is computed per read
+  and never stored, so a tag is written back as the plain entity.
+- The tagging-rule registry keeps its order. `GET /api/tagging-rules` returns
+  the rules newest-created first instead of newest-updated first, because the
+  store orders by `updated_at`: pausing or editing a rule used to move it to the
+  top under the pointer that clicked it, so the row that changed was never the
+  row that was clicked. Two API tests cover the order and the usage counts.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`

@@ -52,8 +52,8 @@ income, expenses and net, and rows that open for editing with one click.
 
 ![Transactions](docs/images/transactions.png)
 
-**Tags** — the taxonomy rules and filters work with, colour-coded and renamed in
-place.
+**Tags** — the taxonomy rules and filters work with: a directory that says how
+many movements carry each tag and which rules apply it.
 
 ![Tags](docs/images/tags.png)
 

@@ -26,21 +26,19 @@ with the rounded `Flowly` wordmark. Everything is SVG, served from
 | Colour | Value | Where it lands |
 | --- | --- | --- |
 | Deep green | `#0b3d2e` | The dark end of every gradient: the tile's top-left, the stem of the `F`, the browser theme colour |
-| Brand green | `#277b62` | The middle stop of the gradient, the flat chrome tile, primary actions, the filled balance card, the default tag colour |
+| Brand green | `#1e6f4e` | The middle stop of the gradient, primary actions, the filled balance card, the default tag colour |
 | Gold | `#d4af37` | The bright end: the tile's bottom-right, the tail of the `y`, gold tags — never text |
 
 The gradient runs deep green → brand green → gold: left to right in the
-wordmark, top-left to bottom-right in the tile. It stays in the lockup asset;
-the application chrome paints the same geometry flat — a solid brand-green tile
-and the wordmark in ink — because a gradient behind the sidebar reads as
-decoration.
+wordmark, top-left to bottom-right in the tile. The chrome wears that same
+lockup — `logo.svg`, the gradient tile with the wordmark — so the product looks
+like Flowly wherever it appears.
 
 | Asset | Use |
 | --- | --- |
-| `logo.svg` | Horizontal lockup with the gradient — tile plus wordmark; the README and anything published outside the app |
-| `logo-wordmark.svg` | The wordmark alone in ink, for the chrome's flat lockup |
+| `logo.svg` | Horizontal lockup — tile plus wordmark; the sidebar, the unlock card and the README |
 | `logo-mark.svg` | The tile alone on a transparent square, for light or dark surfaces |
-| `logo-mark-mono.svg` | The keyhole alone in white, for dark or tinted surfaces; the chrome tile |
+| `logo-mark-mono.svg` | The keyhole alone in white, for dark or tinted surfaces; the session card's avatar |
 | `favicon.svg` | The tile with a little air around it; browser tab |
 
 The tile is painted through a mask (the tile's two traced halves minus the
@@ -49,10 +47,8 @@ the halves meet. The wordmark ships as outlines, not as live text: it keeps its
 rounded shape with no webfont, which is what a private network without a CDN
 needs. The lockup carries no tagline; the unlock card states it as the lead
 paragraph, where a screen reader reads it once, and every asset is labelled
-simply "Flowly". The chrome draws its own tile in CSS — `.brand-tile`, a 9 px
-radius on 30 px filled with `--primary` — and knocks `logo-mark-mono.svg` into
-it at the share of the tile the mark uses (17 px of 30 px), next to
-`logo-wordmark.svg` at the same height.
+simply "Flowly". The chrome places the lockup at 30 px tall — the tile lands at
+the 30 px the sidebar keeps for it — and the unlock card at 34 px.
 
 ## Tokens
 
@@ -69,12 +65,12 @@ blue and violet accents.
 | `--surface-sunken` / `--surface-high` | `#eef2ee` / `#e4eae4` | Control tracks, hover states, table hairlines |
 | `--border` / `--border-strong` | `#e1e8e3` / `#cfdad3` | Card outlines, row dividers, dashed dropzones |
 | `--text` / `--text-secondary` / `--text-muted` / `--text-faint` | `#203032` / `#46585a` / `#667571` / `#74827e` | Headlines and figures, body, metadata, the date eyebrow |
-| `--brand-deep` / `--brand` / `--brand-gold` | `#0b3d2e` / `#277b62` / `#d4af37` | The brand palette: the lockup gradient, the default tag colour, anything that has to read as Flowly |
-| `--brand-gradient` | `#0b3d2e → #277b62 (55 %) → #d4af37` at 120° | The published lockup and the import progress bar — never across the chrome |
-| `--brand-shadow` / `--brand-ring` | `rgba(39, 123, 98, 0.28)` / `rgba(39, 123, 98, 0.18)` | The lift under the chrome tile and primary buttons / focus halos |
-| `--primary` / `--primary-hover` | `#277b62` / `#1f6a54` | Primary actions, the filled balance card, the active navigation pill, the on-state of a switch |
-| `--primary-soft` / `--primary-ink` | `#e4f2eb` / `#1d5c48` | The active navigation pill, chips, icon tiles, tag pills |
-| `--accent` | `#277b62` | Active navigation icon and the dot that ends the active item |
+| `--brand-deep` / `--brand` / `--brand-gold` | `#0b3d2e` / `#1e6f4e` / `#d4af37` | The brand palette: the lockup gradient, the default tag colour, anything that has to read as Flowly |
+| `--brand-gradient` | `#0b3d2e → #1e6f4e (55 %) → #d4af37` at 120° | The lockup and the import progress bar — never behind text |
+| `--brand-shadow` / `--brand-ring` | `rgba(11, 61, 46, 0.26)` / `rgba(30, 111, 78, 0.18)` | The lift under primary buttons / focus halos |
+| `--primary` / `--primary-hover` | `#1e6f4e` / `#17593f` | Primary actions, the filled balance card, the active navigation pill, the on-state of a switch |
+| `--primary-soft` / `--primary-ink` | `#e3f1e8` / `#17593f` | The active navigation pill, chips, icon tiles, tag pills |
+| `--accent` | `#0b3d2e` | Active navigation icon and the dot that ends the active item |
 | `--income` / `--income-graphic` / `--income-soft` | `#1f7a58` / `#37997a` / `#e4f2eb` | Inflow text / chart bars and dots / chips and tiles |
 | `--expense` / `--expense-graphic` / `--expense-soft` | `#a8515d` / `#cf7280` / `#f8e9eb` | Outflow text / chart bars / chips and destructive buttons |
 | `--info` / `--info-graphic` / `--info-soft` | `#6a5fa0` / `#8d81c9` / `#eeebf7` | Engine-level banners and chips |
@@ -122,7 +118,7 @@ same on every machine.
 ## Layout
 
 - Fixed 218 px sidebar in the canvas colour, separated from the content by a
-  hairline: the flat lockup, the **Your vault** label and the six sections, then
+  hairline: the Flowly lockup, the **Your vault** label and the six sections, then
   the session card at the foot — the vault's own name, its state in words, and
   the two session controls as icon buttons (**Lock session**, **Lock all**).
   The active section is a soft-green pill with a brand-green icon and a dot at
@@ -133,7 +129,7 @@ same on every machine.
   **Backup vault**, which deep-links into Settings' export block and focuses it.
   The page's `h1` is read, not printed: the active sidebar item and the page's
   own headline name the section on screen.
-- Content column capped at 1240 px with 40 px gutters; cards carry 24 px internal
+- Content column capped at 1560 px with 40 px gutters; cards carry 24 px internal
   padding and a 20 px gap inside a grid. The dashboard's own grid is three
   columns: the chart and the recent movements take two, the bank card and the
   spending donut take one, and the accounts summary spans the row.
@@ -240,6 +236,18 @@ same on every machine.
   `info`, `neutral`); `meta` and `mono` variants cover uppercase and hashed data.
 - **Tag pill:** pill tinted with the tag's own colour — a 12 % background tint of
   it and a text colour mixed toward `--text` so contrast holds.
+- **Tag directory:** the tags page as a workbench of two cards — **New tag** on
+  the left (the name field wears its `#`, the colour picker sits under its
+  label, and the preview pill follows the name as it is typed) and **Tag
+  directory** on the right. The directory carries a search field, a sort
+  (most used, name, newest), **All / Used / Unused** tabs, a **Jump to** strip
+  of the first letters the vault actually uses, and a table of tag (`#` tile in
+  the tag's own colour), what applies it (how many rules) and its usage (a pill
+  with the number of movements carrying it). A row opens the tag in a dialog —
+  name and colour, **Save tag** — and the two icon buttons beside it do the same
+  and ask before deleting. The footer counts `1–6 of 6` and pages eight at a
+  time; under the table sit three notes: a taxonomy tip, how many tags no
+  movement uses, and how matching is case-insensitive.
 - **Colour picker:** eight palette swatches — Flowly green and gold, then blue,
   violet, emerald, amber, red and slate — each a 30 px rounded tile in a white
   tray, rendered as a radiogroup; the selection carries a white check and an
@@ -274,7 +282,7 @@ Only shipping functionality is on screen; every figure comes from the API.
 | Dashboard | The date and the greeting, one sentence about the page, and the **period picker** (compact trigger plus calendar button; the preset segments, the year strip, the month grid and the selected months as removable chips with **All &lt;year&gt;**, **Clear** and the count open over the page); a **metric row per currency** — the filled balance card with the period's net flow and the savings rate, then what was spent and what came in, each with its delta against the previous equal-length period; an **interactive** cash-flow chart (income/expense bars with a net line, inline SVG) whose hovered month is lit, guided and read out in a tooltip, one keyboard stop walked with the arrow keys, and clickable to open that month in the ledger; the spending breakdown as **one donut per currency**, every tag of the period always drawn, with a legend row per category (colour, amount, share) that opens the ledger filtered to that tag; the recent movements as a paged list (ten rows at a time on the server, with the window and its own Previous/Next); the bank sync card (last sync, **Sync now**, reconnect warnings); the accounts summary; and the backup strip with the **Export data** deep link |
 | Accounts | Green banner with the account count and the booked balance per currency, the headline with the currency chip, the create form, and one card per account with its real balance per currency and booked-movement count, archive, restore an archived account, and cascade delete |
 | Transactions | Green banner naming the encrypted ledger with this month's income, expenses and net, the headline with **Add transaction** (the record form opens in a dialog over the page, with the tag picker and the tagging-rules note), and one ledger card holding the server-side filters (text, account, tag, status, date range), the **View** pills (all movements, then one pill per tag in its own colour), the table — a row opens the movement in the same dialog with one **click** on a cell or on the row's **Edit** button, with account, booking date, amount, payee, note, status and tags — a status chip that switches booked ↔ pending, the source as an offline-AES chip, a **Raw** toggle per row that opens the provider record behind it (the stored fields and the bank's own fields side by side, flattened one per row, with the exact JSON one click away) and delete — and the pager footer |
-| Tags | Violet banner with the tag count, the headline, create with a palette colour or a free colour from the browser picker, **inline rename and recolour** of an existing tag, and cascade delete |
+| Tags | The serif headline with **New tag** beside it, then the workbench: **New tag** (name with its `#`, the palette or a free colour from the browser picker, a live preview) on the left and the **Tag directory** on the right — search, sort (most used, name, newest), All / Used / Unused, the **Jump to** letters, and one row per tag with what applies it and how many movements carry it, opening the editor dialog on a click with **Edit** and the confirmed cascade **delete** beside it, paged eight at a time — over three notes: a taxonomy tip, the unused tags, and the case-insensitive matching |
 | Rules | Violet engine banner (engine name, zero-knowledge chip, what the engine reads, the evaluated-transaction figure and the active-rule chip), then the section headline with the **New rule** shortcut. The **composer** holds the condition builder (rule name and AND/OR logic side by side, numbered condition rows with per-field operators and the amount currency, a dashed **Add condition**, and the tags as toggle pills) over a footer with **Reset**, **Simulate on 100 tx** and **Save rule**; a **live evaluation** line under the form reports what the draft currently matches, read from the server without saving anything. The **overview** column carries automation metrics — total matches, the share of the ledger covered, a stacked bar and legend per tag the rules apply, the rule count and the engine's on/off state — and the **registry** is a full-width table of every rule (name and state, the matched expression, its tags, its match count, an on/off switch, edit and delete) with All/Active filters, an enable/disable-all action and the backfill button. **Edit** opens the same composer fields in a dialog over the page and saving replaces that rule's conditions while keeping its id, state and order; the composer behind keeps its own draft, untouched by the edit, and a click anywhere on a registry row opens the same dialog |
 | Settings | Slate banner with the cipher and zero-cloud chips and the headline, then Enable Banking first, split into three cards: the application (facts plus a callback-URL block that compares itself with the address in use, with the rest of the settings and the disconnect action behind disclosures), the guided bank picker (country and account type with **Load available banks** under them, the search, the sandbox credentials), and the linked banks with their status, per-account mapping, the balance the bank reports with the type it came from, Sync now and Unlink. The picker and the pending-authorization panel take turns: while a consent waits, the card shows only the panel — approve in the bank window, or **Delete** the request — and the picker returns the moment the connection lands. A **Next** banner on the first card always names the action left to take. The passphrase change and the paired export and import option cards (transaction CSV, every table as a plain ZIP, complete encrypted archive, CSV preview and merge, archive replacement) follow |
 

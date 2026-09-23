@@ -1,4 +1,4 @@
-import type { Dashboard, TaggingRule, Transaction, VaultStatus } from "@flowly/web-contracts";
+import type { Dashboard, Tag, TaggingRule, Transaction, VaultStatus } from "@flowly/web-contracts";
 
 function queryString(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams();
@@ -24,6 +24,20 @@ export class ApiError extends Error {
 
 export interface Session {
   csrf: string;
+}
+
+/** What the vault says leans on a tag: movements that carry it, rules that apply it. */
+export interface TagUsage {
+  transactions: number;
+  rules: number;
+}
+
+/**
+ * The tag listing adds `usage`, which the server computes from the vault on
+ * every read. It is never stored, so a tag is written back as the plain entity.
+ */
+export interface DirectoryTag extends Tag {
+  usage: TagUsage;
 }
 
 /** What the stored rules cover, as the engine reads them right now. */

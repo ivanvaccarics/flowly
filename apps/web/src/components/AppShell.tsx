@@ -87,10 +87,7 @@ export function AppShell({
       <aside className="sidebar">
         <div>
           <div className="brand">
-            <span className="brand-tile" aria-hidden="true">
-              <img src="/logo-mark-mono.svg" alt="" width={9} height={17} />
-            </span>
-            <img className="brand-wordmark" src="/logo-wordmark.svg" alt="Flowly" height={17} />
+            <img className="brand-lockup" src="/logo.svg" alt="Flowly" height={30} />
           </div>
           <p className="eyebrow sidebar-label">Your vault</p>
           <nav className="nav" aria-label="Sections">
