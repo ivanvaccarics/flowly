@@ -2,7 +2,11 @@
 
 Status: Accepted (2026-09-22). The breakdown's shape below is superseded by
 [ADR 0034](./0034-the-spending-breakdown-stays-a-donut.md): the per-category
-list is the donut's legend, not a set of bars.
+list is the donut's legend, not a set of bars. The **tag scoping** decided here
+is superseded by
+[ADR 0035](./0035-the-dashboard-is-scoped-by-the-period-alone.md): the month
+set, the monthly chart and the `months` scope of the endpoint stand, the tag
+filter does not.
 
 ## Context
 

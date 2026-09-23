@@ -184,8 +184,14 @@ describe("Flowly web client", () => {
     }
     await waitFor(() => expect(screen.getAllByText("Rent").length).toBeGreaterThan(0));
     expect(screen.getByRole("img", { name: /Income and expenses per week/ })).toBeTruthy();
-    // The legend carries the tag filter, so the dashboard can be narrowed.
-    expect(screen.getByRole("checkbox", { name: "Include Rent" })).toBeTruthy();
+    // The dashboard is scoped by the period; a tag is a legend row, not a filter.
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.getByRole("button", { name: "Show Rent in the ledger" })).toBeTruthy();
+    // The shell keeps the state out of chrome: no vault badge, id or footer card.
+    for (const label of ["Vault unlocked", "Encrypted at rest", "AES-256"]) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByTitle(/Vault identifier/)).toBeNull();
   });
 
   it("draws one donut per currency, never adding unlike ones", async () => {
@@ -228,11 +234,9 @@ describe("Flowly web client", () => {
     expect(screen.getByText("75,0%")).toBeTruthy();
     expect(screen.getByText("25,0%")).toBeTruthy();
     for (const tag of ["Rent", "Groceries", "Travel"]) {
-      expect(screen.getByRole("checkbox", { name: `Include ${tag}` })).toBeTruthy();
+      expect(screen.getByRole("button", { name: `Show ${tag} in the ledger` })).toBeTruthy();
     }
-    expect(
-      screen.getByText("3 of 3 tags included · untick a category to leave it out of every figure"),
-    ).toBeTruthy();
+    expect(screen.getByText("Every category of the period is included · 3 tags")).toBeTruthy();
   });
 
   it("resumes an open vault from its session cookie instead of asking again", async () => {

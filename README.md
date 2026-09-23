@@ -132,14 +132,13 @@ and the latest movements, ten at a time, with **Previous** and **Next** when the
 vault has more — all computed on your self-hosted server, without an Internet
 dependency. Totals always carry their currency, and only booked transactions
 move a balance. **Pick the months you care about** — a preset, a year strip, or
-any combination of months as removable chips — and the whole page follows.
-**Untick categories** in the spending donut's legend to ask "what if I ignore
-the rent?": the donut redraws for the tags you left ticked, every figure, the
-chart and the recent movements recompute, and an unticked category stays in the
-legend so you can bring it back.
+any combination of months as removable chips — and the whole page follows: the
+KPI row, the cash-flow chart, the spending donut and the recent movements all
+describe **every category** of exactly those months, with nothing to switch off
+before the figures add up.
 The cash-flow chart is meant to be touched: each month lights up under the
 pointer or the arrow keys and reads out its income, expenses and net, and each
-category row opens the ledger filtered to that tag.
+category row of the donut opens the ledger filtered to its tag.
 
 ### 🔎 Search that actually finds it
 Filter by date range, account, tag, amount, currency, status or source — and
@@ -260,8 +259,8 @@ Flowly brand palette — deep green `#0b3d2e`, medium green `#1e6f4e`, gold
 `#d4af37` — for the mark, the product's own actions and the default tag colour.
 It has one sidebar and six sections: **Dashboard**, **Accounts**,
 **Transactions**, **Tags**, **Rules** and **Settings**. The top bar carries the
-section title over a breadcrumb naming its family, the vault state, the local
-clock and the session controls. Every section opens the same way: a tinted
+section title over a breadcrumb naming its family, the local clock and the
+session controls. Every section opens the same way: a tinted
 banner — green for the money itself, violet for the automation around it, slate
 for the vault — with the figures that matter, and a headline with the one action
 that section is for.
@@ -277,9 +276,9 @@ movement is corrected in a dialog too: click the date, the payee, the note, the
 tags or the amount, or press the row's **Edit** button, and the same form the
 composer uses opens with everything prefilled. The dashboard's recent
 transactions page the same way, ten rows at a time. The dashboard scopes every
-figure to the months and the categories you select, charts cash flow month by
-month and draws spending as a donut per currency whose legend switches
-categories in and out, so no total ever blends currencies. Accounts can be
+figure to the months you select — all of it, categories included — charts cash
+flow month by month and draws spending as a donut per currency, so no total ever
+blends currencies. Accounts can be
 archived and restored, tags can be
 renamed and recoloured in place, and Settings holds the passphrase change plus
 export and import, after the Enable Banking connection. Export comes in three

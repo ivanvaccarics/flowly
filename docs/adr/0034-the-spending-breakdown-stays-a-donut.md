@@ -1,7 +1,10 @@
 # ADR 0034 — The spending breakdown stays a donut, and its legend is the tag filter
 
 Status: Accepted (2026-09-22). Supersedes the shape decided in
-[ADR 0033](./0033-the-dashboard-is-scoped-by-months-and-tags.md).
+[ADR 0033](./0033-the-dashboard-is-scoped-by-months-and-tags.md). The donut
+stands; the checkbox legend decided below is superseded by
+[ADR 0035](./0035-the-dashboard-is-scoped-by-the-period-alone.md), which makes
+the legend a read-out again.
 
 ## Context
 

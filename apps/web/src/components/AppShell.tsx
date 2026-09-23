@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { VaultStatus } from "@flowly/web-contracts";
 import { Icon, type IconName } from "./icons.js";
 import { Banner } from "./ui.js";
 import { AccountsView } from "../views/AccountsView.js";
@@ -78,7 +77,6 @@ function useLocalTime(): string {
 
 export interface AppShellProps {
   csrf: string;
-  status: VaultStatus | undefined;
   busy: boolean;
   error: string | undefined;
   onLock: (scope: "current" | "all") => Promise<void>;
@@ -88,7 +86,6 @@ export interface AppShellProps {
 
 export function AppShell({
   csrf,
-  status,
   busy,
   error,
   onLock,
@@ -102,7 +99,6 @@ export function AppShell({
   // about instead of the top of the page. Export is reached from the dashboard
   // hero and the navigation; the top bar keeps only the session controls.
   const [anchor, setAnchor] = useState<string | undefined>(undefined);
-  const vaultId = status?.vaultId ?? null;
   const section = NAVIGATION.find((entry) => entry.key === view) ?? NAVIGATION[0]!;
   const localTime = useLocalTime();
 
@@ -148,20 +144,6 @@ export function AppShell({
             ))}
           </nav>
         </div>
-        <div className="sidebar-footer">
-          <div className="vault-card">
-            <span className="avatar">
-              <Icon name="shield" size={18} />
-            </span>
-            <span className="stack" style={{ flex: 1 }}>
-              <strong>Local vault</strong>
-              <span className="sub">Encrypted at rest</span>
-            </span>
-            <span title="No cloud connection">
-              <Icon name="check" size={16} />
-            </span>
-          </div>
-        </div>
       </aside>
 
       <header className="topbar">
@@ -171,18 +153,6 @@ export function AppShell({
             <h1 className="topbar-title" id={`${section.key}-title`}>
               {section.title}
             </h1>
-          </div>
-          <div className="topbar-status">
-            <span className="status-pill" title="Encrypted vault, unlocked for this session">
-              <span className="pulse" />
-              <strong>Vault unlocked</strong>
-              <span className="badge">AES-256</span>
-            </span>
-            {vaultId ? (
-              <span className="chip mono neutral" title={`Vault identifier ${vaultId}`}>
-                {vaultId.slice(0, 13)}
-              </span>
-            ) : null}
           </div>
         </div>
 

@@ -297,14 +297,15 @@ Ledger*, re-tokened from the redrawn `ui/*` mockups and summarized in
 `docs/DESIGN.md` — with one sidebar shell and six sections: Dashboard, Accounts,
 Transactions, Tags, Rules and Settings. Settings opens with the Enable Banking
 connection and then carries the passphrase change plus export and import. The
-shell's top bar carries the section title, the vault state and the session
-controls; cards are white with a hairline outline over a slate canvas, tinted
+shell's top bar carries the section title, the clock and the session controls,
+and the sidebar is the brand and the six sections; cards are white with a
+hairline outline over a slate canvas, tinted
 panels carry nested controls, and the dashboard charts cash flow per month and
-spending as a donut per currency. The dashboard is scoped by the
-months and the categories the reader selects: a preset, a year strip or any
-combination of months as removable chips pick the period, and switching a
-category off recomputes the totals, the chart and the recent movements for the
-tags left on while the categories themselves stay visible. The transactions ledger reads its
+spending as a donut per currency. The dashboard is scoped by the period the
+reader picks — a preset, a year strip or any combination of months as removable
+chips — and by nothing else: the figures, the chart and the recent movements
+describe every category of those months, and a legend row opens the ledger on
+its tag. The transactions ledger reads its
 rows from the server one page at a time — 25 by default, with a page-size
 selector, the visible range and Previous/Next — so a vault with thousands of
 movements is browsable instead of truncated. Only implemented features are
@@ -1409,8 +1410,9 @@ Status: **complete** (2026-09-20).
   out of the way when everything fits on one page.
 - The dashboard no longer repeats the shell's vault status: the **Local vault
   status** card was showing the vault id, the last unlock and the encryption
-  state that the sidebar and the top bar already carry, in the middle of a
-  financial summary.
+  state in the middle of a financial summary. The shell has since dropped its
+  own copies of them too (see `keep-the-dashboard-figures-whole`), so no figure
+  of the vault's internals competes with the money.
 
 #### Task `interactive-dashboard-charts`
 
@@ -1563,19 +1565,38 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0033`.
   months, so a scattered selection never pulls in the months between.
 - The chart buckets by month for a month set — one bucket per selected month and
   currency, empty months included — instead of the old fixed week.
-- The spending breakdown is a **donut per currency whose legend is the tag
-  filter**: a checkbox per category, every tag of the period always listed, an
-  unticked one dimmed but never hidden. Unticking a category redraws the donut
-  for the tags left ticked and recomputes the totals, the chart and the recent
-  movements; **Include all** (or ticking it again) brings it back. Tags are
-  excluded, not included, so anything new is part of the picture by default.
-- Balances stay the account balances — a balance of one tag is not money — while
-  income, expenses, net flow, the chart, the recent movements and the ledger link
-  follow the selection; the ledger search accepts the same `months` and `tags`,
-  so its rows are the ones the figures came from.
+- The spending breakdown is a **donut per currency**, one arc per tag of the
+  period with the total in the hole. The legend was built as a checkbox filter;
+  `keep-the-dashboard-figures-whole` turned it back into a read-out, so the
+  dashboard has a single scope.
+- Balances stay the account balances — a balance of one tag is not money — and
+  income, expenses, net flow, the chart and the recent movements describe every
+  tag of the selected months.
 - The KPI row, the filter bar, the donut and its legend and the recent table
   follow the redrawn dashboard; the scoping decision is `docs/adr/0033`, and the
   donut's return as the breakdown's shape is `docs/adr/0034`.
+
+#### Task `keep-the-dashboard-figures-whole`
+
+Status: **complete** (2026-09-23), decision in `docs/adr/0035`.
+
+- The dashboard's only scope is its **period**: the months the reader picks stay
+  the whole of the filtering, and every figure, the chart, the donut and the
+  recent movements describe every category of those months. A tag is no longer
+  something to switch off, so `GET /api/dashboard` is called with `months` alone
+  and the ledger search behind the recent card carries no `tags` either.
+- The spending legend is a **read-out**: colour, name, amount and share per tag,
+  with the row itself opening the ledger on that tag. There is no checkbox, no
+  **Include all** and no dimmed row — a figure the reader had to reassemble from
+  ticks was answering "what if I ignore the rent?" rather than the question the
+  page is for.
+- The shell lost the chrome that repeated the vault's internals: the top bar's
+  **Vault unlocked** pill (`AES-256` badge) and the short vault id are gone, and
+  so is the sidebar's **Local vault · Encrypted at rest** card. The top bar
+  keeps the section title, the clock and the session controls; what the vault is
+  and how it is encrypted stays on the unlock screen and in Settings.
+- `GET /api/dashboard` still accepts `tags` for other clients — the endpoint is
+  unchanged — but the web client never sends it.
 
 #### Task `restyle-the-rules-page-and-count-what-rules-cover`
 

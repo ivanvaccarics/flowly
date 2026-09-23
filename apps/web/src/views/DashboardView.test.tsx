@@ -224,7 +224,7 @@ describe("dashboard charts", () => {
     });
   });
 
-  it("filters every figure by the categories the reader leaves selected", async () => {
+  it("scopes every figure by the period only, never by a tag subset", async () => {
     const queries: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -249,45 +249,21 @@ describe("dashboard charts", () => {
     );
     renderDashboard();
 
-    // Every category starts ticked: the reads ask for the months only.
-    const rent = await screen.findByRole("checkbox", { name: "Include Rent" });
-    expect((rent as HTMLInputElement).checked).toBe(true);
+    // The period is the only scope: no read ever narrows the dashboard by tag.
+    await waitFor(() =>
+      expect(screen.getByText("Every category of the period is included · 2 tags")).toBeTruthy(),
+    );
     expect(
       queries.some((query) => query.includes("/api/dashboard?") && query.includes("months=")),
     ).toBe(true);
     expect(queries.some((query) => query.includes("tags="))).toBe(false);
 
-    // Unticking a category narrows the dashboard call and the ledger alike.
-    fireEvent.click(rent);
-    await waitFor(() =>
-      expect(
-        queries.some(
-          (query) => query.includes("/api/dashboard?") && query.includes(`tags=${GROCERIES_TAG}`),
-        ),
-      ).toBe(true),
-    );
+    // Every category of the period is drawn and read out, with its share.
     expect(
-      queries.some(
-        (query) => query.includes("/api/transactions?") && query.includes(`tags=${GROCERIES_TAG}`),
-      ),
-    ).toBe(true);
-    expect(
-      (screen.getByRole("checkbox", { name: "Include Rent" }) as HTMLInputElement).checked,
-    ).toBe(false);
-    // The donut now draws only what is left, so the reader sees what they asked.
-    expect(
-      screen.getByRole("img", { name: "Spending by tag in EUR: Groceries 100%" }),
+      screen.getByRole("img", { name: "Spending by tag in EUR: Rent 75%, Groceries 25%" }),
     ).toBeTruthy();
-
-    // And it can always be switched back on.
-    fireEvent.click(screen.getByRole("checkbox", { name: "Include Rent" }));
-    await waitFor(() =>
-      expect(
-        (screen.getByRole("checkbox", { name: "Include Rent" }) as HTMLInputElement).checked,
-      ).toBe(true),
-    );
-    expect(
-      screen.getByText("2 of 2 tags included · untick a category to leave it out of every figure"),
-    ).toBeTruthy();
+    expect(screen.getByText("75,0%")).toBeTruthy();
+    expect(screen.getByText("25,0%")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Show Groceries in the ledger" })).toBeTruthy();
   });
 });

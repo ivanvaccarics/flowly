@@ -76,10 +76,6 @@ export function DashboardView({
   const [months, setMonths] = useState<string[]>(() => presetMonths("month"));
   const [preset, setPreset] = useState<MonthPreset>("month");
   const [anchorYear, setAnchorYear] = useState(() => new Date().getUTCFullYear());
-  /** Tags the reader switched off; empty means "everything that is there". */
-  const [excludedTags, setExcludedTags] = useState<string[]>([]);
-  /** The tags the period actually holds, so a re-pick can always reach them. */
-  const [periodTagIds, setPeriodTagIds] = useState<string[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard | undefined>(undefined);
   const [previous, setPrevious] = useState<Dashboard | undefined>(undefined);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -91,20 +87,15 @@ export function DashboardView({
   const [loading, setLoading] = useState(false);
 
   const { from, to } = useMemo(() => monthsRange(months), [months]);
-  const includedTags = useMemo(
-    () => periodTagIds.filter((tagId) => !excludedTags.includes(tagId)),
-    [periodTagIds, excludedTags],
-  );
-  const tagsAllIncluded = includedTags.length === periodTagIds.length;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const scope = { months: monthsQuery(months) };
-      const tags = tagsAllIncluded ? undefined : monthsQuery(includedTags);
+      // The dashboard is scoped by the period only: every category of those
+      // months is part of every figure, the chart and the recent movements.
       const [current, earlier, accountList, tagList] = await Promise.all([
-        api.dashboard({ months: scope.months, ...(tags ? { tags } : {}) }),
-        api.dashboard({ months: monthsQuery(shiftMonths(months)), ...(tags ? { tags } : {}) }),
+        api.dashboard({ months: monthsQuery(months) }),
+        api.dashboard({ months: monthsQuery(shiftMonths(months)) }),
         api.list<Account>("accounts"),
         api.list<Tag>("tags"),
       ]);
@@ -112,15 +103,13 @@ export function DashboardView({
       setPrevious(earlier);
       setAccounts(accountList.items);
       setTags(tagList.items);
-      const seen = current.spendingByTag.map((entry) => entry.tagId).sort();
-      setPeriodTagIds((previous) => (previous.join(",") === seen.join(",") ? previous : seen));
       setError(undefined);
     } catch (cause) {
       setError(describeError(cause));
     } finally {
       setLoading(false);
     }
-  }, [months, includedTags, tagsAllIncluded]);
+  }, [months]);
 
   // The recent card pages on the server like the ledger does, so a busy vault
   // is browsed here instead of being cut off at the first screenful.
@@ -130,7 +119,6 @@ export function DashboardView({
         limit: RECENT_PAGE_SIZE,
         offset: (recentPage - 1) * RECENT_PAGE_SIZE,
         months: monthsQuery(months),
-        ...(tagsAllIncluded ? {} : { tags: monthsQuery(includedTags) }),
       });
       // The page can empty under the user: fold back to the last one with rows.
       if (response.items.length === 0 && response.total > 0 && recentPage > 1) {
@@ -143,7 +131,7 @@ export function DashboardView({
     } catch (cause) {
       setError(describeError(cause));
     }
-  }, [recentPage, months, includedTags, tagsAllIncluded]);
+  }, [recentPage, months]);
 
   useEffect(() => {
     void load();
@@ -184,6 +172,11 @@ export function DashboardView({
       }))
       .sort((left, right) => right.totalMinor - left.totalMinor);
   }, [dashboard]);
+  /** The distinct tags behind the breakdown, for the card's own headline. */
+  const categoryCount = useMemo(
+    () => new Set((dashboard?.spendingByTag ?? []).map((entry) => entry.tagId)).size,
+    [dashboard],
+  );
   const colourOf = useCallback(
     (tagId: string, index: number) =>
       tagById.get(tagId)?.color ??
@@ -219,12 +212,6 @@ export function DashboardView({
   function clearMonths() {
     setPreset("custom");
     setMonths([]);
-  }
-
-  function toggleTag(tagId: string) {
-    setExcludedTags((current) =>
-      current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId],
-    );
   }
 
   return (
@@ -357,9 +344,6 @@ export function DashboardView({
                 <h2>Cash flow</h2>
                 <span className="sub">
                   Income vs expenses · {from} → {to}
-                  {includedTags.length === periodTagIds.length
-                    ? ""
-                    : ` · ${includedTags.length} of ${periodTagIds.length} tags`}
                 </span>
               </div>
               <div className="legend">
@@ -503,21 +487,13 @@ export function DashboardView({
                 <p className="eyebrow">Categories</p>
                 <h2>Spending breakdown</h2>
                 <span className="sub">
-                  {periodTagIds.length === 0
+                  {categoryCount === 0
                     ? "No tagged spending in this period"
-                    : `${includedTags.length} of ${periodTagIds.length} tags included · untick a category to leave it out of every figure`}
+                    : `Every category of the period is included · ${categoryCount} ${
+                        categoryCount === 1 ? "tag" : "tags"
+                      }`}
                 </span>
               </div>
-              {excludedTags.length > 0 ? (
-                <button
-                  type="button"
-                  className="btn small ghost"
-                  onClick={() => setExcludedTags([])}
-                >
-                  <Icon name="refresh" size={12} />
-                  Include all
-                </button>
-              ) : null}
             </header>
             {dashboard && dashboard.spendingByTag.length > 0 ? (
               spendingGroups.map((group) => (
@@ -526,8 +502,6 @@ export function DashboardView({
                   currency={group.currency}
                   entries={group.entries}
                   colourOf={colourOf}
-                  included={(tagId) => !excludedTags.includes(tagId)}
-                  onToggle={toggleTag}
                   onOpen={(tagId) => onSeeAllTransactions({ tagId, from, to })}
                 />
               ))
@@ -580,40 +554,35 @@ export function DashboardView({
 }
 
 /**
- * The dashboard's spending breakdown: one donut per currency, an arc per
- * *included* tag, with the drawn total in the hole. The legend is the tag
- * filter — a checkbox per row, always listing every category of the period so
- * one that was switched off can be switched back on — and each row can also
- * open the ledger on its tag. Hand-rolled, like the cash-flow chart: Flowly
+ * The dashboard's spending breakdown: one donut per currency, an arc per tag of
+ * the period, with the total in the hole. Every category is always part of the
+ * picture — the period is the only scope the dashboard offers — so the legend
+ * is a plain read-out: colour, name, amount and share per tag, with each row
+ * opening the ledger on that tag. Hand-rolled, like the cash-flow chart: Flowly
  * ships no charting dependency.
  */
 function SpendingPie({
   entries,
   currency,
   colourOf,
-  included,
-  onToggle,
   onOpen,
 }: {
   entries: Array<{ tagId: string; tagName: string; currency: string; spentMinor: number }>;
   currency: string;
   colourOf: (tagId: string, index: number) => string;
-  included: (tagId: string) => boolean;
-  onToggle: (tagId: string) => void;
   onOpen: (tagId: string) => void;
 }) {
   const [activeTagId, setActiveTagId] = useState<string | undefined>(undefined);
-  const drawn = entries.filter((entry) => included(entry.tagId));
-  const drawnTotal = drawn.reduce((total, entry) => total + entry.spentMinor, 0);
+  const total = entries.reduce((sum, entry) => sum + entry.spentMinor, 0);
   const size = 168;
   const centre = size / 2;
   const radius = 66;
   const circumference = 2 * Math.PI * radius;
   // A hair of space between slices keeps neighbours visually separate.
-  const gap = drawn.length > 1 ? 3 : 0;
+  const gap = entries.length > 1 ? 3 : 0;
   let consumed = 0;
-  const slices = drawn.map((entry, index) => {
-    const share = drawnTotal > 0 ? entry.spentMinor / drawnTotal : 0;
+  const slices = entries.map((entry, index) => {
+    const share = total > 0 ? entry.spentMinor / total : 0;
     const length = Math.max(0, share * circumference - gap);
     const slice = {
       key: `${entry.tagId}-${entry.currency}`,
@@ -624,16 +593,12 @@ function SpendingPie({
     consumed += share * circumference;
     return slice;
   });
-  const totalText = formatMinorToAmount(drawnTotal, currency);
+  const totalText = formatMinorToAmount(total, currency);
   const active = entries.find((entry) => entry.tagId === activeTagId);
-  const shareOf = (minor: number) => (drawnTotal > 0 ? (minor / drawnTotal) * 100 : 0);
-  const label = `Spending by tag in ${currency}: ${
-    drawn.length === 0
-      ? "no category selected"
-      : drawn
-          .map((entry) => `${entry.tagName} ${Math.round(shareOf(entry.spentMinor))}%`)
-          .join(", ")
-  }`;
+  const shareOf = (minor: number) => (total > 0 ? (minor / total) * 100 : 0);
+  const label = `Spending by tag in ${currency}: ${entries
+    .map((entry) => `${entry.tagName} ${Math.round(shareOf(entry.spentMinor))}%`)
+    .join(", ")}`;
 
   return (
     <div className="donut">
@@ -641,7 +606,7 @@ function SpendingPie({
         <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
           <circle className="donut-track" cx={centre} cy={centre} r={radius} />
           {slices.map((slice, index) => {
-            const entry = drawn[index];
+            const entry = entries[index];
             if (!entry) return null;
             return (
               <circle
@@ -683,58 +648,45 @@ function SpendingPie({
                 {currency}
               </span>
               <span className={totalText.length > 9 ? "total small" : "total"}>{totalText}</span>
-              <span className="sub">{drawn.length === 0 ? "no category selected" : "spent"}</span>
+              <span className="sub">spent</span>
             </>
           )}
         </div>
       </div>
 
       <ul className="legend-rows">
-        {entries.map((entry, index) => {
-          const isIncluded = included(entry.tagId);
-          return (
-            <li
-              key={`${entry.tagId}-${entry.currency}`}
-              className={isIncluded ? "legend-row-item" : "legend-row-item excluded"}
-              onPointerEnter={() => setActiveTagId(entry.tagId)}
-              onPointerLeave={() =>
+        {entries.map((entry, index) => (
+          <li
+            key={`${entry.tagId}-${entry.currency}`}
+            className="legend-row-item"
+            onPointerEnter={() => setActiveTagId(entry.tagId)}
+            onPointerLeave={() =>
+              setActiveTagId((current) => (current === entry.tagId ? undefined : current))
+            }
+          >
+            <button
+              type="button"
+              className="legend-row"
+              aria-label={`Show ${entry.tagName} in the ledger`}
+              title={`Show ${entry.tagName} in the ledger`}
+              onFocus={() => setActiveTagId(entry.tagId)}
+              onBlur={() =>
                 setActiveTagId((current) => (current === entry.tagId ? undefined : current))
               }
+              onClick={() => onOpen(entry.tagId)}
             >
-              <label className="legend-row">
-                <input
-                  type="checkbox"
-                  checked={isIncluded}
-                  aria-label={`Include ${entry.tagName}`}
-                  onChange={() => onToggle(entry.tagId)}
-                  onFocus={() => setActiveTagId(entry.tagId)}
-                  onBlur={() =>
-                    setActiveTagId((current) => (current === entry.tagId ? undefined : current))
-                  }
-                />
-                <span className="legend-item">
-                  <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
-                  {entry.tagName}
-                </span>
-                <span className="mono">
-                  {formatMinorToAmount(entry.spentMinor, entry.currency)}
-                </span>
-                <span className="muted mono">
-                  {isIncluded ? `${formatDecimal(shareOf(entry.spentMinor))}%` : "—"}
-                </span>
-              </label>
-              <button
-                type="button"
-                className="legend-open"
-                aria-label={`Show ${entry.tagName} in the ledger`}
-                title={`Show ${entry.tagName} in the ledger`}
-                onClick={() => onOpen(entry.tagId)}
-              >
+              <span className="legend-item">
+                <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
+                {entry.tagName}
+              </span>
+              <span className="mono">{formatMinorToAmount(entry.spentMinor, entry.currency)}</span>
+              <span className="muted mono">{formatDecimal(shareOf(entry.spentMinor))}%</span>
+              <span className="legend-mark" aria-hidden="true">
                 <Icon name="transactions" size={14} />
-              </button>
-            </li>
-          );
-        })}
+              </span>
+            </button>
+          </li>
+        ))}
       </ul>
     </div>
   );

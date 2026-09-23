@@ -98,7 +98,6 @@ describe("accessibility structure", () => {
     const { container } = render(
       <AppShell
         csrf="csrf-token"
-        status={unlockedStatus}
         busy={false}
         error={undefined}
         onLock={async () => undefined}

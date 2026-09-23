@@ -124,8 +124,8 @@ you should see.
 | Look at the footer of a filtered ledger with more rows than one page | It reads `Showing 1–25 of N transactions` with `Page 1 / x`; **Next** shows the following rows and **Previous** comes back; **Rows per page** switches to 50 or 100 and starts again from page 1 |
 | Change any filter, or record a transaction, while on a later page | The ledger returns to page 1 of the new result set |
 | Pick months on the dashboard — a preset, the year strip, or single months | The selected months appear as removable chips, the KPI row, the chart and the recent table all describe exactly those months, and a month nobody selected never leaks into the totals |
-| Untick a category in the spending breakdown's legend | The row dims instead of disappearing and the donut redraws for the tags left ticked, every figure, the chart and the recent movements recompute, and **Include all** (or ticking it again) brings it back |
-| Press the record button at the end of a legend row | The ledger opens filtered to that tag, over the same period |
+| Look at the spending breakdown's legend | There is no checkbox: one row per tag with its colour, amount and share, and the donut draws every category of the period |
+| Press a legend row of the spending breakdown | The ledger opens filtered to that tag, over the same period |
 | Delete a transaction | It disappears; reloading keeps it gone |
 | Archive an account | It stays in the list marked archived, and offers **Restore** instead of **Archive** |
 | Restore that account | It is active again with the same id, balance and transactions |
@@ -164,7 +164,7 @@ you should see.
 | Press **Export data** in the dashboard header | Settings opens with the export block already in view and focused |
 | Look at the **Bank sync** card | Without a connected bank it offers **Connect to Enable Banking**; with one it shows the last sync, the paired accounts and a **Sync now** button |
 | Look at the **Recent transactions** card with more than ten movements in the vault | Ten rows plus `Showing 1–10 of N transactions` and **Previous**/**Next**; the header chip counts every match, and **See all** opens the full ledger |
-| Look at the dashboard side column | The card is the bank sync, the spending breakdown and the accounts summary: the vault status lives in the shell's sidebar and top bar, not on the dashboard |
+| Look at the dashboard side column | The card is the bank sync, the spending breakdown and the accounts summary: no card repeats the vault's state, and the shell no longer carries it either — the top bar is the section title, the clock and the session controls, and the sidebar is the brand and the six sections |
 
 ### Bank connection (Enable Banking)
 

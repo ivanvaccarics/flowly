@@ -283,26 +283,6 @@ h3 {
   color: var(--accent);
 }
 
-.sidebar-footer {
-  padding: 1rem;
-}
-
-.vault-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  box-shadow: var(--shadow-1);
-}
-
-.vault-card strong {
-  font-weight: 600;
-}
-
 .topbar {
   position: sticky;
   top: 0;
@@ -342,44 +322,6 @@ h3 {
   white-space: nowrap;
 }
 
-.topbar-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: nowrap;
-  min-width: 0;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.3rem 0.75rem;
-  border: 1px solid var(--income-soft-border);
-  border-radius: var(--radius-pill);
-  background: var(--income-soft);
-  color: var(--income);
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.status-pill strong {
-  color: inherit;
-  font-weight: 600;
-}
-
-.status-pill .badge {
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--text-secondary);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 .clock-chip {
   display: inline-flex;
   align-items: center;
@@ -393,23 +335,6 @@ h3 {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-.avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-pill);
-  background: var(--text);
-  color: #fff;
-  flex: 0 0 auto;
-}
-
-.avatar.soft {
-  background: var(--surface-sunken);
-  color: var(--text-secondary);
 }
 
 /* ------------------------------------------------------------- structure */
@@ -1947,7 +1872,7 @@ button.tag-pill:hover {
 
 .legend-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 0.6rem;
   align-items: center;
   width: 100%;
@@ -1968,7 +1893,6 @@ button.legend-row {
   cursor: pointer;
 }
 
-.legend-rows li.is-active .legend-row,
 .legend-row:hover {
   background: var(--surface-low);
   border-color: var(--border);
@@ -2462,36 +2386,23 @@ button.legend-row {
   color: var(--expense);
 }
 
-/* The legend is the tag filter: a checkbox per category, plus a button that
-   opens the ledger on that tag. */
+/* The legend is a read-out of the donut: colour, name, amount and share, with
+   each row opening the ledger on that tag. */
 .legend-rows li.legend-row-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.35rem;
+  display: block;
 }
 
-.legend-row-item.excluded .legend-row {
-  opacity: 0.45;
-}
-
-.legend-open {
+.legend-row .legend-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
+  color: var(--text-faint);
+  transition: color 0.15s ease;
 }
 
-.legend-open:hover {
-  border-color: var(--border);
-  background: var(--surface-low);
-  color: var(--text);
+.legend-row:hover .legend-mark,
+.legend-row:focus-visible .legend-mark {
+  color: var(--primary);
 }
 
 /* ---------------------------------------------------------- page headings */

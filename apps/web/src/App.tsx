@@ -59,7 +59,6 @@ export function App() {
   return (
     <AppShell
       csrf={workspace.csrf}
-      status={workspace.status}
       busy={workspace.busy}
       error={workspace.error}
       onLock={workspace.lock}
