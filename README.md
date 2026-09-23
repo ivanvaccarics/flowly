@@ -2,237 +2,126 @@
 
 <img src="apps/web/public/logo.svg" alt="Flowly" width="340">
 
-# 💸 Flowly
+# Flowly
 
-### Your money. Your device. Your keys.
+**Self-hosted personal finance. Your money, your device, your keys.**
 
-**A self-hosted personal finance server first, with a desktop app planned for
-macOS and Windows.**
-No account. No cloud. No tracking. Ever.
+No account · No cloud · No tracking.
 
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 ![Status](https://img.shields.io/badge/status-early%20development-orange)
-![License](https://img.shields.io/badge/license-Apache%202.0-blue)
-![Platforms](https://img.shields.io/badge/platforms-server%20first%20%7C%20desktop%20app%20planned-8A2BE2)
+[![Container image](https://github.com/ivanvaccarics/flowly/actions/workflows/image.yml/badge.svg)](https://github.com/ivanvaccarics/flowly/actions/workflows/image.yml)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
-![Container image](https://github.com/ivanvaccarics/flowly/actions/workflows/image.yml/badge.svg)
 
 </div>
 
 ---
 
-## 🌱 The idea
+Flowly is finance software you run yourself: one **encrypted vault** on hardware
+you control, opened from the browser over your private network. You keep the
+passphrase, the server keeps the ciphertext, and nothing leaves your machine.
+While the vault is locked there is nothing readable on disk — not in the
+database, not in journals, not in caches, not in logs.
 
-Most finance apps ask you to hand over the most sensitive data you own — every
-coffee, every salary, every mistake — in exchange for a dashboard.
-
-Flowly asks for nothing.
-
-Everything lives in an **encrypted vault on hardware you control**, unlocked by
-a passphrase only you know. The first release stores one shared vault on your
-self-hosted server for all of your private-network browser sessions. The planned
-desktop app will keep its own independent local vault. There is no Flowly cloud
-account or analytics pipeline quietly watching. If you want data in another
-independent vault, you export it and import it. That's it. 🔐
-
-| 🙃 Most finance apps | 🚀 Flowly |
+| Most finance apps | Flowly |
 | --- | --- |
-| Sign up with email & password | No registration, no identity |
-| Your data on their servers | Your data stays on infrastructure you control |
+| Sign up with email and password | No registration, no identity |
+| Your data on their servers | Your data on infrastructure you control |
 | Silent background sync | You decide what moves, and when |
-| Telemetry & ads pay the bills | Zero telemetry, zero trackers, zero ads |
-| Useless without the Internet | The server needs only your private network |
-| They hold the keys | Your passphrase unlocks your encryption key |
+| Telemetry and ads pay the bills | Zero telemetry, zero trackers, zero ads |
+| Useless without the Internet | Needs only your private network |
+| They hold the keys | Your passphrase unlocks your key |
 
-> 🧭 **One promise we never break:** when the vault is locked, there is nothing
-> readable on disk. Not in the database, not in journals, not in caches, not in
-> logs.
+## What it looks like
 
----
+Six sections, one design language: every section opens with a banner saying what
+it is about and a headline naming what it is for, and every figure comes from the
+vault. No placeholder data anywhere in the app.
 
-## 🖼️ What it looks like
-
-Six sections, one design language: a tinted banner states what the section is
-about and the figures that matter, a headline names what the section is for, and
-every card says what it holds. Every number below comes from the vault — no
-placeholder data anywhere in the app.
-
-**Dashboard** — the period you are looking at, the metric row per currency,
-weekly cash flow and spending by tag.
+**Dashboard** — balances per currency, monthly cash flow and spending by tag, for
+the months you pick.
 
 ![Dashboard](docs/images/dashboard.png)
 
-**Accounts** — one card per account, each with its real balance per currency and
-its booked-movement count; archived accounts stay visible and can be restored.
+**Accounts** — one card per account with its real balance and booked-movement
+count; archived accounts stay visible and can be restored.
 
 ![Accounts](docs/images/accounts.png)
 
-**Transactions** — the ledger: server-side filters, tag pills, this month's
-income, expenses and net, and a row that opens for editing with one click.
+**Transactions** — the ledger: server-side filters, tag pills, the month's
+income, expenses and net, and rows that open for editing with one click.
 
 ![Transactions](docs/images/transactions.png)
 
-**Tags** — the taxonomy that rules and filters work with, with a colour palette
-and inline rename.
+**Tags** — the taxonomy rules and filters work with, colour-coded and renamed in
+place.
 
 ![Tags](docs/images/tags.png)
 
-**Rules** — the rule composer with live evaluation next to the engine's own
-coverage: how many transactions each rule and each applied tag covers.
+**Rules** — the rule composer with live evaluation beside the engine's own
+coverage, per rule and per tag.
 
 ![Rules](docs/images/rules.png)
 
-**Settings** — the bank connection, the passphrase and the three portable export
-shapes, all against the local vault.
+**Settings** — the bank connection, the passphrase and the three export shapes,
+all against the local vault.
 
 ![Settings](docs/images/settings.png)
 
-> 🧪 These images are generated from a throwaway vault full of invented data:
+> The screenshots come from a throwaway vault full of invented data:
 > `pnpm demo:seed` fills it and `pnpm demo:screenshots` captures the six
 > sections — see
 > [docs/RUNNING.md](docs/RUNNING.md#regenerating-the-readme-screenshots).
 
----
+## Features
 
-## ✨ What Flowly does
+- **Accounts** — checking, savings, credit cards, cash, wallets and investments,
+  each in its own currency, with archived accounts you can restore.
+- **Transactions** — payee, dates, status, tags and your own notes, kept
+  separate from imported bank descriptions so nothing you write is overwritten,
+  with server-side filters and paging over the whole ledger.
+- **Tags** — Unicode-aware and case-insensitive, keeping the casing you typed,
+  colour-coded and renameable in place. Tags added by hand and by a rule share
+  one set, and a rule never removes a tag you chose.
+- **Rules** — AND/OR conditions over note, payee, description, amount or account,
+  with decimal amounts in their own currency (never a count of cents), a live
+  preview of what a draft would match, and a coverage count per rule and tag.
+  Rules only add tags, and deleting one never takes a tag away.
+- **Multi-currency, honestly** — amounts are integers in minor units and every
+  transaction keeps its original currency, so no total ever blends unlike
+  currencies without a real exchange rate.
+- **Dashboard** — every figure follows the months you select; cash flow is
+  charted month by month and spending is a donut per currency, and both answer
+  the pointer and the keyboard.
+- **Search** — server-side filters over date range, account, tag, amount,
+  currency, status and source, plus free text across payee, description and
+  notes.
+- **Bank connection (Enable Banking)** — connect with your own application id and
+  private key, kept only inside the encrypted vault; link each shared account,
+  import its activity, reconcile pending rows in place, and keep your notes and
+  tags. The vault stays the canonical ledger.
+- **Portable data** — a transaction CSV, a plain ZIP with one CSV per table plus
+  a manifest, and a password-encrypted complete archive, with protection against
+  spreadsheet formula injection and imports that are previewed and atomic.
+- **Privacy** — no registration, no telemetry, no ad SDKs, no automatic upload
+  and one-tap local data deletion.
 
-### 🏦 Accounts & transactions
-Checking, savings, credit cards, cash, wallets, investments — each with its own
-currency. Add transactions with payee, dates, status and tags. Your personal
-notes stay **separate** from imported bank descriptions, so nothing you write
-ever gets overwritten. 📝
+## Security
 
-### 🏷️ Tags that behave
-Unicode-aware, case-insensitive matching with the casing you typed preserved.
-Add colors, filter by them, live with them. Tags you add by hand and tags added
-by a rule share the same set — a rule never removes a tag you chose.
-
-### 🪄 Rules that tag for you
-Write a rule once and Flowly keeps applying it. Conditions combine with AND or
-OR over your note, the payee, the imported description, the amount or the
-account — "notes contain rent", "payee is ACME, or amount is over 1000" — and
-assign one or more tags. Amounts are written as decimals in their own currency,
-like "-5.10 EUR", never as a count of cents. Rules run on new transactions and
-imports; you can also apply them to what you already have, with a preview of
-exactly what will change. The page measures itself: while you type, Flowly says
-how many of your most recent movements the rule would match, and the overview
-counts what the saved rules cover, tag by tag.
-Edit a rule whenever the matching turns out wrong: **Edit** opens it in a dialog
-over the page, so the **New rule** card you may already be writing keeps its own
-draft, and saving keeps the rule's id, its on/off state and its place in the
-order. Rules only add tags, and deleting a rule never takes a tag away.
-
-### 🌍 Multi-currency, honestly
-Every amount is stored as an **integer in minor units** — no floating-point
-rounding drama. Each transaction keeps its original currency, and Flowly refuses
-to blend unlike currencies into one fake number without a real exchange rate.
-
-### 📊 A dashboard worth opening
-Balances per account, net cash flow, income vs. expenses, spending by category
-and the latest movements, ten at a time, with **Previous** and **Next** when the
-vault has more — all computed on your self-hosted server, without an Internet
-dependency. Totals always carry their currency, and only booked transactions
-move a balance. **Pick the months you care about** — a preset, a year strip, or
-any combination of months as removable chips — and the whole page follows: the
-KPI row, the cash-flow chart, the spending donut and the recent movements all
-describe **every category** of exactly those months, with nothing to switch off
-before the figures add up.
-The cash-flow chart is meant to be touched: each month lights up under the
-pointer or the arrow keys and reads out its income, expenses and net, and each
-category row of the donut opens the ledger filtered to its tag.
-
-### 🔎 Search that actually finds it
-Filter by date range, account, tag, amount, currency, status or source — and
-free-text search across payee, description and your notes. Filtering runs on the
-server, so a large vault stays quick.
-
-### 🏦 Connect your bank (Enable Banking)
-Connect a bank from Settings with your Enable Banking application id, private key
-and callback URL — the key is verified once and then kept only inside the
-encrypted vault. Search your bank by name or BIC, authorize the consent at the
-bank — Flowly comes back on its own — and tell Flowly for each shared account
-whether to create a new account or pair an existing one. For a linked account
-the balance Flowly shows everywhere is the one your bank reports. Banks refresh
-when you press **Sync now** on the dashboard, or on every unlock if you switch
-that on in Settings — it is off by default, because a consent only grants a
-handful of unattended reads a day. When the bank refuses one, Flowly stops asking
-and says when it will try again. Pending rows reconcile into booked ones in
-place, your notes and tags are never overwritten, every raw provider response is
-kept per account, and the vault stays the canonical ledger. Every row imported
-from a bank carries a
-**Raw** button in the ledger: it shows the fields Flowly stored next to the ones
-the bank sent, as tables rather than a JSON blob.
-
-### 🔐 Security you can explain to a friend
-- A **mandatory passphrase** protects a randomly generated encryption key,
-  derived with Argon2id and a per-vault salt.
-- **Optional biometrics are planned for the desktop app** — Touch ID and
-  Windows Hello will be shortcuts, never replacements for your passphrase.
-- **Encrypted at rest**: SQLCipher 4 on the self-hosted server — verified in
-  Phase 0 on Linux `arm64` and `amd64` with no readable data on disk while the
-  vault is locked — and SQLCipher in the desktop app.
-- **Auto-lock** on inactivity and when the app goes to the background.
-- **Fails closed**: wrong key or tampered data raises a clear error, never a
+- A **mandatory passphrase** protects a randomly generated key, derived with
+  Argon2id and a per-vault salt.
+- **Encrypted at rest** with SQLCipher 4: while the vault is locked there is no
+  readable data on disk.
+- **Sessions** live in an `HttpOnly` cookie with a CSRF token, expire after an
+  idle window and lock the vault when the last one goes away; writes carry the
+  revision they read, so two browsers can never overwrite each other silently.
+- **Fails closed**: a wrong key or tampered data raises a clear error, never a
   silently empty vault.
+- **Before you trust it with your money:** there is no passphrase recovery, plain
+  CSV exports are not encrypted, and the server is not a backup. Keep an export
+  whose password you know.
 
-### 📦 Your data, portable
-- 📄 **Transaction CSV** — clean, standard, spreadsheet-ready.
-- 🗃️ **Every table as a ZIP** — one plain CSV per table plus a manifest, so you
-  can take your data elsewhere even if you stop using Flowly.
-- 🔒 **Complete portable export** — a password-encrypted, versioned archive with
-  everything (accounts, transactions, tags, tagging rules, preferences) and a
-  checksum manifest. This is the supported way to move a complete vault between
-  independent server and desktop deployments.
-- 🛡️ Spreadsheet formula-injection protection on export.
-- ✅ Import with a **preview first**: transaction CSVs merge after duplicate
-  checks; complete portable archives always replace the destination vault after
-  explicit confirmation. Every import is atomic and nothing is silently
-  dropped.
-- 🧬 Smart deduplication via stable IDs, provider IDs, then a deterministic
-  fingerprint.
-
-### 🕵️ Privacy, by construction
-No registration · No telemetry · No ad SDKs · No automatic upload · No Internet
-dependency · One-tap local data deletion.
-
----
-
-## 🧱 How it's built
-
-The delivery strategy starts with the server:
-
-- 🌐 **Self-hosted web** — React UI plus a TypeScript service running on your
-  chosen Docker host, shared by browsers on a private LAN or VPN over required
-  HTTPS. Supported hosts are Linux `amd64`/`arm64` and Docker Desktop on macOS
-  and Windows.
-- 🖥️ **Desktop app, planned after the Server MVP** — one Flutter codebase for
-  macOS and Windows
-- 🔗 **Shared contracts** — versioned JSON Schemas, one canonical CSV/archive
-  spec, and golden fixtures that both clients must satisfy in CI
-
-| Platform | Runtime | Storage | Delivery |
-| --- | --- | --- | --- |
-| 🌐 Self-hosted server | React + TS service | Encrypted SQLite | Server MVP, Phases 0-5 |
-| 💻 macOS | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
-| 🪟 Windows | Flutter | SQLCipher + Drift | Core Phases 8-10; banking Phase 11 |
-
-Why a second client at all? Because a browser shell is a worse product than an
-installed application. React first provides an accessible interface to the
-self-hosted vault. After that release is stable, Flutter adds mature encrypted
-storage, biometrics and installers on the desktop. Shared contracts plus
-cross-client tests keep the two implementations honest. 🤝
-
-### 🗂️ Inside the repository
-
-```text
-apps/server             TypeScript service: domain, application, Fastify API
-apps/web                React/Vite browser client (no vault storage)
-packages/web-contracts  Generated types and Ajv validators from the schemas
-contracts/              JSON Schemas, fixtures and golden expected results
-deployment/self-hosted  Docker Compose for the server vault
-spikes/                 Phase 0 feasibility code, kept as evidence
-```
-
-## 🛠️ Run it locally
+## Quick start
 
 Prerequisites: **Node.js 22.12+** and **pnpm** (`corepack enable pnpm`).
 
@@ -240,197 +129,76 @@ Prerequisites: **Node.js 22.12+** and **pnpm** (`corepack enable pnpm`).
 pnpm install            # install the workspace
 pnpm contracts:generate # regenerate types from contracts/ (committed output)
 pnpm dev                # server on 127.0.0.1:8787 + UI on 127.0.0.1:5173
+
 pnpm verify             # format, lint, secret scan, types and tests
 pnpm build              # compile the server and bundle the UI
+```
 
+Or self-host the stack with Docker:
+
+```bash
 docker compose up --build
 ```
 
-The vault is real now. `POST /api/vault/create` builds an encrypted vault,
-`/api/vault/unlock` opens it, and `/api/vault/lock` closes the current session or
-every session. Sessions live in an `HttpOnly` cookie with a CSRF token, expire
-after an idle window, and the vault locks itself when the last session goes
-away. Writes carry the revision they read, so two browsers can never overwrite
-each other silently: a stale write gets `409 revision_conflict`.
+Images are published for `linux/amd64` and `linux/arm64` as
+`ghcr.io/ivanvaccarics/flowly`, so `docker compose pull` never compiles SQLCipher
+on your own machine. Compose publishes the port on `127.0.0.1` only, and the
+server refuses to bind a public interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true`
+is set on purpose.
 
-The browser UI follows the repository's own design system (*Sovereign Ledger*:
-slate canvas, white cards with a hairline outline, a tinted sidebar) and the
-Flowly brand palette — deep green `#0b3d2e`, medium green `#1e6f4e`, gold
-`#d4af37` — for the mark, the product's own actions and the default tag colour.
-It has one sidebar and six sections: **Dashboard**, **Accounts**,
-**Transactions**, **Tags**, **Rules** and **Settings**. The top bar carries the
-section title over a breadcrumb naming its family, the local clock and the
-session controls. Every section opens the same way: a tinted
-banner — green for the money itself, violet for the automation around it, slate
-for the vault — with the figures that matter, and a headline with the one action
-that section is for.
-Accounts are endpoint cards with their real balances and the booked total per
-currency; rules are a registry table whose rows carry an on/off switch and open
-the rule in a dialog over the page, so the composer writing a new one keeps its
-own draft; the ledger keeps its filters, its **View** pills and its pager in one
-card, and records a movement from **Add transaction**, which opens the form in a
-dialog as well. The ledger pages through its matching rows on the server — 25 per
-page by default, 50 or 100 from the selector — and always says which window it is
-showing, so a vault with thousands of movements is never silently truncated. A
-movement is corrected in a dialog too: click the date, the payee, the note, the
-tags or the amount, or press the row's **Edit** button, and the same form the
-composer uses opens with everything prefilled. The dashboard's recent
-transactions page the same way, ten rows at a time. The dashboard scopes every
-figure to the months you select — all of it, categories included — charts cash
-flow month by month and draws spending as a donut per currency, so no total ever
-blends currencies. Accounts can be
-archived and restored, tags can be
-renamed and recoloured in place, and Settings holds the passphrase change plus
-export and import, after the Enable Banking connection. Export comes in three
-shapes: the single transaction CSV, a plain ZIP with one CSV per table (and a
-manifest) for taking everything elsewhere, and the
-password-encrypted complete archive. Import is additive for a CSV merge and
-replaces the vault for a complete archive, after an explicit confirmation and an
-encrypted safety snapshot. Deleting an account or a tag asks for a cascade and
-tells you how many records are affected.
-The product mark — a white keyhole in a squircle filled with the brand gradient,
-next to the rounded `Flowly` wordmark — ships as SVG in `apps/web/public` and is
-documented in [docs/DESIGN.md](docs/DESIGN.md), along with the tokens and the
-mapping to what actually ships.
+## Repository layout
 
-You can drive the whole lifecycle against a running server with
-`node tooling/scripts/vault-smoke.mjs create` and then
-`node tooling/scripts/vault-smoke.mjs verify` after a restart. The Compose file
-publishes the port on `127.0.0.1` only, and the server refuses to bind a public
-interface unless `FLOWLY_ALLOW_PUBLIC_BIND=true` is set on purpose.
+```text
+apps/server             TypeScript service: domain, application, Fastify API
+apps/web                React/Vite browser client
+packages/web-contracts  Generated types and validators from the schemas
+contracts/              JSON Schemas, fixtures and golden expected results
+deployment/self-hosted  Docker Compose for the server vault
+spikes/                 Phase 0 feasibility code, kept as evidence
+```
 
-The server image itself comes from the GitHub Container Registry: CI builds
-`linux/amd64` and `linux/arm64` on every change to the code, so
-`docker compose pull` fetches `ghcr.io/ivanvaccarics/flowly` instead of compiling
-SQLCipher on your own machine — which is what makes a Raspberry Pi a fine host.
-Both regular CI and image publication scan the complete Git history with a
-pinned Gitleaks image, and publication waits for that scan to pass. The sole
-ignored finding is one exact historical fingerprint for a documented synthetic
-sandbox fixture, not a blanket path or rule exclusion.
+## Documentation
 
-### 📚 Documentation
-
-- [docs/RUNNING.md](docs/RUNNING.md) — how to run Flowly locally, self-host it,
-  and what the planned desktop app will need.
+- [docs/RUNNING.md](docs/RUNNING.md) — run Flowly locally, self-host it, and
+  regenerate the screenshots above.
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — install on Docker Compose, trust the
   local certificate authority, upgrade, roll back and back up.
 - [docs/AUTOMATIC_STARTUP.md](docs/AUTOMATIC_STARTUP.md) — Docker and Tailscale
   on a machine that reboots on its own: the `startup.sh` script and the systemd
-  unit that bring the stack and the tailnet HTTPS mapping back at boot.
+  unit that bring the stack back at boot.
 - [docs/TESTING.md](docs/TESTING.md) — the acceptance script and the manual test
   plan, with what a pass looks like for every screen.
-- [docs/DESIGN.md](docs/DESIGN.md) — the UI design system, its tokens and the
-  mapping to the sections that actually ship.
-- [docs/PLAN.md](docs/PLAN.md) — architecture, security requirements, data
-  model and the phase-by-phase delivery plan.
-- [docs/adr/](docs/adr/) — the decisions behind the storage engine, key
-  hierarchy, sessions, portability, toolchain, concurrency and cascades.
+- [docs/DESIGN.md](docs/DESIGN.md) — the UI design system, its tokens, and the
+  brand lockup and palette.
+- [docs/PLAN.md](docs/PLAN.md) — architecture, security requirements, data model
+  and the phase-by-phase delivery plan.
+- [docs/adr/](docs/adr/) — the decisions behind storage, key hierarchy, sessions,
+  portability, concurrency and cascades.
 - [docs/security/](docs/security/) — threat model, privacy notice, data-loss
-  warning, support matrix, verification status, SBOM, license inventory and the
-  [security audit](docs/security/audit-2026-09-15.md).
+  warning, support matrix, verification status and the security audit.
 - [contracts/README.md](contracts/README.md) — the canonical schemas, fixtures
-  and golden vectors that both clients must satisfy.
-- [docs/TERMS_OF_SERVICE.md](docs/TERMS_OF_SERVICE.md) — the terms for running a
-  Flowly instance and for connecting it to a bank.
-- [docs/PRIVACY_POLICY.md](docs/PRIVACY_POLICY.md) — what Flowly stores, what
-  leaves your server, and who is responsible for what.
+  and golden vectors.
+- [docs/TERMS_OF_SERVICE.md](docs/TERMS_OF_SERVICE.md) and
+  [docs/PRIVACY_POLICY.md](docs/PRIVACY_POLICY.md) — the terms for running an
+  instance and connecting it to a bank, and what Flowly stores and who is
+  responsible for what.
 
----
+## Status
 
-## 🚦 Where we are
+Flowly is in **early development**. The encrypted vault, the finance flows, the
+dashboard, server-side search, the Enable Banking connector and the deployment
+hardening all work; an independent cryptographic review and a full
+assistive-technology audit are still open. The plan behind them lives in
+[docs/PLAN.md](docs/PLAN.md).
 
-Flowly is **in early development**. The architecture and security model are
-designed and reviewed, Phase 0 proved the encrypted storage and session
-feasibility, Phase 1 stands up the real workspace with canonical contracts, and
-Phase 2 delivers the encrypted vault itself: Argon2id unlock, SQLCipher storage,
-browser sessions with auto-lock and revision-checked writes, and Phase 3 adds the
-daily finance flows with tagging rules and file-based portability. Phase 4 adds
-the dashboard and server-side search, and Phase 5 hardens the
-deployment: HTTPS with a local certificate authority, upgrade and rollback
-documentation, an SBOM and license inventory, and a threat model. Phase 6 then
-connects the server to Enable Banking: bank consent with per-account linking, raw
-provider payloads stored per account, reconciliation by provider id, and refresh
-on demand or on unlock when the setting asks for it. The app is still
-pre-release: an independent
-cryptographic review and a full assistive-technology audit remain open.
+## Contributing
 
-| | Milestone | Status |
-| --- | --- | --- |
-| 0️⃣ | Server storage, Docker and private-network security feasibility | ✅ Complete |
-| 1️⃣ | Server foundation, contracts and TypeScript domain | ✅ Complete |
-| 2️⃣ | Server vault, encrypted storage, sessions and auto-lock | ✅ Complete |
-| 3️⃣ | Server accounts, transactions, tags, notes, tagging rules and data portability | ✅ Complete |
-| 4️⃣ | Server dashboard and search | ✅ Complete |
-| 5️⃣ | Server hardening and release | ✅ Complete |
-| 6️⃣ | Enable Banking for Server | ✅ Complete |
-| 8️⃣ | Desktop app foundation and encrypted local vaults | 🔮 Post-MVP |
-| 9️⃣ | Desktop feature parity | 🔮 Post-MVP |
-| 🔟 | Desktop hardening and release | 🔮 Post-MVP |
-| 1️⃣1️⃣ | Enable Banking for the desktop app | 🔮 Post-MVP |
-| 1️⃣2️⃣ | Opt-in automatic encrypted backups | 🔮 Post-MVP |
+Open an issue to share an idea, report a bug or challenge a design decision.
+Shared schemas and fixtures, CSV edge cases and design tokens are good first
+areas, and accessibility feedback is especially welcome. We follow
+[Conventional Commits](https://www.conventionalcommits.org/) and ask one thing
+above all: **never commit secrets or real financial data.**
 
-⭐ **Star the repo** to follow along — that's the easiest way to see it grow.
+## License
 
-### 🏦 About bank connections
-
-Phase 6 connects the server to **Enable Banking**; Phase 11 adds the same
-connector to the desktop app. Provider credentials and signing keys **never**
-ship inside any client: the application key pair is stored in the encrypted
-vault, JWT signing happens on the server only, and the API exposes just a
-fingerprint of the matching public key. Bank data arrives as an import channel —
-not a sync service, and never the source of truth. The destination vault stays
-canonical: imported rows carry their provider id, pending activity reconciles
-into booked activity in place, and your notes and tags are never overwritten. 🏠
-
----
-
-## 🙅 What Flowly will never do
-
-- ☁️ Create a Flowly cloud account for you
-- 🔄 Sync your devices automatically behind your back
-- 🗄️ Store your transactions in a Flowly-operated cloud
-- 📈 Guess exchange rates or portfolio prices for you
-- 💳 Move money on your behalf
-- 👀 Ship analytics, ads or trackers
-
----
-
-## ⚠️ Please read this before trusting it with your data
-
-- 🔑 **There is no passphrase recovery.** No account, Flowly service or key
-  escrow exists. Lose your passphrase and every unlocked vault, and the data is
-  gone forever. Your only safety net is an export whose password you know.
-- 🔁 **There is no sync between vaults.** Browsers connected to one server
-  deployment share its vault; the future desktop app and other deployments remain
-  independent.
-- 📄 **Plain CSV exports are not encrypted.** Use the password-protected archive
-  to move data around.
-- 💾 **The server is not a backup.** Manual encrypted exports are required in
-  the MVP; optional automatic backups are planned for Phase 12.
-
----
-
-## 💛 Get involved
-
-Flowly is open source and built in the open — early is the best time to shape
-it.
-
-- 💬 **Open an issue** to share an idea, report a bug or challenge a design
-  decision
-- 🧪 **Try the spikes** and tell us where encrypted server storage or Docker
-  deployment breaks on your host
-- 🌍 **Translate** — all UI text is externalized from day one
-- ♿ **Accessibility feedback** is especially welcome; we target WCAG 2.2 AA
-- 📣 **Tell a friend** who's tired of handing their bank history to a startup
-
-Good first areas: shared schemas & fixtures, CSV edge cases, recurrence calendar
-tests, and design tokens.
-
-We follow [Conventional Commits](https://www.conventionalcommits.org/), and we
-ask one thing above all: **never commit secrets or real financial data.** 🔒
-
----
-
-## 📜 License
-
-Released under the [Apache License 2.0](LICENSE). Use it, fork it, audit it. 🔍
+[Apache License 2.0](LICENSE) — use it, fork it, audit it.

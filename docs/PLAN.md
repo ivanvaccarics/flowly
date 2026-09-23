@@ -1648,6 +1648,28 @@ Status: **complete** (2026-09-22), decision in `docs/adr/0028`.
   their heading (Trend, Movements, Breakdown, Accounts, Setup, Registry, Data in,
   Data out, Security), so every card says what it is at a glance.
 
+#### Task `rewrite-the-readme-as-a-product-overview`
+
+Status: **complete** (2026-09-23), decision in `docs/adr/0036`.
+
+- `README.md` was rewritten from the top: identity and badges, one paragraph of
+  what Flowly is, the six screenshots with one-line captions, the features that
+  ship, the security model, the quick start, the repository layout, the
+  documentation index, the status, contributing and the license. It went from
+  about 430 lines of prose to about 200.
+- The client-platform table, the milestone table and the "How it's built" essay
+  are gone from the front page. ADR 0032 had renamed the mobile material to
+  desktop rather than removing it from the README; the platform and phase
+  material now lives only in this plan and in its ADRs, which the README links
+  to.
+- Long paragraphs that restated other documents went with them: the design
+  system is `docs/DESIGN.md`, the session mechanics and the screenshot recipe
+  are `docs/RUNNING.md`, the deployment and the local CA are
+  `docs/DEPLOYMENT.md`. The README describes the shipped product and points at
+  the document that owns each detail.
+- The `## What it looks like` section, its six images and their synthetic-vault
+  note survive ADR 0031; the screenshots themselves are unchanged.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`
