@@ -10,20 +10,10 @@ import {
   emptyTransactionDraft,
   type TransactionDraft,
 } from "../components/TransactionFields.js";
-import {
-  Banner,
-  BannerFigure,
-  Chip,
-  Empty,
-  Money,
-  SectionBanner,
-  SectionIntro,
-  tagPillStyle,
-} from "../components/ui.js";
+import { Banner, Chip, Empty, Money, SectionIntro, tagPillStyle } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { parseAmountToMinor } from "../lib/money.js";
-import { formatMinorToAmount } from "../lib/money.js";
 import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
 import { RawTransactionPanel } from "../components/RawTransactionPanel.js";
 
@@ -75,10 +65,6 @@ export function TransactionsView({
   >(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
   const [rawOpen, setRawOpen] = useState<string | undefined>(undefined);
-  /** This month's flows, for the banner: the same figures the dashboard shows. */
-  const [monthFlow, setMonthFlow] = useState<
-    { currency: string; incomeMinor: number; expensesMinor: number; netMinor: number } | undefined
-  >(undefined);
 
   const composerCurrency = composer ? draftCurrency(composer, accounts.items) : "EUR";
   // An edit keeps the movement's own currency unless the account changes: a USD
@@ -136,23 +122,6 @@ export function TransactionsView({
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const to = new Date().toISOString().slice(0, 10);
-    void api
-      .dashboard({ from: `${to.slice(0, 7)}-01`, to })
-      .then((data) => {
-        if (cancelled) return;
-        setMonthFlow(data.cashFlow[0] ?? undefined);
-      })
-      .catch(() => {
-        if (!cancelled) setMonthFlow(undefined);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function startComposer() {
     setFormError(undefined);
@@ -280,56 +249,11 @@ export function TransactionsView({
       aria-busy={loading || undefined}
       aria-labelledby="transactions-title"
     >
-      <SectionBanner
-        tone="vault"
-        icon="transactions"
-        eyebrow="Encrypted ledger"
-        title="Local transactions database"
-        badge={<Chip tone="income">Zero-knowledge</Chip>}
-        lead="Every movement is validated and stays on this device. Search, filters and paging run on the server against the encrypted vault; nothing is searched in the browser."
-        side={
-          <Chip tone="vault" icon="lock">
-            AES-256-GCM
-          </Chip>
-        }
-        figures={
-          <>
-            <BannerFigure
-              label="Income this month"
-              value={
-                monthFlow
-                  ? `+${formatMinorToAmount(monthFlow.incomeMinor, monthFlow.currency)} ${monthFlow.currency}`
-                  : "—"
-              }
-              tone="income"
-            />
-            <BannerFigure
-              label="Expenses this month"
-              value={
-                monthFlow
-                  ? `-${formatMinorToAmount(monthFlow.expensesMinor, monthFlow.currency)} ${monthFlow.currency}`
-                  : "—"
-              }
-              tone="expense"
-            />
-            <BannerFigure
-              label="Net flow this month"
-              value={
-                monthFlow
-                  ? `${monthFlow.netMinor >= 0 ? "+" : "-"}${formatMinorToAmount(Math.abs(monthFlow.netMinor), monthFlow.currency)} ${monthFlow.currency}`
-                  : "—"
-              }
-              tone={monthFlow && monthFlow.netMinor < 0 ? "expense" : "income"}
-            />
-          </>
-        }
-      />
-
       <SectionIntro
         icon="transactions"
-        eyebrow="Analysis & trend"
+        eyebrow="Encrypted ledger"
         title="A readable trace of every movement."
-        lead="Tagging rules run when you save a movement, and only ever add tags."
+        lead="Every movement is validated and stays on this device: search, filters and paging run on the server against the encrypted vault, and nothing is searched in the browser."
         actions={
           <button type="button" className="btn primary" onClick={startComposer}>
             <Icon name="plus" size={16} />

@@ -1758,6 +1758,31 @@ Status: **complete** (2026-09-23), corrections to `docs/adr/0037`.
   counts what the page holds, and a test renders eleven tags and walks to the
   second page to hold it there.
 
+#### Task `open-every-section-the-same-way`
+
+Status: **complete** (2026-09-23), corrections to `docs/adr/0037`.
+
+- The banner is gone from every page. Accounts, Ledger, Rules and Settings
+  opened with a tinted strip carrying an icon tile, chips and a row of figures,
+  while the Dashboard and Tags opened with a headline and a lead — two shapes for
+  one idea. `SectionBanner` and `BannerFigure` are deleted from
+  `apps/web/src/components/ui.tsx` and every section now opens with the same
+  `SectionIntro`: an eyebrow with its icon, the section's sentence in the serif,
+  a lead, and at most one action or state chip beside the name. The figures the
+  banners repeated (this month's flows on the ledger, the booked balance per
+  currency on accounts, the evaluated-transaction count on rules) live in the
+  cards that own them.
+- The **New rule** and **New tag** shortcuts are gone from those two headlines:
+  the composer and the create form are the first thing on the page, so a button
+  to reach them only stood between the reader and the work. The dashboard keeps
+  **Export data** and **New transaction**, and the ledger keeps **Add
+  transaction**, which open dialogs rather than duplicate a form below.
+- The ledger no longer fetches the month's dashboard figures for a banner it no
+  longer has, and the tags page lost its scroll-and-focus shortcut with the
+  button that used it.
+- `docs/DESIGN.md` documents the single page header and the mapping table names
+  what each section actually shows; the six README screenshots were regenerated.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`

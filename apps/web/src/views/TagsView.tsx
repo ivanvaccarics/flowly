@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Tag } from "@flowly/web-contracts";
 import { Icon } from "../components/icons.js";
 import { Modal } from "../components/Modal.js";
 import { TagColorField } from "../components/TagColorField.js";
-import { Banner, Empty } from "../components/ui.js";
+import { Banner, Empty, SectionIntro } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { DEFAULT_TAG_COLOR, normalizeTagName } from "../lib/tags.js";
 import type { DirectoryTag } from "../api/client.js";
@@ -55,7 +55,6 @@ export function TagsView({ csrf }: { csrf: string }) {
   const [letter, setLetter] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | undefined>(undefined);
-  const nameRef = useRef<HTMLInputElement | null>(null);
 
   const usageFor = (tag: Tag) => usageOf(tag) ?? { transactions: 0, rules: 0 };
   const usedOf = (tag: Tag) => usageFor(tag).transactions > 0;
@@ -141,30 +140,12 @@ export function TagsView({ csrf }: { csrf: string }) {
 
   return (
     <section className="view" aria-labelledby="tags-title">
-      <div className="dash-head">
-        <div className="dash-head-text">
-          <p className="eyebrow">Taxonomy</p>
-          <h2 className="display-headline">Tags that make sense.</h2>
-          <p className="lead">
-            A small, intentional vocabulary keeps your transactions useful without making them feel
-            like admin work. Matching is case-insensitive, and the colour is used by the interface
-            alone.
-          </p>
-        </div>
-        <div className="dash-head-actions">
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => {
-              nameRef.current?.focus();
-              nameRef.current?.scrollIntoView?.({ block: "center" });
-            }}
-          >
-            <Icon name="plus" size={16} />
-            New tag
-          </button>
-        </div>
-      </div>
+      <SectionIntro
+        icon="tags"
+        eyebrow="Taxonomy"
+        title="Tags that make sense."
+        lead="A small, intentional vocabulary keeps your transactions useful without making them feel like admin work. Matching is case-insensitive, and the colour is used by the interface alone."
+      />
 
       {(tags.error ?? error) ? <Banner tone="error">{tags.error ?? error}</Banner> : null}
 
@@ -186,7 +167,6 @@ export function TagsView({ csrf }: { csrf: string }) {
               </span>
               <input
                 id="tag-name-new"
-                ref={nameRef}
                 value={name}
                 placeholder="e.g. Weekend trips"
                 onChange={(event) => setName(event.target.value)}

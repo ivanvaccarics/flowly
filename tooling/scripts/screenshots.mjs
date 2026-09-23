@@ -38,7 +38,7 @@ const SECTIONS = [
     title: "Financial overview",
     // The dashboard opens on the current month; the screenshot shows a trend.
     prepare: "3 months",
-    // The dashboard opens with its metric cards rather than a section banner.
+    // The dashboard opens with its metric cards, under the headline.
     ready: ".kpi-row",
     // Taller than the rest: the metric row, three card rows and the backup
     // strip all belong in one picture of the page.
@@ -239,7 +239,7 @@ async function main() {
           section.title,
         )})`,
       );
-      await devtools.waitFor(`!!document.querySelector('${section.ready ?? ".section-banner"}')`);
+      await devtools.waitFor(`!!document.querySelector('${section.ready ?? ".section-intro"}')`);
       if (section.prepare) {
         await devtools.evaluate(`(() => {
           const button = [...document.querySelectorAll("button")]

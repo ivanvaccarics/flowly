@@ -2,14 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Account, Dashboard } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon, type IconName } from "../components/icons.js";
-import {
-  Banner,
-  BannerFigure,
-  Chip,
-  Empty,
-  SectionBanner,
-  SectionIntro,
-} from "../components/ui.js";
+import { Banner, Chip, Empty, SectionIntro } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { ACCOUNT_TYPES, CURRENCIES, formatMoney } from "../lib/money.js";
@@ -97,47 +90,13 @@ export function AccountsView({ csrf }: { csrf: string }) {
 
   const currencies = new Set(balances.map((line) => line.currency));
   // Totals are per currency: Flowly never converts to invent one number.
-  const totals = [...currencies].map((currency) => ({
-    currency,
-    balanceMinor: balances
-      .filter((line) => line.currency === currency)
-      .reduce((total, line) => total + line.balanceMinor, 0),
-  }));
-
   return (
     <section className="view" aria-labelledby="accounts-title">
-      <SectionBanner
-        tone="vault"
-        icon="accounts"
-        eyebrow="Money & accounts"
-        title="Every account, one vault"
-        badge={<Chip tone="neutral">{accounts.items.length} accounts</Chip>}
-        lead="Every account is a local endpoint: a bank-linked account shows the balance your bank sends, every other account books its own movements, and no currency is ever converted."
-        side={
-          <Chip tone="vault" icon="lock">
-            AES-256-GCM
-          </Chip>
-        }
-        figures={
-          totals.length > 0 ? (
-            <>
-              {totals.map((total) => (
-                <BannerFigure
-                  key={total.currency}
-                  label={`Booked balance · ${total.currency}`}
-                  value={formatMoney(total.balanceMinor, total.currency)}
-                />
-              ))}
-            </>
-          ) : null
-        }
-      />
-
       <SectionIntro
         icon="accounts"
         eyebrow="Balances per currency"
-        title="Where your money sits right now."
-        lead="Archived accounts keep their movements and can be restored; deleting one asks for an explicit cascade."
+        title="Every account, one vault."
+        lead="Every account is a local endpoint: a bank-linked account shows the balance your bank sends, every other account books its own movements, and no currency is ever converted. Archived accounts keep their movements and can be restored."
         actions={
           <Chip tone="neutral">
             {currencies.size} {currencies.size === 1 ? "currency" : "currencies"}

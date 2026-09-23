@@ -2578,41 +2578,6 @@ button.legend-row {
 
 /* --------------------------------------------------- dashboard layout */
 
-.dash-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.5rem 2rem;
-  flex-wrap: wrap;
-}
-
-.dash-head-text {
-  display: grid;
-  gap: 0.6rem;
-  max-width: 44rem;
-}
-
-.dash-head-text .eyebrow {
-  margin: 0;
-  color: var(--text-faint);
-}
-
-.dash-head-text .lead {
-  margin: 0;
-  color: var(--text-muted);
-  max-width: 34rem;
-}
-
-.dash-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-
-/* Refreshing reads dim the figures instead of inserting a banner, so a period
-   change never moves the page under the pointer. */
-.kpi-row,
 .dash-grid {
   transition: opacity 140ms ease;
 }
@@ -2932,120 +2897,10 @@ button.legend-row {
 
 /* ---------------------------------------------------------- page headings */
 
-/* Every section opens with the same strip: what it is about, what state it is
-   in, and — when there are numbers — the figures that matter, above the
-   section's own headline. The tone carries the meaning: green for the money
-   itself, violet for the automation around it, slate for the vault. */
-.section-banner {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.25rem 1.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-1);
-}
-
-.section-banner.info {
-  border-color: var(--border);
-  background: var(--surface);
-}
-
-.section-banner.neutral {
-  border-color: var(--border);
-  background: var(--surface-low);
-}
-
-.section-banner-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.section-banner-main {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.section-banner-title {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.section-banner-main .sub {
-  display: block;
-  max-width: 78ch;
-  color: var(--text-secondary);
-}
-
-.section-banner-main .eyebrow {
-  margin: 0 0 0.15rem;
-}
-
-.section-banner-side {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  flex-wrap: wrap;
-}
-
-.section-banner-side .banner-figure {
-  justify-items: end;
-  text-align: right;
-}
-
-.section-banner-figures {
-  display: flex;
-  gap: 2.5rem;
-  flex-wrap: wrap;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(32, 48, 50, 0.08);
-}
-
-.banner-figure {
-  display: grid;
-  gap: 0.1rem;
-}
-
-.banner-figure strong {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
-.banner-figure strong.income {
-  color: var(--income);
-}
-
-.banner-figure strong.expense {
-  color: var(--expense);
-}
-
 .tile.vault {
   background: var(--primary-soft);
   border: 1px solid var(--primary-soft-border);
   color: var(--primary-ink);
-}
-
-.tile.info {
-  background: var(--info-soft);
-  border: 1px solid var(--info-soft-border);
-  color: var(--info);
-}
-
-.tile.neutral {
-  background: var(--surface-low);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
 }
 
 .section-intro {

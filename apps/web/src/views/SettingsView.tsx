@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api } from "../api/client.js";
 import { BankingPanel } from "../components/BankingPanel.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, FileField, SectionBanner, SectionIntro } from "../components/ui.js";
+import { Banner, Chip, FileField, SectionIntro } from "../components/ui.js";
 import { describeError } from "../hooks/use-workspace.js";
 
 interface CsvPreview {
@@ -61,29 +61,11 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
 
   return (
     <section className="view" aria-labelledby="settings-title">
-      <SectionBanner
-        tone="neutral"
-        icon="settings"
-        eyebrow="Vault & data"
-        title="Your vault, your rules"
-        badge={
-          <Chip tone="vault" icon="shield">
-            AES-256-GCM
-          </Chip>
-        }
-        lead="Connect your bank, protect the local vault with its passphrase, and export or import your ledger without giving up sovereignty."
-        side={
-          <Chip tone="income" icon="check">
-            zero-cloud
-          </Chip>
-        }
-      />
-
       <SectionIntro
         icon="settings"
-        eyebrow="Settings"
+        eyebrow="Vault & data"
         title="Nothing leaves the device unless you take it."
-        lead="The bank connection, the passphrase and the portable export all work against the local vault; the three export shapes are the supported way out."
+        lead="Connect your bank, protect the local vault with its passphrase, and export or import your ledger without giving up sovereignty: the three export shapes are the supported way out."
       />
 
       <BankingPanel csrf={csrf} />

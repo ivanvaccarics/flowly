@@ -117,7 +117,7 @@ you should see.
 | Open a tag from the directory (a click on the row, or **Edit**) | The tag opens in a dialog over the page with its name and colour; **Cancel** leaves it untouched, **Save tag** applies the change everywhere the tag is used |
 | Add a transaction with payee, note and a tag | It appears in the table with the amount formatted in its currency |
 | Press **Add transaction** on the ledger | The record form opens in a dialog over the page; saving it closes the dialog and the new movement is at the top of the ledger |
-| Look at the top of any section | A flat banner names what the section is about with its figures, and a headline with the section's action sits under it; the top bar carries the vault's own state, not the section's |
+| Look at the top of any section | It opens the same way everywhere and with nothing else above it: an eyebrow with the section's icon, the section's sentence in the serif and a lead, with at most one action or state chip beside it; the figures are in the cards, and no page carries a banner |
 | Edit the note of a transaction | The change is saved; the revision increases |
 | Click the date (or the payee, the note, the tags, the amount) of a row | The movement opens in the same dialog **Add transaction** uses, prefilled with its account, date, amount, payee, note, status and tags; **Cancel** closes it without writing, and the row's **Edit** button opens it too. The status chip is the exception: a click there only switches booked ↔ pending |
 | Open any dialog while the page is scrolled, with the top bar pinned | The dialog covers the whole window, top bar included: its title is never hidden under the bar and the first field stays reachable |

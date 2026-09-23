@@ -27,6 +27,16 @@ other sections stand.
 > category never moves the page under the pointer. The ledger's **Searching…**
 > banner went the same way.
 
+> **Update (2026-09-23, once more).** The banner is gone from every page. An
+> eyebrow, the section's sentence in the serif and a lead say what a page is for,
+> and nothing sits above them: the tinted strips with their icon tiles, chips and
+> rows of figures (`SectionBanner`, `BannerFigure`) are deleted, and the figures
+> they carried live in the cards, where they can be used. The **New rule** and
+> **New tag** shortcuts went with them: the composer and the create form are the
+> first thing on those pages, so a button to reach them was in the way. Every
+> section now opens with the same `SectionIntro`, and only the standalone bank
+> callback keeps the older hero card.
+
 ## Context
 
 The interface had grown a cool slate canvas, a tinted sidebar, a gradient tile

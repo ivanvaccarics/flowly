@@ -11,15 +11,7 @@ import {
   type RuleDraft,
 } from "../components/RuleFields.js";
 import { Icon } from "../components/icons.js";
-import {
-  Banner,
-  BannerFigure,
-  Chip,
-  Empty,
-  SectionBanner,
-  SectionIntro,
-  tagPillStyle,
-} from "../components/ui.js";
+import { Banner, Chip, Empty, SectionIntro, tagPillStyle } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
@@ -46,7 +38,6 @@ export function RulesView({ csrf }: { csrf: string }) {
     undefined,
   );
   const openerRef = useRef<HTMLElement | null>(null);
-  const composerRef = useRef<HTMLFormElement | null>(null);
   const [report, setReport] = useState<string | undefined>(undefined);
   const [actionError, setActionError] = useState<string | undefined>(undefined);
   const [editorError, setEditorError] = useState<string | undefined>(undefined);
@@ -101,11 +92,6 @@ export function RulesView({ csrf }: { csrf: string }) {
   function updateDraft(next: RuleDraft) {
     setPreview(undefined);
     setDraft(next);
-  }
-
-  function startNewRule() {
-    composerRef.current?.scrollIntoView?.({ block: "start" });
-    composerRef.current?.querySelector<HTMLInputElement>("input")?.focus();
   }
 
   function openEditor(rule: TaggingRule, opener: HTMLElement | null) {
@@ -258,39 +244,22 @@ export function RulesView({ csrf }: { csrf: string }) {
 
   return (
     <section className="view" aria-labelledby="rules-title">
-      <SectionBanner
-        tone="info"
-        icon="rules"
-        title="Deterministic heuristic engine"
-        badge={<Chip tone="income">Zero-knowledge</Chip>}
-        lead="Active rules are evaluated in memory, on your device. Nothing is uploaded and nothing is measured: matching happens here, inside the encrypted vault."
-        side={
-          <>
-            <BannerFigure label="Evaluated" value={stats ? String(evaluated) : "—"} />
-            <Chip tone={activeRules.length > 0 ? "income" : "neutral"}>
-              {activeRules.length > 0 ? `${activeRules.length} active` : "Engine idle"}
-            </Chip>
-          </>
-        }
-      />
-
       <SectionIntro
         icon="rules"
-        eyebrow="Local rules"
+        eyebrow="Deterministic heuristic engine"
         title="Keep order, without thinking about it twice."
-        lead="Define the signal, pick a label and Flowly does the repetitive work. Rules only ever add tags, they run on new transactions and imports, and they stay yours alone."
+        lead="Active rules are evaluated in memory, on your device: nothing is uploaded and nothing is measured. Define the signal, pick a label and Flowly does the repetitive work — rules only ever add tags, on new movements and imports."
         actions={
-          <button type="button" className="btn primary" onClick={startNewRule}>
-            <Icon name="plus" size={16} />
-            New rule
-          </button>
+          <Chip tone={activeRules.length > 0 ? "income" : "neutral"}>
+            {activeRules.length > 0 ? `${activeRules.length} active` : "Engine idle"}
+          </Chip>
         }
       />
 
       <div className="dash">
         <div className="dash-main">
           {/* Named so the card stays a landmark of its own next to the dialog. */}
-          <form className="card composer" aria-label="New rule" onSubmit={create} ref={composerRef}>
+          <form className="card composer" aria-label="New rule" onSubmit={create}>
             <header>
               <div>
                 <p className="eyebrow">Composer</p>
