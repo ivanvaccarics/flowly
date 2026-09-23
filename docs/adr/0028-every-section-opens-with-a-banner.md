@@ -2,6 +2,11 @@
 
 Status: Accepted (2026-09-22)
 
+The pattern stands on the five money, ledger, tag, rule and vault sections; the
+dashboard now opens with the date, an hour's greeting and the metric cards
+instead: [ADR 0037](./0037-the-web-ui-is-flat-warm-and-green.md). The banner
+itself is no longer tinted — it is a white card with a hairline.
+
 ## Context
 
 The redrawn Rules page introduced a shape the older pages did not have: a

@@ -59,7 +59,7 @@ export function BankingSyncCard({
     <section className="card">
       <header>
         <div>
-          <h2>Bank sync</h2>
+          <h2 className="card-title">Bank sync</h2>
           <span className="sub">
             {connected
               ? `${mapped.length} paired ${mapped.length === 1 ? "account" : "accounts"} · ${

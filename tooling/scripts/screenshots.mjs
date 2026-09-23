@@ -24,8 +24,8 @@ const baseUrl = args.find((argument) => argument.startsWith("http")) ?? "http://
 const chromeArgument = args.find((argument) => argument.startsWith("--chrome="));
 const passphrase = process.env.FLOWLY_DEMO_PASSPHRASE ?? "flowly demo passphrase 2026";
 const port = Number(process.env.FLOWLY_SCREENSHOT_PORT ?? 9333);
-/** Viewport height; taller is handy when reviewing a long page by hand. */
-const height = Number(process.env.FLOWLY_SCREENSHOT_HEIGHT ?? 900);
+/** Viewport height; the dashboard is a long page, so the default is tall. */
+const height = Number(process.env.FLOWLY_SCREENSHOT_HEIGHT ?? 1400);
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 const outDir = join(here, "..", "..", "docs", "images");
@@ -36,8 +36,13 @@ const SECTIONS = [
     file: "dashboard.png",
     nav: "Dashboard",
     title: "Financial overview",
-    // The dashboard opens on the current month; the screenshot shows a trend.
+    // The dashboard opens on the current month; the screenshot shows a trend,
+    // and the period picker has to be opened before its presets can be clicked.
+    openPicker: true,
     prepare: "3 months",
+    // Taller than the rest: the metric row, three card rows and the backup
+    // strip all belong in one picture of the page.
+    height: 2100,
   },
   { file: "accounts.png", nav: "Accounts", title: "Accounts & resources" },
   { file: "transactions.png", nav: "Transactions", title: "Transactions" },
@@ -204,9 +209,24 @@ async function main() {
 
     await devtools.send("Page.navigate", { url: baseUrl });
     await devtools.waitFor("!!document.querySelector('.sidebar')");
-    await devtools.waitFor("!!document.querySelector('.section-banner')");
+    await devtools.waitFor("!!document.querySelector('.topbar')");
 
     for (const section of SECTIONS) {
+      if (section.height && section.height !== height) {
+        await devtools.send("Emulation.setDeviceMetricsOverride", {
+          width: 1440,
+          height: section.height,
+          deviceScaleFactor: 1,
+          mobile: false,
+        });
+      } else {
+        await devtools.send("Emulation.setDeviceMetricsOverride", {
+          width: 1440,
+          height,
+          deviceScaleFactor: 1,
+          mobile: false,
+        });
+      }
       await devtools.evaluate(`(() => {
         const button = [...document.querySelectorAll(".nav button")]
           .find((candidate) => candidate.textContent.trim() === ${JSON.stringify(section.nav)});
@@ -214,9 +234,19 @@ async function main() {
         button.click();
       })()`);
       await devtools.waitFor(
-        `document.querySelector(".topbar-title")?.textContent.trim() === ${JSON.stringify(section.title)}`,
+        `[...document.querySelectorAll("h1")].some((heading) => heading.textContent.trim() === ${JSON.stringify(
+          section.title,
+        )})`,
       );
-      await devtools.waitFor("!!document.querySelector('.section-banner')");
+      await devtools.waitFor(
+        section.openPicker
+          ? "!!document.querySelector('.kpi-row')"
+          : "!!document.querySelector('.section-banner')",
+      );
+      if (section.openPicker) {
+        await devtools.evaluate(`document.querySelector(".period-trigger").click()`);
+        await devtools.waitFor("!!document.querySelector('.period-popover')");
+      }
       if (section.prepare) {
         await devtools.evaluate(`(() => {
           const button = [...document.querySelectorAll("button")]

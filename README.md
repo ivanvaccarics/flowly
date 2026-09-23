@@ -34,9 +34,8 @@ database, not in journals, not in caches, not in logs.
 
 ## What it looks like
 
-Six sections, one design language: every section opens with a banner saying what
-it is about and a headline naming what it is for, and every figure comes from the
-vault. No placeholder data anywhere in the app.
+Six sections, one design language, and every figure read from the vault. No
+placeholder data anywhere in the app.
 
 **Dashboard** — balances per currency, monthly cash flow and spending by tag, for
 the months you pick.

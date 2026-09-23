@@ -9,36 +9,38 @@ authoritative summary for anyone cloning the repository.
 
 ## Character
 
-High-trust, sovereign and quiet: white cards with a hairline outline over a
-cool slate canvas, a tinted sidebar, one accent colour used sparingly, dense
-tabular structures and precise typographic contrast. No decorative noise, no
-dark-mode inversion, and the brand gradient is spent where the brand itself
-speaks — the tile and the progress bar — never across the chrome. Colour only
-enters where it carries meaning: the brand green for the product's own actions,
-emerald for inflows, red for outflows and destructive actions, violet for
-engine-level information.
+High-trust, sovereign and quiet: white cards with a hairline outline and a soft
+shadow over a warm off-white canvas, one green used sparingly, and a serif that
+appears only where the product speaks in a full sentence. No decorative noise,
+no dark-mode inversion, no gradient across the chrome. Colour only enters where
+it carries meaning: the brand green for the product's own actions, the one
+filled card that states the balance, green for inflows, a muted red for
+outflows and destructive actions, violet for engine-level information.
 
 ## Brand
 
-The Flowly mark is a white keyhole knocked out of a green-to-gold squircle,
-locked up with the rounded `Flowly` wordmark. Everything is SVG, served from
-`apps/web/public`, and every asset carries the same three colours:
+The Flowly mark is a white keyhole knocked out of a green squircle, locked up
+with the rounded `Flowly` wordmark. Everything is SVG, served from
+`apps/web/public`:
 
 | Colour | Value | Where it lands |
 | --- | --- | --- |
 | Deep green | `#0b3d2e` | The dark end of every gradient: the tile's top-left, the stem of the `F`, the browser theme colour |
-| Medium green | `#1e6f4e` | The middle stop: the tile's centre, the `o` and `w`, primary actions, the default tag colour |
+| Brand green | `#277b62` | The middle stop of the gradient, the flat chrome tile, primary actions, the filled balance card, the default tag colour |
 | Gold | `#d4af37` | The bright end: the tile's bottom-right, the tail of the `y`, gold tags — never text |
 
-The gradient runs deep green → medium green → gold: left to right in the
-wordmark, top-left to bottom-right in the tile. It never sits behind text; the
-only other fade the product paints is the soft wash behind the unlock card.
+The gradient runs deep green → brand green → gold: left to right in the
+wordmark, top-left to bottom-right in the tile. It stays in the lockup asset;
+the application chrome paints the same geometry flat — a solid brand-green tile
+and the wordmark in ink — because a gradient behind the sidebar reads as
+decoration.
 
 | Asset | Use |
 | --- | --- |
-| `logo.svg` | Horizontal lockup — tile plus wordmark; the unlock card and the README |
+| `logo.svg` | Horizontal lockup with the gradient — tile plus wordmark; the README and anything published outside the app |
+| `logo-wordmark.svg` | The wordmark alone in ink, for the chrome's flat lockup |
 | `logo-mark.svg` | The tile alone on a transparent square, for light or dark surfaces |
-| `logo-mark-mono.svg` | The keyhole alone in white, for dark or tinted surfaces; the sidebar brand tile |
+| `logo-mark-mono.svg` | The keyhole alone in white, for dark or tinted surfaces; the chrome tile |
 | `favicon.svg` | The tile with a little air around it; browser tab |
 
 The tile is painted through a mask (the tile's two traced halves minus the
@@ -46,10 +48,11 @@ keyhole) so its knockout edge stays crisp instead of picking up the seam where
 the halves meet. The wordmark ships as outlines, not as live text: it keeps its
 rounded shape with no webfont, which is what a private network without a CDN
 needs. The lockup carries no tagline; the unlock card states it as the lead
-paragraph, where a screen reader reads it once, and `logo.svg` is labelled
-simply "Flowly". The sidebar draws its own tile in CSS — `.brand-tile`, an
-11 px radius on 34 px with `--brand-gradient` — and knocks `logo-mark-mono.svg`
-into it at the share of the tile the mark uses (20 px of 34 px).
+paragraph, where a screen reader reads it once, and every asset is labelled
+simply "Flowly". The chrome draws its own tile in CSS — `.brand-tile`, a 9 px
+radius on 30 px filled with `--primary` — and knocks `logo-mark-mono.svg` into
+it at the share of the tile the mark uses (17 px of 30 px), next to
+`logo-wordmark.svg` at the same height.
 
 ## Tokens
 
@@ -59,25 +62,25 @@ blue and violet accents.
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--canvas` | `#f8fafc` | Application background behind the cards |
-| `--surface` | `#ffffff` | Cards, tables, popovers, top bar |
-| `--sidebar` | `#f1f5f9` | The navigation rail |
-| `--surface-low` | `#f8fafc` | Fieldsets, ribbons, list rows, option cards, inputs |
-| `--surface-sunken` | `#f1f5f9` | Chips, icon tiles, control tracks, table hairlines |
-| `--border` / `--border-strong` | `#e2e8f0` / `#cbd5e1` | Card outlines, row dividers, dashed dropzones |
-| `--text` / `--text-secondary` / `--text-muted` / `--text-faint` | `#0f172a` / `#475569` / `#64748b` / `#94a3b8` | Headlines and figures, body, metadata, placeholders |
-| `--brand-deep` / `--brand` / `--brand-gold` | `#0b3d2e` / `#1e6f4e` / `#d4af37` | The brand palette: the tile, the default tag colour, anything that has to read as Flowly |
-| `--brand-gradient` | `#0b3d2e → #1e6f4e (55 %) → #d4af37` at 120° | The sidebar tile and the progress bar — the only gradient the chrome gets |
-| `--brand-shadow` / `--brand-ring` | `rgba(11, 61, 46, 0.26)` / `rgba(30, 111, 78, 0.18)` | The lift under the tile and primary buttons / focus halos |
-| `--primary` / `--primary-hover` | `#1e6f4e` / `#17593f` | Primary actions, active segment, focused fields, the on-state of a switch |
-| `--primary-soft` / `--primary-ink` | `#e3f1e8` / `#17593f` | Vault chips, icon tiles, tag pills |
-| `--accent` | `#0b3d2e` | Active navigation icon, account dot, outlined focus rings |
-| `--income` / `--income-graphic` / `--income-soft` | `#047857` / `#10b981` / `#d1fae5` | Inflow text / chart bars and dots / chips and tiles |
-| `--expense` / `--expense-graphic` / `--expense-soft` | `#dc2626` / `#ef4444` / `#fee2e2` | Outflow text / chart bars / chips and destructive buttons |
-| `--info` / `--info-graphic` / `--info-soft` | `#7c3aed` / `#8b5cf6` / `#ede9fe` | Engine-level banners and chips |
-| `--warning` / `--warning-soft` | `#b45309` / `#fef3c7` | Sovereign-warning banners |
-| `--accent-blue` / `--accent-blue-soft` | `#1d4ed8` / `#dbeafe` | The focal figure of a metric row |
-| Radius | 6 px / 10 px / 16 px / pill | Micro controls / inputs and buttons / cards and panels / chips |
+| `--canvas` | `#f7f8f5` | Application background behind the cards, and the top bar |
+| `--surface` | `#fffefb` | Cards, tables, popovers, inputs |
+| `--sidebar` | `#f7f8f5` | The navigation rail, separated by a hairline |
+| `--surface-low` | `#f2f7f3` | Fieldsets, ribbons, list rows, option cards, icon tiles |
+| `--surface-sunken` / `--surface-high` | `#eef2ee` / `#e4eae4` | Control tracks, hover states, table hairlines |
+| `--border` / `--border-strong` | `#e1e8e3` / `#cfdad3` | Card outlines, row dividers, dashed dropzones |
+| `--text` / `--text-secondary` / `--text-muted` / `--text-faint` | `#203032` / `#46585a` / `#667571` / `#74827e` | Headlines and figures, body, metadata, the date eyebrow |
+| `--brand-deep` / `--brand` / `--brand-gold` | `#0b3d2e` / `#277b62` / `#d4af37` | The brand palette: the lockup gradient, the default tag colour, anything that has to read as Flowly |
+| `--brand-gradient` | `#0b3d2e → #277b62 (55 %) → #d4af37` at 120° | The published lockup and the import progress bar — never across the chrome |
+| `--brand-shadow` / `--brand-ring` | `rgba(39, 123, 98, 0.28)` / `rgba(39, 123, 98, 0.18)` | The lift under the chrome tile and primary buttons / focus halos |
+| `--primary` / `--primary-hover` | `#277b62` / `#1f6a54` | Primary actions, the filled balance card, the active navigation pill, the on-state of a switch |
+| `--primary-soft` / `--primary-ink` | `#e4f2eb` / `#1d5c48` | The active navigation pill, chips, icon tiles, tag pills |
+| `--accent` | `#277b62` | Active navigation icon and the dot that ends the active item |
+| `--income` / `--income-graphic` / `--income-soft` | `#1f7a58` / `#37997a` / `#e4f2eb` | Inflow text / chart bars and dots / chips and tiles |
+| `--expense` / `--expense-graphic` / `--expense-soft` | `#a8515d` / `#cf7280` / `#f8e9eb` | Outflow text / chart bars / chips and destructive buttons |
+| `--info` / `--info-graphic` / `--info-soft` | `#6a5fa0` / `#8d81c9` / `#eeebf7` | Engine-level banners and chips |
+| `--warning` / `--warning-soft` | `#8a5f28` / `#f7efe2` | Sovereign-warning banners |
+| `--accent-blue` / `--accent-blue-soft` | `#35618f` / `#e8eff6` | Secondary chart slices |
+| Radius | 8 px / 12 px / 18 px / pill | Micro controls / inputs and buttons / cards and panels / chips |
 | Shadow | level 1–3 | Cards, hover and popovers, modal and unlock card |
 
 Every colour that carries text clears WCAG AA on white: the gold is a fill, a
@@ -89,9 +92,12 @@ keep the mockup values exactly.
 
 ## Typography
 
-- **Display (Manrope):** the page title in the top bar, section headings, metric
-  values, ribbon figures and chart centres.
-- **Body (Inter):** controls, prose, table cells.
+- **Headline (local serif):** the one full sentence a page opens with — the
+  dashboard's greeting and the unlock card's welcome — set at 2.25-2.5 rem, and
+  the section headline on the five pages that keep the banner/intro pair.
+- **Display (Manrope):** card titles, metric values, ribbon figures and chart
+  centres.
+- **Body (Inter):** controls, prose, table cells, the sidebar and the top bar.
 - **Data (JetBrains Mono):** key fingerprints, hashes, provider payloads, dates
   in the ledger and the amounts and shares beside a chart legend. Money is set
   in the display
@@ -107,49 +113,57 @@ every export stays canonical, so the figures round-trip. The amount fields accep
 either convention — `1.234,56` and `1,234.56` both land on the same value.
 
 **No webfont CDN.** Flowly runs on a private network with no Internet access, so
-the families are declared with local fallbacks (`SF Pro`, `Segoe UI`, system
-fonts). Where Manrope, Inter or JetBrains Mono are installed the intended look is
-reproduced exactly; otherwise the closest system face is used and the layout does
-not shift.
+the families are declared with local fallbacks (`Iowan Old Style`, `Palatino`,
+`SF Pro`, `Segoe UI`, system fonts). Where they are installed the intended look
+is reproduced exactly; otherwise the closest system face is used and the layout
+does not shift. The wordmark is outlines, never a font, so the brand looks the
+same on every machine.
 
 ## Layout
 
-- Fixed 258 px tinted sidebar, separated from the content by a hairline: brand
-  tile and wordmark and the six sections, with no user account and no vault card
-  under them — the vault's state belongs to the unlock screen, not to the chrome
-  of a section. The active section is a white pill with a hairline outline and a
-  brand-green icon.
-- Sticky 64 px white top bar carrying the current section's `h1`, the local clock
-  and the session controls (Lock session, Lock all). A breadcrumb eyebrow above
-  the `h1` names the family the section belongs to (Analysis & trend, Money &
-  accounts, Automation & taxonomy, Vault & data), so a page is never just its
-  own title. Exporting has one home —
-  Settings — and no top-bar shortcut; the dashboard hero's **Export data** button
-  is a deep link that opens Settings, scrolls the export block into view and puts
-  focus on it.
-- Content column capped at 1600 px with 32 px gutters; cards carry 24 px internal
-  padding and a 20 px gap inside a grid.
-- Below 1024 px the sidebar becomes a horizontal, wrapping nav, the top bar wraps
-  and cards stack.
+- Fixed 218 px sidebar in the canvas colour, separated from the content by a
+  hairline: the flat lockup, the **Your vault** label and the six sections, then
+  the session card at the foot — the vault's own name, its state in words, and
+  the two session controls as icon buttons (**Lock session**, **Lock all**).
+  The active section is a soft-green pill with a brand-green icon and a dot at
+  its end.
+- Sticky 70 px top bar in the canvas colour over a hairline, carrying what the
+  session knows — an **Encrypted locally** chip and the hour the vault was
+  opened — and the one action that belongs to the vault rather than a section:
+  **Backup vault**, which deep-links into Settings' export block and focuses it.
+  The page's `h1` is read, not printed: the active sidebar item and the page's
+  own headline name the section on screen.
+- Content column capped at 1240 px with 40 px gutters; cards carry 24 px internal
+  padding and a 20 px gap inside a grid. The dashboard's own grid is three
+  columns: the chart and the recent movements take two, the bank card and the
+  spending donut take one, and the accounts summary spans the row.
+- Below 1200 px the dashboard grid folds to two columns, below 1024 px the
+  sidebar becomes a horizontal, wrapping nav, the top bar wraps and everything
+  stacks.
 
 ## Components
 
-- **Top bar title:** the single `h1` of every screen lives here, and each view
-  points its `aria-labelledby` at it. Sections therefore open without repeating
-  their own name.
-- **Section banner:** every section opens with the same tinted strip, above its
-  own headline — an icon tile, an optional eyebrow, the section's title with a
-  state chip, a sentence about what the section does, state chips on the right
-  and, when there are numbers, a row of figures under the text (this month's
-  income, expenses and net on the ledger; the booked balance per currency on
-  accounts; the evaluated-transaction figure and active-rule chip on rules). The
-  tone carries the meaning: green for the money itself, violet for the
-  automation around it, slate for the vault. It is informational, never a
-  warning.
+- **Page title:** the single `h1` of every screen is read by assistive
+  technology and pointed at by each view's `aria-labelledby`, but it is not
+  printed: the sidebar names the current section, and every page opens with its
+  own headline.
+- **Dashboard header:** the date as an eyebrow, the greeting as the page's serif
+  headline, one sentence about what the page shows, and the period picker beside
+  it. It replaces the banner/intro pair on the dashboard, where the figures that
+  pair used to carry are the three metric cards themselves.
+- **Section banner:** the five other sections open with the same flat strip over
+  their headline — a white card with a hairline, an icon tile in the section's
+  tone, an optional eyebrow, the section's title with a state chip, a sentence
+  about what the section does, state chips on the right and, when there are
+  numbers, a row of figures under a hairline (this month's income, expenses and
+  net on the ledger; the booked balance per currency on accounts; the
+  evaluated-transaction figure and active-rule chip on rules). The tone carries
+  the meaning: green for the money itself, violet for the automation around it,
+  slate for the vault. It is informational, never a warning.
 - **Section intro:** the headline block under the banner — an eyebrow with the
-  section's icon, a sentence worth reading, a lead and the section's own action
-  (period control and shortcuts on the dashboard, **New rule** on rules,
-  **Add transaction** on the ledger, the currency chip on accounts).
+  section's icon, the section's serif sentence, a lead and the section's own
+  action (**New rule** on rules, **Add transaction** on the ledger, the currency
+  chip on accounts).
 - **Page header:** the older hero card, kept only for the bank callback, which
   renders outside the shell and owns the page's `h1`.
 - **Coverage bar:** the overview's stacked bar, one segment per tag the rules
@@ -193,16 +207,28 @@ not shift.
   tag of the period is always included — the dashboard's only scope is the
   period — so the legend is a read-out, not a filter: colour, name, amount and
   share per row. A row is a button that opens the ledger on that tag.
-- **Period picker:** the dashboard's own bar — a preset (month, 3 months, year,
-  custom), a year strip with a count of that year's selected months, and the
-  twelve months of the year the strip points at. Under them sit the selected
-  months as removable chips, with **All &lt;year&gt;**, **Clear** and the count
-  at the end of that same row. Clicking a month is what "custom" means, and the
-  preset follows the click.
-- **KPI row:** the four figures a period is read by — total balance, income,
-  expenses and net flow — each with its unit and a one-line hint, separated by
-  the same hairline the mockups use. One row per currency, because unlike
-  currencies are never added together.
+- **Period picker:** a compact trigger in the dashboard header, naming the
+  period in words (**This month**, **Last 3 months**, **This year**, **Custom
+  months**) with a calendar button beside it. Either one opens the picker over
+  the page: the preset segments, a year strip with a count of that year's
+  selected months, the twelve months of the year the strip points at, and the
+  selected months as removable chips with **All &lt;year&gt;**, **Clear** and
+  the count. Clicking a month is what "custom" means, and the preset follows the
+  click; choosing a preset closes the picker again.
+- **Metric card:** the three figures a period is read by — the balance across
+  accounts, what was spent and what came in — each a card with a label, an icon
+  tile, a large tabular value with its currency and a one-line context. The
+  balance card is the page's one filled surface: brand green with white type,
+  the period's net flow underneath and the savings rate as a badge. One row per
+  currency, because unlike currencies are never added together.
+- **Recent transactions:** the dashboard's movement list — an icon tile, the
+  payee, a meta line naming the day, the account and where the row came from
+  (never the provider's raw id), the row's tags as pills, and the amount on the
+  right, green for inflows and red for outflows. It pages ten rows at a time and
+  links to the full ledger.
+- **Backup strip:** a dashed, soft-green strip under the dashboard stating that
+  the vault is stored on the device and ready for an encrypted backup, with the
+  **Export data** deep link into Settings.
 - **Cash-flow chart:** weekly income/expense bars with a net line, inline SVG.
 - **Account card:** icon tile, name, type and currency, status chips and a tinted
   balance block with the booked-movement count.
@@ -245,7 +271,7 @@ Only shipping functionality is on screen; every figure comes from the API.
 
 | Section | Contents |
 | --- | --- |
-| Dashboard | Green banner (encrypted ledger, accounts, currencies and the selected months) and the headline with Export data and New transaction; the **period picker** (preset, year strip, month grid, and the selected months as removable chips with **All &lt;year&gt;**, **Clear** and the count on the same row); a **KPI row per currency** (total balance, income, expenses, net flow) with deltas against the previous equal-length period and the savings rate; an **interactive** cash-flow chart (monthly income/expense bars with a net line, inline SVG) whose hovered month is lit, guided and read out in a tooltip, one keyboard stop walked with the arrow keys, and clickable to open that month in the ledger; the spending breakdown as **one donut per currency**, every tag of the period always drawn, with a legend row per category (colour, amount, share) that opens the ledger filtered to that tag; recent transactions table, paged ten rows at a time on the server with the window and its own Previous/Next; accounts summary and the bank sync card (last sync, **Sync now**, reconnect warnings) |
+| Dashboard | The date and the greeting, one sentence about the page, and the **period picker** (compact trigger plus calendar button; the preset segments, the year strip, the month grid and the selected months as removable chips with **All &lt;year&gt;**, **Clear** and the count open over the page); a **metric row per currency** — the filled balance card with the period's net flow and the savings rate, then what was spent and what came in, each with its delta against the previous equal-length period; an **interactive** cash-flow chart (income/expense bars with a net line, inline SVG) whose hovered month is lit, guided and read out in a tooltip, one keyboard stop walked with the arrow keys, and clickable to open that month in the ledger; the spending breakdown as **one donut per currency**, every tag of the period always drawn, with a legend row per category (colour, amount, share) that opens the ledger filtered to that tag; the recent movements as a paged list (ten rows at a time on the server, with the window and its own Previous/Next); the bank sync card (last sync, **Sync now**, reconnect warnings); the accounts summary; and the backup strip with the **Export data** deep link |
 | Accounts | Green banner with the account count and the booked balance per currency, the headline with the currency chip, the create form, and one card per account with its real balance per currency and booked-movement count, archive, restore an archived account, and cascade delete |
 | Transactions | Green banner naming the encrypted ledger with this month's income, expenses and net, the headline with **Add transaction** (the record form opens in a dialog over the page, with the tag picker and the tagging-rules note), and one ledger card holding the server-side filters (text, account, tag, status, date range), the **View** pills (all movements, then one pill per tag in its own colour), the table — a row opens the movement in the same dialog with one **click** on a cell or on the row's **Edit** button, with account, booking date, amount, payee, note, status and tags — a status chip that switches booked ↔ pending, the source as an offline-AES chip, a **Raw** toggle per row that opens the provider record behind it (the stored fields and the bank's own fields side by side, flattened one per row, with the exact JSON one click away) and delete — and the pager footer |
 | Tags | Violet banner with the tag count, the headline, create with a palette colour or a free colour from the browser picker, **inline rename and recolour** of an existing tag, and cascade delete |
@@ -257,17 +283,22 @@ free-text search lives in the Transactions filters, next to the other query
 controls, so there is one place to search the ledger instead of two. If a global
 search comes back later, it should reuse the same server-side query endpoint.
 
-The top bar's clock shows the local wall time, refreshed every 30 seconds. There
-is no session countdown: the API exposes no remaining-time value, and inventing
-one would be a figure the vault cannot compute.
+The top bar's second chip shows the hour the vault was opened, taken from the
+status the server reports rather than from a live clock, so it never drifts from
+what the vault knows. There is no session countdown: the API exposes no
+remaining-time value, and inventing one would be a figure the vault cannot
+compute.
 
 Deliberately absent because the product does not have them: the user avatar and
 account identity (Flowly has no accounts or users), the interface theme switch
 (the design ships one light theme), transfer/top-up actions, filtered exports,
 the ledger checksum chip and the mockups' illustrative node identifiers.
 
-The vault lock screen uses the same language: centered card over a wash that
-carries a hint of the brand green and gold, the lockup, the passphrase field,
-the no-recovery warning, and a tinted facts row with the vault state. It is the
-one screen that gets the gradient as atmosphere; everywhere else the colour is
-functional.
+The vault lock screen uses the same language: the flat lockup centred over the
+canvas, a white card with the private-vault eyebrow, the hour's greeting, the
+serif **Welcome back.** headline, the passphrase field with its reveal button
+and the **Unlock vault** action, a hairline, and two trust statements —
+`AES-256, encrypted locally` and `No cloud, we never see the key`. The screen
+states the vault's state in words ("this vault is locked") and leaves the
+storage engine out of it: what encrypts the vault belongs to the technical
+documents, not to the door.

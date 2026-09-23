@@ -300,7 +300,7 @@ FLOWLY_LOG_LEVEL=warn node apps/server/dist/index.js &
 # 2. Fill the vault: accounts, tags, rules and about three months of movements.
 pnpm demo:seed -- http://127.0.0.1:8787 --create
 
-# 3. Capture the six sections into docs/images (1440x900, headless Chrome).
+# 3. Capture the six sections into docs/images (1440 wide, headless Chrome).
 pnpm demo:screenshots -- http://127.0.0.1:8787
 
 # 4. Stop the scratch server and delete the vault.
@@ -315,6 +315,10 @@ kill %1 && rm -rf /tmp/flowly-demo
   protocol — Node's own `WebSocket` is the only dependency — and writes one PNG
   per section into `docs/images/`. Pass `--chrome=/path/to/chrome` or set
   `CHROME_PATH` if Chrome is not where the script looks.
+- The viewport is 1440 px wide and `FLOWLY_SCREENSHOT_HEIGHT` (default 1400) px
+  tall; the dashboard is captured at 2100 px because its page is long. The
+  script opens the dashboard's period picker to set the trend preset and closes
+  it again by picking one, so the screenshots show the page, not its menus.
 - The demo data is dated relative to the day it is seeded, so the dashboard's
   period, the ledger's month and the rules' coverage stay sensible whenever the
   screenshots are retaken.

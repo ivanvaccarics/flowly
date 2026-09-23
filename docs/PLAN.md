@@ -1670,6 +1670,43 @@ Status: **complete** (2026-09-23), decision in `docs/adr/0036`.
 - The `## What it looks like` section, its six images and their synthetic-vault
   note survive ADR 0031; the screenshots themselves are unchanged.
 
+#### Task `restyle-the-web-ui-to-the-flat-mockups`
+
+Status: **complete** (2026-09-23), decision in `docs/adr/0037`.
+
+- The palette is the mockups': warm off-white canvas, warm white cards, one
+  green (`#277b62`) for actions, the active navigation pill and the filled
+  balance card, a muted red for outflows, the engine's violet untouched. The
+  tokens live in `apps/web/src/styles.css` and their table in `docs/DESIGN.md`.
+- The dashboard opens with the date and an hour's greeting in the page's serif,
+  one sentence about what the page shows, and a compact period control — a
+  trigger naming the period in words plus a calendar button, both opening the
+  existing month picker over the page. The month set stays the dashboard's only
+  scope (ADR 0035); choosing a preset folds the picker away again.
+- The metric row became the mockups' three cards: the balance across accounts as
+  the page's single filled surface, with the period's net flow and the savings
+  rate, then what was spent and what came in with their deltas. The cash-flow
+  chart and the recent movements (now a list of rows: payee, day, account,
+  source, tags, amount) take two columns, the bank sync card and the spending
+  donut one, and the accounts summary closes the page over a dashed backup strip
+  with the **Export data** deep link.
+- The shell states the vault instead of the section: the top bar carries
+  **Encrypted locally**, the hour the vault was opened and **Backup vault**,
+  while the page's `h1` is read by assistive technology and no longer printed.
+  The sidebar ends in the session card — the vault's name, its state in words
+  and the **Lock session** / **Lock all** controls — and paints the lockup flat
+  from the new `logo-wordmark.svg` over a solid brand-green tile; the gradient
+  stays in `logo.svg` for the README.
+- The lock screen follows its own mockup: the flat lockup, the private-vault
+  eyebrow with the hour's greeting, a serif **Welcome back.**, the passphrase
+  field with a reveal button, **Unlock vault** with its arrow, and two trust
+  statements. The storage engine stays out of it.
+- The five sections that keep the banner and intro pair inherited the flat card,
+  the serif headline and the new tokens without a markup change. `docs/DESIGN.md`
+  was rewritten where the language changed, `docs/TESTING.md` follows the moved
+  controls, the web tests track the new copy, and the six README screenshots were
+  regenerated.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`

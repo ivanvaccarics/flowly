@@ -110,8 +110,8 @@ function unlockedRoutes(): RouteMap {
 
 async function unlock(app = <App />) {
   render(app);
-  await waitFor(() => expect(screen.getByLabelText("Passphrase")).toBeTruthy());
-  fireEvent.change(screen.getByLabelText("Passphrase"), {
+  await waitFor(() => expect(screen.getByLabelText("Vault passphrase")).toBeTruthy());
+  fireEvent.change(screen.getByLabelText("Vault passphrase"), {
     target: { value: "correct horse battery staple" },
   });
   await waitFor(() =>
@@ -133,14 +133,14 @@ describe("Flowly web client", () => {
     render(<App />);
 
     await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Vault locked"),
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Welcome back."),
     );
-    expect(screen.getByLabelText("Passphrase")).toBeTruthy();
+    expect(screen.getByLabelText("Vault passphrase")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Unlock vault" }).hasAttribute("disabled")).toBe(
       true,
     );
     // The lock screen states the vault state, not the storage engine.
-    expect(screen.getByText("locked")).toBeTruthy();
+    expect(screen.getByText(/vault is locked/i)).toBeTruthy();
     expect(screen.queryByText("sqlcipher")).toBeNull();
   });
 
@@ -254,7 +254,7 @@ describe("Flowly web client", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Financial overview" })).toBeTruthy(),
     );
-    expect(screen.queryByLabelText("Passphrase")).toBeNull();
+    expect(screen.queryByLabelText("Vault passphrase")).toBeNull();
   });
 
   it("names where a dashboard row came from instead of its provider row id", async () => {
@@ -293,7 +293,7 @@ describe("Flowly web client", () => {
     });
     render(<App />);
 
-    await waitFor(() => expect(screen.getByLabelText("Passphrase")).toBeTruthy());
+    await waitFor(() => expect(screen.getByLabelText("Vault passphrase")).toBeTruthy());
     expect(screen.getByText(/session expired/i)).toBeTruthy();
   });
 

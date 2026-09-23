@@ -3,15 +3,7 @@ import type { Account, Dashboard, Tag, Transaction } from "@flowly/web-contracts
 import { api } from "../api/client.js";
 import { DashboardFilters } from "../components/DashboardFilters.js";
 import { Icon } from "../components/icons.js";
-import {
-  Banner,
-  BannerFigure,
-  Chip,
-  Empty,
-  Money,
-  SectionBanner,
-  SectionIntro,
-} from "../components/ui.js";
+import { Banner, Chip, Empty, Money, tagPillStyle } from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { describeError } from "../hooks/use-workspace.js";
 import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
@@ -26,6 +18,28 @@ import {
 } from "../lib/months.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** What the period picker calls each preset, in the dashboard's own words. */
+const PRESET_LABELS: Record<MonthPreset, string> = {
+  month: "This month",
+  quarter: "Last 3 months",
+  year: "This year",
+  custom: "Custom months",
+};
+
+/** The period, said inside a label: "Spent this month", "Income this year". */
+const PERIOD_WORDS: Record<MonthPreset, string> = {
+  month: "this month",
+  quarter: "in 3 months",
+  year: "this year",
+  custom: "in this period",
+};
+
+function greetingOf(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 /** The dashboard reads the ledger ten rows at a time; the ledger itself pages 25. */
 const RECENT_PAGE_SIZE = 10;
@@ -83,8 +97,20 @@ export function DashboardView({
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [recentTotal, setRecentTotal] = useState(0);
   const [recentPage, setRecentPage] = useState(1);
+  /** The period picker stays closed until the reader asks for it. */
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
+
+  const today = new Date();
+  const todayLabel = today.toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const greeting = `${greetingOf(today.getHours())}.`;
+  const periodWord = PERIOD_WORDS[preset];
 
   const { from, to } = useMemo(() => monthsRange(months), [months]);
 
@@ -187,6 +213,9 @@ export function DashboardView({
 
   function applyPreset(next: "month" | "quarter" | "year" | "custom") {
     setPreset(next);
+    // A preset is a complete answer, so the picker folds away; "Custom" keeps
+    // it open, because that is where the months get clicked.
+    if (next !== "custom") setPickerOpen(false);
     if (next === "custom") return;
     const nextMonths = presetMonths(next);
     setMonths(nextMonths);
@@ -216,64 +245,60 @@ export function DashboardView({
 
   return (
     <section className="view" aria-labelledby="dashboard-title">
-      <SectionBanner
-        tone="vault"
-        icon="dashboard"
-        eyebrow="Encrypted ledger"
-        title="Local financial overview"
-        badge={
-          <Chip tone="income" icon="shield">
-            zero-telemetry
-          </Chip>
-        }
-        lead="Every figure below is aggregated on this device from the booked movements of the encrypted vault; nothing is uploaded and no currency is ever converted."
-        side={
-          <Chip tone="vault" icon="lock">
-            AES-256-GCM
-          </Chip>
-        }
-        figures={
-          <>
-            <BannerFigure label="Accounts" value={String(accounts.length)} />
-            <BannerFigure
-              label="Currencies"
-              value={String(new Set(dashboard?.balances.map((line) => line.currency) ?? []).size)}
-            />
-            <BannerFigure label="Selected months" value={String(months.length)} />
-          </>
-        }
-      />
-
-      <SectionIntro
-        icon="dashboard"
-        eyebrow="Analysis & trend"
-        title="Where the money went, and what is left."
-        lead="Aggregates use booked transactions only, and each currency keeps its own figures."
-        actions={
-          <>
-            <button type="button" className="btn ghost" onClick={onExportData}>
-              <Icon name="download" size={16} />
-              Export data
+      <div className="dash-head">
+        <div className="dash-head-text">
+          <p className="eyebrow">{todayLabel}</p>
+          <h2 className="display-headline">{greeting}</h2>
+          <p className="lead">
+            A clear view of what came in, what went out, and what is still yours. Every figure is
+            aggregated on this device from the booked movements of the encrypted vault.
+          </p>
+        </div>
+        <div className="dash-head-actions">
+          <div className="period-picker">
+            <button
+              type="button"
+              className="period-trigger"
+              aria-expanded={pickerOpen}
+              aria-controls="dashboard-period"
+              onClick={() => setPickerOpen((open) => !open)}
+            >
+              {PRESET_LABELS[preset]}
+              <span aria-hidden="true">▾</span>
             </button>
-            <button type="button" className="btn primary" onClick={onNewTransaction}>
-              <Icon name="plus" size={16} />
-              New transaction
+            <button
+              type="button"
+              className="btn"
+              aria-label="Choose months"
+              title="Choose months"
+              aria-expanded={pickerOpen}
+              aria-controls="dashboard-period"
+              onClick={() => setPickerOpen((open) => !open)}
+            >
+              <Icon name="calendar" size={16} />
             </button>
-          </>
-        }
-      />
-
-      <DashboardFilters
-        months={months}
-        preset={preset}
-        anchorYear={anchorYear}
-        onPreset={applyPreset}
-        onAnchorYear={setAnchorYear}
-        onToggleMonth={toggleMonth}
-        onSelectYear={selectYear}
-        onClear={clearMonths}
-        onRemoveMonth={toggleMonth}
-      />
+            {pickerOpen ? (
+              <div className="period-popover" id="dashboard-period">
+                <DashboardFilters
+                  months={months}
+                  preset={preset}
+                  anchorYear={anchorYear}
+                  onPreset={applyPreset}
+                  onAnchorYear={setAnchorYear}
+                  onToggleMonth={toggleMonth}
+                  onSelectYear={selectYear}
+                  onClear={clearMonths}
+                  onRemoveMonth={toggleMonth}
+                />
+              </div>
+            ) : null}
+          </div>
+          <button type="button" className="btn primary" onClick={onNewTransaction}>
+            <Icon name="plus" size={16} />
+            New transaction
+          </button>
+        </div>
+      </div>
 
       {error ? <Banner tone="error">{error}</Banner> : null}
       {loading ? <Banner>Reading the vault…</Banner> : null}
@@ -292,263 +317,256 @@ export function DashboardView({
         const expenseDelta = delta(flow.expensesMinor, previousFlow?.expensesMinor ?? 0);
         return (
           <div className="kpi-row" key={flow.currency}>
-            <article className="kpi">
-              <span className="eyebrow">Total balance</span>
+            <article className="kpi lead">
+              <div className="kpi-head">
+                <span className="kpi-label">Balance across accounts</span>
+                <span className="kpi-icon">
+                  <Icon name="accounts" size={16} />
+                </span>
+              </div>
               <span className="kpi-value">
                 {formatMinorToAmount(balanceTotal, flow.currency)}
-                <span className="unit">{flow.currency}</span>
+                <span className="kpi-unit">{flow.currency}</span>
               </span>
-              <span className="kpi-hint">{accounts.length} accounts</span>
+              <div className="kpi-foot">
+                <span className="kpi-hint">
+                  {flow.netMinor >= 0 ? "+" : "-"}
+                  {formatMinorToAmount(Math.abs(flow.netMinor), flow.currency)} {periodWord}
+                </span>
+                {savingsRate === null ? null : (
+                  <span className="kpi-badge">{formatDecimal(savingsRate)}% saved</span>
+                )}
+              </div>
             </article>
             <article className="kpi">
-              <span className="eyebrow">Income</span>
-              <span className="kpi-value income">
-                {flow.incomeMinor > 0 ? "+" : ""}
-                {formatMinorToAmount(flow.incomeMinor, flow.currency)}
-                <span className="unit">{flow.currency}</span>
-              </span>
-              <span className={`kpi-hint ${incomeDelta.tone}`}>{incomeDelta.text}</span>
-            </article>
-            <article className="kpi">
-              <span className="eyebrow">Expenses</span>
-              <span className="kpi-value expense">
-                -{formatMinorToAmount(flow.expensesMinor, flow.currency)}
-                <span className="unit">{flow.currency}</span>
+              <div className="kpi-head">
+                <span className="kpi-label">Spent {periodWord}</span>
+                <span className="kpi-icon">
+                  <Icon name="download" size={16} />
+                </span>
+              </div>
+              <span className="kpi-value">
+                {formatMinorToAmount(flow.expensesMinor, flow.currency)}
+                <span className="kpi-unit">{flow.currency}</span>
               </span>
               <span className={`kpi-hint ${expenseDelta.tone}`}>{expenseDelta.text}</span>
             </article>
-            <article className="kpi lead">
-              <span className="eyebrow">Net flow</span>
-              <span className={`kpi-value ${flow.netMinor < 0 ? "expense" : "income"}`}>
-                {flow.netMinor >= 0 ? "+" : "-"}
-                {formatMinorToAmount(Math.abs(flow.netMinor), flow.currency)}
-                <span className="unit">{flow.currency}</span>
+            <article className="kpi">
+              <div className="kpi-head">
+                <span className="kpi-label">Income {periodWord}</span>
+                <span className="kpi-icon">
+                  <Icon name="upload" size={16} />
+                </span>
+              </div>
+              <span className="kpi-value">
+                {formatMinorToAmount(flow.incomeMinor, flow.currency)}
+                <span className="kpi-unit">{flow.currency}</span>
               </span>
-              <span className="kpi-hint">
-                {flow.transactionCount} booked movements ·{" "}
-                {savingsRate === null
-                  ? "no income this period"
-                  : `${formatDecimal(savingsRate)}% savings rate`}
-              </span>
+              <span className={`kpi-hint ${incomeDelta.tone}`}>{incomeDelta.text}</span>
             </article>
           </div>
         );
       })}
 
-      <div className="dash">
-        <div className="dash-main">
-          <div className="card">
-            <header>
-              <div>
-                <p className="eyebrow">Trend</p>
-                <h2>Cash flow</h2>
-                <span className="sub">
-                  Income vs expenses · {from} → {to}
-                </span>
-              </div>
-              <div className="legend">
-                <span className="legend-item">
-                  <span className="dot income" /> Income
-                </span>
-                <span className="legend-item">
-                  <span className="dot expense" /> Expenses
-                </span>
-                <span className="legend-item">
-                  <span className="dot line" /> Net
-                </span>
-              </div>
-            </header>
-            {primaryBuckets.length > 0 ? (
-              <CashFlowChart
-                buckets={primaryBuckets}
-                currency={primaryCurrency}
-                onSelect={(bucket) => onSeeAllTransactions({ from: bucket.from, to: bucket.to })}
-              />
-            ) : (
-              <Empty>No booked transactions in this period.</Empty>
-            )}
-          </div>
-
-          <div className="card">
-            <header>
-              <div>
-                <p className="eyebrow">Movements</p>
-                <h2>Recent transactions</h2>
-              </div>
-              <div className="cell-actions">
-                <Chip tone="neutral">{recentTotal} records</Chip>
-                <button type="button" className="btn small" onClick={() => onSeeAllTransactions()}>
-                  See all →
-                </button>
-              </div>
-            </header>
-            {recent.length > 0 ? (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Beneficiary / cause</th>
-                      <th>Account</th>
-                      <th>Date</th>
-                      <th className="cell-amount">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recent.map((transaction) => {
-                      const account = accountById.get(transaction.accountId);
-                      const [year, month, day] = transaction.bookingDate.split("-");
-                      return (
-                        <tr key={transaction.id}>
-                          <td>
-                            <span className="tx">
-                              <span className="tx-icon">
-                                <Icon name="transactions" size={14} />
-                              </span>
-                              <span className="stack">
-                                <strong>
-                                  {transaction.payee ?? transaction.description ?? "—"}
-                                </strong>
-                                {/* Never the provider's raw row id: it is a
-                                    UUID nobody can read. Show the bank's own
-                                    description, or where the row came from. */}
-                                <span className="sub">
-                                  {transaction.description &&
-                                  transaction.description !== transaction.payee
-                                    ? transaction.description
-                                    : transaction.source}
-                                </span>
-                              </span>
-                            </span>
-                          </td>
-                          <td>
-                            <span className="stack">
-                              <span>{account?.name ?? transaction.accountId.slice(0, 8)}</span>
-                              <span className="sub">
-                                {account?.type ?? "—"} · {transaction.status}
-                              </span>
-                            </span>
-                          </td>
-                          <td>
-                            <span className="cell-nowrap">
-                              {day} {MONTHS[Number(month) - 1]} {year}
-                            </span>
-                          </td>
-                          <td className="cell-amount">
-                            <Money
-                              minor={transaction.amountMinor}
-                              currency={transaction.currency}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <Empty>No transactions yet. Record the first one.</Empty>
-            )}
-            {recentTotal > RECENT_PAGE_SIZE ? (
-              <div className="pager">
-                <p className="pager-summary" role="status">
-                  {`Showing ${recentFirstRow}–${recentLastRow} of ${recentTotal} transactions`}
-                </p>
-                <div className="cell-actions">
-                  <button
-                    type="button"
-                    className="btn small"
-                    disabled={recentPage <= 1}
-                    onClick={() => setRecentPage(Math.max(1, recentPage - 1))}
-                  >
-                    Previous
-                  </button>
-                  <span className="chip mono neutral">
-                    Page {recentPage} / {recentPageCount}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn small"
-                    disabled={recentPage >= recentPageCount}
-                    onClick={() => setRecentPage(Math.min(recentPageCount, recentPage + 1))}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            ) : null}
-          </div>
+      <div className="dash-grid">
+        <div className="card dash-span-2">
+          <header>
+            <div>
+              <h2 className="card-title">Cash flow</h2>
+              <span className="sub">
+                Income vs expenses · {from} → {to}
+              </span>
+            </div>
+            <div className="legend">
+              <span className="legend-item">
+                <span className="dot income" /> Income
+              </span>
+              <span className="legend-item">
+                <span className="dot expense" /> Expenses
+              </span>
+              <span className="legend-item">
+                <span className="dot line" /> Net
+              </span>
+            </div>
+          </header>
+          {primaryBuckets.length > 0 ? (
+            <CashFlowChart
+              buckets={primaryBuckets}
+              currency={primaryCurrency}
+              onSelect={(bucket) => onSeeAllTransactions({ from: bucket.from, to: bucket.to })}
+            />
+          ) : (
+            <Empty>No booked transactions in this period.</Empty>
+          )}
         </div>
 
-        <aside className="dash-side">
-          <BankingSyncCard csrf={csrf} onOpenSettings={onOpenSettings} onSynced={reload} />
-          <div className="card">
-            <header>
-              <div>
-                <p className="eyebrow">Categories</p>
-                <h2>Spending breakdown</h2>
-                <span className="sub">
-                  {categoryCount === 0
-                    ? "No tagged spending in this period"
-                    : `Every category of the period is included · ${categoryCount} ${
-                        categoryCount === 1 ? "tag" : "tags"
-                      }`}
-                </span>
-              </div>
-            </header>
-            {dashboard && dashboard.spendingByTag.length > 0 ? (
-              spendingGroups.map((group) => (
-                <SpendingPie
-                  key={group.currency}
-                  currency={group.currency}
-                  entries={group.entries}
-                  colourOf={colourOf}
-                  onOpen={(tagId) => onSeeAllTransactions({ tagId, from, to })}
-                />
-              ))
-            ) : (
-              <Empty>No tagged spending in this period.</Empty>
-            )}
-          </div>
+        <BankingSyncCard csrf={csrf} onOpenSettings={onOpenSettings} onSynced={reload} />
 
-          <div className="card">
-            <header>
-              <div>
-                <p className="eyebrow">Accounts</p>
-                <h2>Accounts summary</h2>
-              </div>
-            </header>
-            {dashboard && dashboard.balances.length > 0 ? (
-              <ul className="account-rows">
-                {dashboard.balances.map((line) => {
-                  const account = accounts.find((candidate) => candidate.id === line.accountId);
-                  return (
-                    <li key={`${line.accountId}-${line.currency}`}>
-                      <span className="tx-icon">
-                        <Icon name="accounts" size={14} />
-                      </span>
-                      <span className="stack" style={{ flex: 1 }}>
-                        <strong>{line.accountName}</strong>
-                        <span className="sub mono">
-                          {account?.type ?? "account"} · {line.currency}
-                          {line.isDefaultCurrency ? "" : " · other currency"}
+        <div className="card">
+          <header>
+            <div>
+              <h2 className="card-title">Spending by tag</h2>
+              <span className="sub">
+                {categoryCount === 0
+                  ? "No tagged spending in this period"
+                  : `Every category of the period is included · ${categoryCount} ${
+                      categoryCount === 1 ? "tag" : "tags"
+                    }`}
+              </span>
+            </div>
+          </header>
+          {dashboard && dashboard.spendingByTag.length > 0 ? (
+            spendingGroups.map((group) => (
+              <SpendingPie
+                key={group.currency}
+                currency={group.currency}
+                entries={group.entries}
+                colourOf={colourOf}
+                onOpen={(tagId) => onSeeAllTransactions({ tagId, from, to })}
+              />
+            ))
+          ) : (
+            <Empty>No tagged spending in this period.</Empty>
+          )}
+        </div>
+
+        <div className="card dash-span-2">
+          <header>
+            <div>
+              <h2 className="card-title">Recent transactions</h2>
+            </div>
+            <div className="cell-actions">
+              <Chip tone="neutral">{recentTotal} records</Chip>
+              <button
+                type="button"
+                className="btn small ghost"
+                onClick={() => onSeeAllTransactions()}
+              >
+                All transactions
+                <Icon name="arrow" size={14} />
+              </button>
+            </div>
+          </header>
+          {recent.length > 0 ? (
+            <ul className="tx-list">
+              {recent.map((transaction) => {
+                const account = accountById.get(transaction.accountId);
+                const [year, month, day] = transaction.bookingDate.split("-");
+                const tags = transaction.tagIds
+                  .map((tagId) => tagById.get(tagId))
+                  .filter((tag): tag is Tag => tag !== undefined);
+                return (
+                  <li className="tx-row" key={transaction.id}>
+                    <span className="tx-avatar" aria-hidden="true">
+                      <Icon name="transactions" size={16} />
+                    </span>
+                    <span className="tx-main">
+                      <strong>{transaction.payee ?? transaction.description ?? "—"}</strong>
+                      {/* Never the provider's raw row id: it is a UUID nobody
+                            can read. Show the bank's own description, where the
+                            row came from, and the day it was booked. */}
+                      <span className="tx-meta">
+                        <span>
+                          {day} {MONTHS[Number(month) - 1]} {year}
                         </span>
+                        <span aria-hidden="true">·</span>
+                        <span>{account?.name ?? "—"}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>
+                          {transaction.description && transaction.description !== transaction.payee
+                            ? transaction.description
+                            : transaction.source}
+                        </span>
+                        {tags.map((tag) => (
+                          <span className="tag-pill" key={tag.id} style={tagPillStyle(tag.color)}>
+                            {tag.name}
+                          </span>
+                        ))}
                       </span>
-                      <Money minor={line.balanceMinor} currency={line.currency} />
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <Empty>No accounts yet.</Empty>
-            )}
-          </div>
-        </aside>
+                    </span>
+                    <Money minor={transaction.amountMinor} currency={transaction.currency} />
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <Empty>No transactions yet. Record the first one.</Empty>
+          )}
+          {recentTotal > RECENT_PAGE_SIZE ? (
+            <div className="pager">
+              <p className="pager-summary" role="status">
+                {`Showing ${recentFirstRow}–${recentLastRow} of ${recentTotal} transactions`}
+              </p>
+              <div className="cell-actions">
+                <button
+                  type="button"
+                  className="btn small"
+                  disabled={recentPage <= 1}
+                  onClick={() => setRecentPage(Math.max(1, recentPage - 1))}
+                >
+                  Previous
+                </button>
+                <span className="chip mono neutral">
+                  Page {recentPage} / {recentPageCount}
+                </span>
+                <button
+                  type="button"
+                  className="btn small"
+                  disabled={recentPage >= recentPageCount}
+                  onClick={() => setRecentPage(Math.min(recentPageCount, recentPage + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="card dash-full">
+          <header>
+            <div>
+              <h2 className="card-title">Accounts summary</h2>
+              <span className="sub">
+                Every account of this vault, with the balance its own currency reports
+              </span>
+            </div>
+          </header>
+          {dashboard && dashboard.balances.length > 0 ? (
+            <ul className="account-rows">
+              {dashboard.balances.map((line) => {
+                const account = accounts.find((candidate) => candidate.id === line.accountId);
+                return (
+                  <li key={`${line.accountId}-${line.currency}`}>
+                    <span className="tx-icon">
+                      <Icon name="accounts" size={14} />
+                    </span>
+                    <span className="stack" style={{ flex: 1 }}>
+                      <strong>{line.accountName}</strong>
+                      <span className="sub mono">
+                        {account?.type ?? "account"} · {line.currency}
+                        {line.isDefaultCurrency ? "" : " · other currency"}
+                      </span>
+                    </span>
+                    <Money minor={line.balanceMinor} currency={line.currency} />
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <Empty>No accounts yet.</Empty>
+          )}
+        </div>
       </div>
 
-      <p className="page-footer">
-        Flowly · no account, no cloud, no tracking. Cash-flow aggregates use booked transactions
-        only and never convert between currencies.
-      </p>
+      <div className="backup-banner">
+        <p>
+          <Icon name="download" size={16} />
+          Your vault is stored on this device and ready for an encrypted backup.
+        </p>
+        <button type="button" className="btn" onClick={onExportData}>
+          Export data
+        </button>
+      </div>
     </section>
   );
 }

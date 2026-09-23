@@ -60,7 +60,7 @@ describe("accessibility structure", () => {
       />,
     );
     assertAccessibleNames(container);
-    expect(screen.getByLabelText("Passphrase")).toBeTruthy();
+    expect(screen.getByLabelText("Vault passphrase")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
