@@ -97,8 +97,6 @@ export function TagsView({ csrf }: { csrf: string }) {
     setPage(1);
   }, [query, scope, letter, sort]);
 
-  const unused = tags.items.filter((tag) => !usedOf(tag)).length;
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(undefined);
@@ -388,32 +386,6 @@ export function TagsView({ csrf }: { csrf: string }) {
               </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="tag-notes">
-        <div className="card">
-          <h2 className="card-title">Taxonomy tip</h2>
-          <p className="sub">
-            Few and broad beats many and precise: a tag that covers forty movements is doing more
-            work than one that covers two.
-          </p>
-        </div>
-        <div className="card">
-          <h2 className="card-title">Unused tags</h2>
-          <p className="sub">
-            {unused === 0
-              ? "Every tag is on at least one movement."
-              : `${unused} ${unused === 1 ? "tag is" : "tags are"} on no movement yet. A rule can ` +
-                "put one to work, or deleting it keeps the list honest."}
-          </p>
-        </div>
-        <div className="card">
-          <h2 className="card-title">Case-insensitive</h2>
-          <p className="sub">
-            Typing <code>Weekend</code> and <code>weekend</code> is the same tag, and the casing you
-            typed is the one the interface shows.
-          </p>
         </div>
       </div>
 

@@ -281,9 +281,9 @@ than a parallel test suite.
 
 Phase boundaries and dependencies are listed in `docs/PLAN.md` sections 17-18.
 
-### Regenerating the README screenshots
+### Regenerating the screenshots
 
-The screenshots in `README.md` come from a **scratch vault full of synthetic
+The screenshots in `docs/SCREENSHOTS.md` come from a **scratch vault full of synthetic
 data**, never from a real one, and they are produced by two scripts so they can
 be regenerated after a UI change:
 

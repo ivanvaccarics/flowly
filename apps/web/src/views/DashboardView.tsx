@@ -224,15 +224,10 @@ export function DashboardView({
     >
       <div className="section-intro">
         <div className="section-intro-main">
-          <p className="eyebrow primary">
-            <Icon name="dashboard" size={14} />
+          <h2 className="eyebrow primary">
+            <Icon name="dashboard" size={24} />
             Analysis &amp; trend
-          </p>
-          <h2>Where the money went, and what is left.</h2>
-          <p className="lead">
-            Where the money went, and what is left. Every figure is aggregated on this device from
-            the booked movements of the encrypted vault, and each currency keeps its own numbers.
-          </p>
+          </h2>
         </div>
         <div className="section-intro-actions">
           <button type="button" className="btn ghost" onClick={onExportData}>

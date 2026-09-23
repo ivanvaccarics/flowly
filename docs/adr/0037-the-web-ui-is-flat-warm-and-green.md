@@ -37,6 +37,15 @@ other sections stand.
 > section now opens with the same `SectionIntro`, and only the standalone bank
 > callback keeps the older hero card.
 
+> **Update (2026-09-23, and again).** Two more pages lose the thing that stood
+> between the reader and the work. The ledger writes a movement in a **card
+> above its table** — the same fields the dialog held, with **Add transaction**
+> and **Reset** — so the headline's shortcut went; a row still opens its
+> *existing* movement in a dialog. And the tags page ends at its directory: the
+> three notes under the table said what the interface already shows. The six
+> screenshots also moved out of the README into `docs/SCREENSHOTS.md`, which the
+> README links to in one line.
+
 ## Context
 
 The interface had grown a cool slate canvas, a tinted sidebar, a gradient tile

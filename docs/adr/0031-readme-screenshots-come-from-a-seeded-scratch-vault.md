@@ -1,4 +1,7 @@
 # ADR 0031 — README screenshots come from a seeded scratch vault
++
+The images themselves live in [SCREENSHOTS.md](../SCREENSHOTS.md) now, which the
+README links to; the recipe and the rule below are unchanged.
 
 Status: Accepted (2026-09-22)
 

@@ -1783,6 +1783,25 @@ Status: **complete** (2026-09-23), corrections to `docs/adr/0037`.
 - `docs/DESIGN.md` documents the single page header and the mapping table names
   what each section actually shows; the six README screenshots were regenerated.
 
+#### Task `write-a-movement-in-a-form-and-drop-the-tag-notes`
+
+Status: **complete** (2026-09-23), corrections to `docs/adr/0037`.
+
+- The ledger writes a movement in a **card above the table** again: the same
+  fields the dialog held (account, booking date, amount, payee, note, status and
+  tags), the tagging-rules note, **Add transaction** and **Reset**. Saving empties
+  the form and keeps its place, and the new row is at the top of the ledger. The
+  **Add transaction** button in the headline is gone, because the form is the
+  first thing on the page; the *edit* dialog is untouched, so a row still opens
+  its movement over the page.
+- The tags page ends at its directory: the three notes under the table (a
+  taxonomy tip, the unused-tag count, the case-insensitive reminder) said what
+  the interface already shows and are gone, along with the count they needed.
+- The screenshots moved out of the README into `docs/SCREENSHOTS.md`, one
+  picture per section, which the README links to with a single line. `AGENTS.md`
+  lists the new document, `docs/RUNNING.md` and the capture script name it, and
+  ADR 0031 points at it.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`

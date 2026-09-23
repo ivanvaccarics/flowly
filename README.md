@@ -37,40 +37,8 @@ database, not in journals, not in caches, not in logs.
 Six sections, one design language, and every figure read from the vault. No
 placeholder data anywhere in the app.
 
-**Dashboard** — balances per currency, monthly cash flow and spending by tag, for
-the months you pick.
-
-![Dashboard](docs/images/dashboard.png)
-
-**Accounts** — one card per account with its real balance and booked-movement
-count; archived accounts stay visible and can be restored.
-
-![Accounts](docs/images/accounts.png)
-
-**Transactions** — the ledger: server-side filters, tag pills, the month's
-income, expenses and net, and rows that open for editing with one click.
-
-![Transactions](docs/images/transactions.png)
-
-**Tags** — the taxonomy rules and filters work with: a directory that says how
-many movements carry each tag and which rules apply it.
-
-![Tags](docs/images/tags.png)
-
-**Rules** — the rule composer with live evaluation beside the engine's own
-coverage, per rule and per tag.
-
-![Rules](docs/images/rules.png)
-
-**Settings** — the bank connection, the passphrase and the three export shapes,
-all against the local vault.
-
-![Settings](docs/images/settings.png)
-
-> The screenshots come from a throwaway vault full of invented data:
-> `pnpm demo:seed` fills it and `pnpm demo:screenshots` captures the six
-> sections — see
-> [docs/RUNNING.md](docs/RUNNING.md#regenerating-the-readme-screenshots).
+📸 **[The six sections, one picture each →](docs/SCREENSHOTS.md)** — taken from a
+throwaway vault full of invented data, never from a real one.
 
 ## Features
 

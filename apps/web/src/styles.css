@@ -2809,22 +2809,6 @@ button.legend-row {
   flex: 0 0 auto;
 }
 
-.tag-notes {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.25rem;
-}
-
-.tag-notes p {
-  margin: 0.4rem 0 0;
-}
-
-.tag-notes code {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
 /* The name field wears its "#" the way the directory shows a tag. */
 .name-field {
   display: flex;
@@ -3235,10 +3219,6 @@ button.legend-row {
   }
 
   .tag-workbench {
-    grid-template-columns: 1fr;
-  }
-
-  .tag-notes {
     grid-template-columns: 1fr;
   }
 

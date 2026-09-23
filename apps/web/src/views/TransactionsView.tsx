@@ -57,8 +57,10 @@ export function TransactionsView({
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
-  /** The movement being added, while its dialog is open. */
-  const [composer, setComposer] = useState<TransactionDraft | undefined>(undefined);
+  /** The movement being written in the form above the ledger. */
+  const [composer, setComposer] = useState<TransactionDraft>(() =>
+    emptyTransactionDraft(new Date().toISOString().slice(0, 10)),
+  );
   /** The movement being corrected, with the row to hand focus back to. */
   const [editor, setEditor] = useState<
     { transaction: Transaction; draft: TransactionDraft; opener: HTMLElement | null } | undefined
@@ -66,7 +68,7 @@ export function TransactionsView({
   const [formError, setFormError] = useState<string | undefined>(undefined);
   const [rawOpen, setRawOpen] = useState<string | undefined>(undefined);
 
-  const composerCurrency = composer ? draftCurrency(composer, accounts.items) : "EUR";
+  const composerCurrency = draftCurrency(composer, accounts.items);
   // An edit keeps the movement's own currency unless the account changes: a USD
   // movement booked on a EUR account must stay USD.
   const editorCurrency = editor
@@ -123,16 +125,9 @@ export function TransactionsView({
     void load();
   }, [load]);
 
-  function startComposer() {
-    setFormError(undefined);
-    setEditor(undefined);
-    setComposer(emptyTransactionDraft(new Date().toISOString().slice(0, 10)));
-  }
-
   /** A click on a cell — or the row's Edit button — opens the same dialog. */
   function startEditing(transaction: Transaction, opener: HTMLElement | null) {
     setFormError(undefined);
-    setComposer(undefined);
     setEditor({ transaction, draft: draftFromTransaction(transaction), opener });
   }
 
@@ -146,7 +141,6 @@ export function TransactionsView({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setFormError(undefined);
-    if (!composer) return;
     const account = accounts.items.find((candidate) => candidate.id === composer.accountId);
     if (!account) {
       setFormError("Choose an account first.");
@@ -177,7 +171,9 @@ export function TransactionsView({
         ...(composer.payee ? { payee: composer.payee } : {}),
         ...(composer.note ? { userNote: composer.note } : {}),
       });
-      setComposer(undefined);
+      // The form keeps its place but empties itself: the next movement starts
+      // from a clean draft, exactly like the composer above it did.
+      setComposer(emptyTransactionDraft(new Date().toISOString().slice(0, 10)));
       // A new row is normally dated today, so it belongs at the top of the
       // newest-first order: show it instead of leaving the user on page 5.
       if (page === 1) {
@@ -254,41 +250,47 @@ export function TransactionsView({
         eyebrow="Encrypted ledger"
         title="A readable trace of every movement."
         lead="Every movement is validated and stays on this device: search, filters and paging run on the server against the encrypted vault, and nothing is searched in the browser."
-        actions={
-          <button type="button" className="btn primary" onClick={startComposer}>
+      />
+
+      {/* The movement is written here, above the ledger it lands in: the form is
+          the first thing on the page, so a button that opened a dialog over the
+          same fields only stood between the reader and the work. */}
+      <form className="card" aria-label="New transaction" onSubmit={submit}>
+        <header>
+          <div>
+            <h2 className="card-title">New transaction</h2>
+            <span className="sub">
+              Tagging rules run when you save. The new movement appears at the top of the ledger.
+            </span>
+          </div>
+        </header>
+        <TransactionFields
+          draft={composer}
+          accounts={accounts.items}
+          tags={tags.items}
+          currency={composerCurrency}
+          tagLabel="Select tags for the new transaction"
+          onChange={setComposer}
+        />
+        {formError ? <Banner tone="error">{formError}</Banner> : null}
+        <div className="cell-actions">
+          <button type="submit" className="btn primary">
             <Icon name="plus" size={16} />
             Add transaction
           </button>
-        }
-      />
-
-      {composer ? (
-        <Modal title="Add transaction" onClose={() => setComposer(undefined)}>
-          <form className="stack" onSubmit={submit}>
-            <p className="muted">
-              Tagging rules run when you save. The new movement appears at the top of the ledger.
-            </p>
-            <TransactionFields
-              draft={composer}
-              accounts={accounts.items}
-              tags={tags.items}
-              currency={composerCurrency}
-              tagLabel="Select tags for the new transaction"
-              onChange={setComposer}
-            />
-            {formError ? <Banner tone="error">{formError}</Banner> : null}
-            <div className="cell-actions">
-              <button type="submit" className="btn primary">
-                <Icon name="plus" size={16} />
-                Add transaction
-              </button>
-              <button type="button" className="btn" onClick={() => setComposer(undefined)}>
-                Cancel
-              </button>
-            </div>
-          </form>
-        </Modal>
-      ) : null}
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setFormError(undefined);
+              setComposer(emptyTransactionDraft(new Date().toISOString().slice(0, 10)));
+            }}
+          >
+            <Icon name="refresh" size={16} />
+            Reset
+          </button>
+        </div>
+      </form>
 
       {editor ? (
         <Modal title={`Edit ${editor.transaction.payee ?? "transaction"}`} onClose={closeEditor}>

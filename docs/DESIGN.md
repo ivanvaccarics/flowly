@@ -142,11 +142,11 @@ same on every machine.
   technology and pointed at by each view's `aria-labelledby`, but it is not
   printed: the sidebar names the current section, and every page opens with its
   own headline.
-- **Dashboard header:** the eyebrow with the section's icon, the page's own
-  sentence in the serif, one line about what the figures mean, and the two
-  actions the page is for — **Export data** and **New transaction**. The period
-  controls sit under it, open, in the same card the other sections use for
-  their filters.
+- **Dashboard header:** the eyebrow with the section's icon and the two actions
+  the page is for — **Export data** and **New transaction**. The figures below
+  are the page's own statement, so the dashboard carries no headline of its own;
+  the period controls sit under it, open, in the same card the other sections use
+  for their filters.
 - **Page header:** every section opens the same way and nothing else comes
   first — an eyebrow with the section's icon, the section's own sentence in the
   serif, a lead that says what the page does, and, when the section has one, the
@@ -181,8 +181,8 @@ same on every machine.
   A cell that carries an action of its own, like the status chip, keeps it. The
   row's second line names where it came from (the bank's own description, or the
   source); a provider's raw row id lives only behind **Raw**.
-- **Dialog:** the composer, the rule editor and the movement editor open over the
-  page in one dialog — a full-viewport backdrop *above* the sticky top bar, with
+- **Dialog:** the rule editor and the movement editor open over the page in one
+  dialog — a full-viewport backdrop *above* the sticky top bar, with
   the body scrolling under it. Escape, the X and **Cancel** close it without
   writing, focus is trapped while it is open and returns to the control that
   opened it, and the dialog never repeats the page's `h1`.
@@ -241,8 +241,9 @@ same on every machine.
   with the number of movements carrying it). A row opens the tag in a dialog —
   name and colour, **Save tag** — and the two icon buttons beside it do the same
   and ask before deleting. The footer counts `1–6 of 6` and pages eight at a
-  time; under the table sit three notes: a taxonomy tip, how many tags no
-  movement uses, and how matching is case-insensitive.
+  time. The page ends there: the notes the first draft carried under the table
+  (a taxonomy tip, the unused-tag count, the case-insensitive reminder) said
+  what the interface already shows, so they are gone.
 - **Colour picker:** eight palette swatches — Flowly green and gold, then blue,
   violet, emerald, amber, red and slate — each a 30 px rounded tile in a white
   tray, rendered as a radiogroup; the selection carries a white check and an
@@ -276,8 +277,8 @@ Only shipping functionality is on screen; every figure comes from the API.
 | --- | --- |
 | Dashboard | The serif headline with **Export data** and **New transaction**, then the **period picker** in its own card — the preset segments, the year strip, the month grid, and the selected months as removable chips with **All &lt;year&gt;**, **Clear** and the count on the same row; a **metric row per currency** — the filled balance card with the period's net flow and the savings rate, then what was spent and what came in, each with its delta against the previous equal-length period; an **interactive** cash-flow chart (income/expense bars with a net line, inline SVG) whose hovered month is lit, guided and read out in a tooltip, one keyboard stop walked with the arrow keys, and clickable to open that month in the ledger; the spending breakdown as **one donut per currency**, every tag of the period always drawn, with a legend row per category (colour, amount, share) that opens the ledger filtered to that tag; the recent movements as a paged list (ten rows at a time on the server, with the window and its own Previous/Next); the bank sync card (last sync, **Sync now**, reconnect warnings); the accounts summary; and the backup strip with the **Create backup** deep link |
 | Accounts | The headline with the currency chip, the create form, and one card per account with its real balance per currency and booked-movement count, archive, restore an archived account, and cascade delete |
-| Transactions | The headline naming the encrypted ledger with **Add transaction** (the record form opens in a dialog over the page, with the tag picker and the tagging-rules note), and one ledger card holding the server-side filters (text, account, tag, status, date range), the **View** pills (all movements, then one pill per tag in its own colour), the table — a row opens the movement in the same dialog with one **click** on a cell or on the row's **Edit** button, with account, booking date, amount, payee, note, status and tags — a status chip that switches booked ↔ pending, the source as an offline-AES chip, a **Raw** toggle per row that opens the provider record behind it (the stored fields and the bank's own fields side by side, flattened one per row, with the exact JSON one click away) and delete — and the pager footer |
-| Tags | The serif headline with **New tag** beside it, then the workbench: **New tag** (name with its `#`, the palette or a free colour from the browser picker, a live preview) on the left and the **Tag directory** on the right — search, sort (most used, name, newest), All / Used / Unused, the **Jump to** letters, and one row per tag with what applies it and how many movements carry it, opening the editor dialog on a click with **Edit** and the confirmed cascade **delete** beside it, paged eight at a time — over three notes: a taxonomy tip, the unused tags, and the case-insensitive matching |
+| Transactions | The headline naming the encrypted ledger, then the **New transaction** card — the record form itself, inline above the ledger, with the tag picker and the tagging-rules note — and the ledger card holding the server-side filters (text, account, tag, status, date range), the **View** pills (all movements, then one pill per tag in its own colour), the table — a row opens the movement in the same dialog with one **click** on a cell or on the row's **Edit** button, with account, booking date, amount, payee, note, status and tags — a status chip that switches booked ↔ pending, the source as an offline-AES chip, a **Raw** toggle per row that opens the provider record behind it (the stored fields and the bank's own fields side by side, flattened one per row, with the exact JSON one click away) and delete — and the pager footer |
+| Tags | The serif headline, then the workbench: **New tag** (name with its `#`, the palette or a free colour from the browser picker, a live preview) on the left and the **Tag directory** on the right — search, sort (most used, name, newest), All / Used / Unused, the **Jump to** letters, and one row per tag with what applies it and how many movements carry it, opening the editor dialog on a click with **Edit** and the confirmed cascade **delete** beside it, paged eight at a time |
 | Rules | The headline naming the engine with the active-rule chip, then the **composer** holds the condition builder (rule name and AND/OR logic side by side, numbered condition rows with per-field operators and the amount currency, a dashed **Add condition**, and the tags as toggle pills) over a footer with **Reset**, **Simulate on 100 tx** and **Save rule**; a **live evaluation** line under the form reports what the draft currently matches, read from the server without saving anything. The **overview** column carries automation metrics — total matches, the share of the ledger covered, a stacked bar and legend per tag the rules apply, the rule count and the engine's on/off state — and the **registry** is a full-width table of every rule (name and state, the matched expression, its tags, its match count, an on/off switch, edit and delete) with All/Active filters, an enable/disable-all action and the backfill button. **Edit** opens the same composer fields in a dialog over the page and saving replaces that rule's conditions while keeping its id, state and order; the composer behind keeps its own draft, untouched by the edit, and a click anywhere on a registry row opens the same dialog |
 | Settings | The headline, then Enable Banking first, split into three cards: the application (facts plus a callback-URL block that compares itself with the address in use, with the rest of the settings and the disconnect action behind disclosures), the guided bank picker (country and account type with **Load available banks** under them, the search, the sandbox credentials), and the linked banks with their status, per-account mapping, the balance the bank reports with the type it came from, Sync now and Unlink. The picker and the pending-authorization panel take turns: while a consent waits, the card shows only the panel — approve in the bank window, or **Delete** the request — and the picker returns the moment the connection lands. A **Next** banner on the first card always names the action left to take. The passphrase change and the paired export and import option cards (transaction CSV, every table as a plain ZIP, complete encrypted archive, CSV preview and merge, archive replacement) follow |
 

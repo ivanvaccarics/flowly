@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Captures the README screenshots from a running Flowly server.
+ * Captures the screenshots in docs/SCREENSHOTS.md from a running Flowly server.
  *
  *   node tooling/scripts/screenshots.mjs [baseUrl] [--chrome=/path/to/chrome]
  *
@@ -30,7 +30,7 @@ const height = Number(process.env.FLOWLY_SCREENSHOT_HEIGHT ?? 1400);
 const here = fileURLToPath(new URL(".", import.meta.url));
 const outDir = join(here, "..", "..", "docs", "images");
 
-/** The sections the README shows, in the order they are captured. */
+/** The sections docs/SCREENSHOTS.md shows, in the order they are captured. */
 const SECTIONS = [
   {
     file: "dashboard.png",
