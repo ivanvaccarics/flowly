@@ -247,8 +247,6 @@ export function RulesView({ csrf }: { csrf: string }) {
       <SectionIntro
         icon="rules"
         eyebrow="Deterministic heuristic engine"
-        title="Keep order, without thinking about it twice."
-        lead="Active rules are evaluated in memory, on your device: nothing is uploaded and nothing is measured. Define the signal, pick a label and Flowly does the repetitive work — rules only ever add tags, on new movements and imports."
         actions={
           <Chip tone={activeRules.length > 0 ? "income" : "neutral"}>
             {activeRules.length > 0 ? `${activeRules.length} active` : "Engine idle"}

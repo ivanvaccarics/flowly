@@ -138,12 +138,7 @@ export function TagsView({ csrf }: { csrf: string }) {
 
   return (
     <section className="view" aria-labelledby="tags-title">
-      <SectionIntro
-        icon="tags"
-        eyebrow="Taxonomy"
-        title="Tags that make sense."
-        lead="A small, intentional vocabulary keeps your transactions useful without making them feel like admin work. Matching is case-insensitive, and the colour is used by the interface alone."
-      />
+      <SectionIntro icon="tags" eyebrow="Taxonomy" />
 
       {(tags.error ?? error) ? <Banner tone="error">{tags.error ?? error}</Banner> : null}
 

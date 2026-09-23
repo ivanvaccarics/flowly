@@ -65,34 +65,25 @@ export function Empty({ children }: { children: ReactNode }) {
 }
 
 /**
- * The section's own headline: an eyebrow with the section's
- * icon, a sentence worth reading, and — when the section has one — the action
- * that belongs beside its name. Every section opens with exactly this, so the
- * pages read as one product instead of six.
+ * The line a section opens with: its name, with the section's own icon, and —
+ * when the section has one — the action or state that belongs on the same line.
+ * Nothing else comes before the cards: they say what the section is for.
  */
 export function SectionIntro({
   icon,
   eyebrow,
-  title,
-  lead,
   actions,
 }: {
   icon: IconName;
   eyebrow: string;
-  title: string;
-  lead?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
     <div className="section-intro">
-      <div className="section-intro-main">
-        <p className="eyebrow primary">
-          <Icon name={icon} size={14} />
-          {eyebrow}
-        </p>
-        <h2>{title}</h2>
-        {lead ? <p className="lead">{lead}</p> : null}
-      </div>
+      <p className="eyebrow primary">
+        <Icon name={icon} size={16} />
+        {eyebrow}
+      </p>
       {actions ? <div className="section-intro-actions">{actions}</div> : null}
     </div>
   );

@@ -95,8 +95,6 @@ export function AccountsView({ csrf }: { csrf: string }) {
       <SectionIntro
         icon="accounts"
         eyebrow="Balances per currency"
-        title="Every account, one vault."
-        lead="Every account is a local endpoint: a bank-linked account shows the balance your bank sends, every other account books its own movements, and no currency is ever converted. Archived accounts keep their movements and can be restored."
         actions={
           <Chip tone="neutral">
             {currencies.size} {currencies.size === 1 ? "currency" : "currencies"}

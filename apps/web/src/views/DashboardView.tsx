@@ -3,7 +3,7 @@ import type { Account, Dashboard, Tag, Transaction } from "@flowly/web-contracts
 import { api } from "../api/client.js";
 import { DashboardFilters } from "../components/DashboardFilters.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, Empty, Money, tagPillStyle } from "../components/ui.js";
+import { Banner, Chip, Empty, Money, SectionIntro, tagPillStyle } from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { describeError } from "../hooks/use-workspace.js";
 import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
@@ -222,24 +222,22 @@ export function DashboardView({
       aria-busy={loading || undefined}
       aria-labelledby="dashboard-title"
     >
-      <div className="section-intro">
-        <div className="section-intro-main">
-          <h2 className="eyebrow primary">
-            <Icon name="dashboard" size={24} />
-            Analysis &amp; trend
-          </h2>
-        </div>
-        <div className="section-intro-actions">
-          <button type="button" className="btn ghost" onClick={onExportData}>
-            <Icon name="download" size={16} />
-            Export data
-          </button>
-          <button type="button" className="btn primary" onClick={onNewTransaction}>
-            <Icon name="plus" size={16} />
-            New transaction
-          </button>
-        </div>
-      </div>
+      <SectionIntro
+        icon="dashboard"
+        eyebrow="Analysis & trend"
+        actions={
+          <>
+            <button type="button" className="btn ghost" onClick={onExportData}>
+              <Icon name="download" size={16} />
+              Export data
+            </button>
+            <button type="button" className="btn primary" onClick={onNewTransaction}>
+              <Icon name="plus" size={16} />
+              New transaction
+            </button>
+          </>
+        }
+      />
 
       <DashboardFilters
         months={months}

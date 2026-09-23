@@ -245,12 +245,7 @@ export function TransactionsView({
       aria-busy={loading || undefined}
       aria-labelledby="transactions-title"
     >
-      <SectionIntro
-        icon="transactions"
-        eyebrow="Encrypted ledger"
-        title="A readable trace of every movement."
-        lead="Every movement is validated and stays on this device: search, filters and paging run on the server against the encrypted vault, and nothing is searched in the browser."
-      />
+      <SectionIntro icon="transactions" eyebrow="Encrypted ledger" />
 
       {/* The movement is written here, above the ledger it lands in: the form is
           the first thing on the page, so a button that opened a dialog over the

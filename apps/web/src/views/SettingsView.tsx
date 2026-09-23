@@ -61,12 +61,7 @@ export function SettingsView({ csrf, busy, onChangePassphrase, onClearError }: S
 
   return (
     <section className="view" aria-labelledby="settings-title">
-      <SectionIntro
-        icon="settings"
-        eyebrow="Vault & data"
-        title="Nothing leaves the device unless you take it."
-        lead="Connect your bank, protect the local vault with its passphrase, and export or import your ledger without giving up sovereignty: the three export shapes are the supported way out."
-      />
+      <SectionIntro icon="settings" eyebrow="Vault & data" />
 
       <BankingPanel csrf={csrf} />
 
