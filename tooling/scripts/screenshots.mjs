@@ -36,15 +36,13 @@ const SECTIONS = [
     file: "dashboard.png",
     nav: "Dashboard",
     title: "Financial overview",
-    // The dashboard opens on the current month; the screenshot shows a trend,
-    // and the period picker has to be opened before its presets can be clicked.
-    openPicker: true,
+    // The dashboard opens on the current month; the screenshot shows a trend.
     prepare: "3 months",
     // The dashboard opens with its metric cards rather than a section banner.
     ready: ".kpi-row",
     // Taller than the rest: the metric row, three card rows and the backup
     // strip all belong in one picture of the page.
-    height: 2100,
+    height: 2300,
   },
   { file: "accounts.png", nav: "Accounts", title: "Accounts & resources" },
   { file: "transactions.png", nav: "Transactions", title: "Transactions" },
@@ -242,10 +240,6 @@ async function main() {
         )})`,
       );
       await devtools.waitFor(`!!document.querySelector('${section.ready ?? ".section-banner"}')`);
-      if (section.openPicker) {
-        await devtools.evaluate(`document.querySelector(".period-trigger").click()`);
-        await devtools.waitFor("!!document.querySelector('.period-popover')");
-      }
       if (section.prepare) {
         await devtools.evaluate(`(() => {
           const button = [...document.querySelectorAll("button")]

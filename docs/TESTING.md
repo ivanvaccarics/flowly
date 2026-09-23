@@ -125,7 +125,7 @@ you should see.
 | Filter by account, date range, tag, status or free text | The list narrows and the count updates; nothing is filtered in the browser only |
 | Look at the footer of a filtered ledger with more rows than one page | It reads `Showing 1–25 of N transactions` with `Page 1 / x`; **Next** shows the following rows and **Previous** comes back; **Rows per page** switches to 50 or 100 and starts again from page 1 |
 | Change any filter, or record a transaction, while on a later page | The ledger returns to page 1 of the new result set |
-| Pick months on the dashboard — the period trigger or the calendar button opens the picker, then a preset, the year strip, or single months | The selected months appear as removable chips, the metric row, the chart and the recent list all describe exactly those months, and a month nobody selected never leaks into the totals |
+| Pick months on the dashboard — a preset, the year strip, or single months | The selected months appear as removable chips, the metric row, the chart and the recent list all describe exactly those months, and a month nobody selected never leaks into the totals; while the figures are re-read they dim for a moment and nothing moves under the pointer |
 | Look at the spending breakdown's legend | There is no checkbox: one row per tag with its colour, amount and share, and the donut draws every category of the period |
 | Press a legend row of the spending breakdown | The ledger opens filtered to that tag, over the same period |
 | Delete a transaction | It disappears; reloading keeps it gone |
@@ -164,7 +164,7 @@ you should see.
 | Point at a week of the cash-flow chart, then walk it with **←**/**→** | The week lights up with a vertical guide and a tooltip naming the dates, income, expenses and net; the other weeks dim; the arrow keys move the same readout without adding tab stops |
 | Hover a slice or a legend row of the spending pie | The slice thickens, the other slices dim, the legend row highlights and the hole reads the tag's name, amount, share and currency instead of the period total |
 | Click a cash-flow week, then a slice or legend row | The ledger opens filtered to that week's dates, or to that tag inside the dashboard's period, with the filters visible in the form and **Clear filters** at hand |
-| Press **Export data** in the strip under the dashboard, or **Backup vault** in the top bar | Settings opens with the export block already in view and focused |
+| Press **Export data** beside the dashboard headline, **Create backup** on the strip under it, or **Backup vault** in the top bar | Settings opens with the export block already in view and focused |
 | Look at the **Bank sync** card | Without a connected bank it offers **Connect to Enable Banking**; with one it shows the last sync, the paired accounts and a **Sync now** button |
 | Look at the **Recent transactions** card with more than ten movements in the vault | Ten rows of payee, day, account, source, tags and amount, plus `Showing 1–10 of N transactions` and **Previous**/**Next**; the header chip counts every match, and **All transactions** opens the full ledger |
 | Look at the dashboard's cards | The bank sync card, the spending breakdown, the recent movements and the accounts summary sit in the dashboard's own three-column grid; none repeats what the vault owns — the top bar states the vault's state, and the sidebar's session card holds the lock controls |

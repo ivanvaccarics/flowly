@@ -275,7 +275,11 @@ export function TransactionsView({
   }
 
   return (
-    <section className="view" aria-labelledby="transactions-title">
+    <section
+      className={loading ? "view is-refreshing" : "view"}
+      aria-busy={loading || undefined}
+      aria-labelledby="transactions-title"
+    >
       <SectionBanner
         tone="vault"
         icon="transactions"
@@ -507,7 +511,6 @@ export function TransactionsView({
         </div>
 
         {(formError ?? error) ? <Banner tone="error">{formError ?? error}</Banner> : null}
-        {loading ? <Banner>Searching…</Banner> : null}
 
         <div className="table-wrap">
           <table>

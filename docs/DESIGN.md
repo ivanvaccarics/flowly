@@ -143,10 +143,11 @@ same on every machine.
   technology and pointed at by each view's `aria-labelledby`, but it is not
   printed: the sidebar names the current section, and every page opens with its
   own headline.
-- **Dashboard header:** the date as an eyebrow, the greeting as the page's serif
-  headline, one sentence about what the page shows, and the period picker beside
-  it. It replaces the banner/intro pair on the dashboard, where the figures that
-  pair used to carry are the three metric cards themselves.
+- **Dashboard header:** the eyebrow with the section's icon, the page's own
+  sentence in the serif, one line about what the figures mean, and the two
+  actions the page is for — **Export data** and **New transaction**. The period
+  controls sit under it, open, in the same card the other sections use for
+  their filters.
 - **Section banner:** the five other sections open with the same flat strip over
   their headline — a white card with a hairline, an icon tile in the section's
   tone, an optional eyebrow, the section's title with a state chip, a sentence
@@ -203,14 +204,14 @@ same on every machine.
   tag of the period is always included — the dashboard's only scope is the
   period — so the legend is a read-out, not a filter: colour, name, amount and
   share per row. A row is a button that opens the ledger on that tag.
-- **Period picker:** a compact trigger in the dashboard header, naming the
-  period in words (**This month**, **Last 3 months**, **This year**, **Custom
-  months**) with a calendar button beside it. Either one opens the picker over
-  the page: the preset segments, a year strip with a count of that year's
-  selected months, the twelve months of the year the strip points at, and the
-  selected months as removable chips with **All &lt;year&gt;**, **Clear** and
-  the count. Clicking a month is what "custom" means, and the preset follows the
-  click; choosing a preset closes the picker again.
+- **Period picker:** the dashboard's own bar, always visible under the header —
+  the preset segments (month, 3 months, year, custom), a year strip with a count
+  of that year's selected months, the twelve months of the year the strip points
+  at, and the selected months as removable chips with **All &lt;year&gt;**,
+  **Clear** and the count on the same row. Clicking a month is what "custom"
+  means, and the preset follows the click. Changing the period dims the figures
+  that are being re-read instead of inserting a banner: nothing moves under the
+  pointer while a read is in flight.
 - **Metric card:** the three figures a period is read by — the balance across
   accounts, what was spent and what came in — each a card with a label, an icon
   tile, a large tabular value with its currency and a one-line context. The
@@ -279,7 +280,7 @@ Only shipping functionality is on screen; every figure comes from the API.
 
 | Section | Contents |
 | --- | --- |
-| Dashboard | The date and the greeting, one sentence about the page, and the **period picker** (compact trigger plus calendar button; the preset segments, the year strip, the month grid and the selected months as removable chips with **All &lt;year&gt;**, **Clear** and the count open over the page); a **metric row per currency** — the filled balance card with the period's net flow and the savings rate, then what was spent and what came in, each with its delta against the previous equal-length period; an **interactive** cash-flow chart (income/expense bars with a net line, inline SVG) whose hovered month is lit, guided and read out in a tooltip, one keyboard stop walked with the arrow keys, and clickable to open that month in the ledger; the spending breakdown as **one donut per currency**, every tag of the period always drawn, with a legend row per category (colour, amount, share) that opens the ledger filtered to that tag; the recent movements as a paged list (ten rows at a time on the server, with the window and its own Previous/Next); the bank sync card (last sync, **Sync now**, reconnect warnings); the accounts summary; and the backup strip with the **Export data** deep link |
+| Dashboard | The serif headline with **Export data** and **New transaction**, then the **period picker** in its own card — the preset segments, the year strip, the month grid, and the selected months as removable chips with **All &lt;year&gt;**, **Clear** and the count on the same row; a **metric row per currency** — the filled balance card with the period's net flow and the savings rate, then what was spent and what came in, each with its delta against the previous equal-length period; an **interactive** cash-flow chart (income/expense bars with a net line, inline SVG) whose hovered month is lit, guided and read out in a tooltip, one keyboard stop walked with the arrow keys, and clickable to open that month in the ledger; the spending breakdown as **one donut per currency**, every tag of the period always drawn, with a legend row per category (colour, amount, share) that opens the ledger filtered to that tag; the recent movements as a paged list (ten rows at a time on the server, with the window and its own Previous/Next); the bank sync card (last sync, **Sync now**, reconnect warnings); the accounts summary; and the backup strip with the **Create backup** deep link |
 | Accounts | Green banner with the account count and the booked balance per currency, the headline with the currency chip, the create form, and one card per account with its real balance per currency and booked-movement count, archive, restore an archived account, and cascade delete |
 | Transactions | Green banner naming the encrypted ledger with this month's income, expenses and net, the headline with **Add transaction** (the record form opens in a dialog over the page, with the tag picker and the tagging-rules note), and one ledger card holding the server-side filters (text, account, tag, status, date range), the **View** pills (all movements, then one pill per tag in its own colour), the table — a row opens the movement in the same dialog with one **click** on a cell or on the row's **Edit** button, with account, booking date, amount, payee, note, status and tags — a status chip that switches booked ↔ pending, the source as an offline-AES chip, a **Raw** toggle per row that opens the provider record behind it (the stored fields and the bank's own fields side by side, flattened one per row, with the exact JSON one click away) and delete — and the pager footer |
 | Tags | The serif headline with **New tag** beside it, then the workbench: **New tag** (name with its `#`, the palette or a free colour from the browser picker, a live preview) on the left and the **Tag directory** on the right — search, sort (most used, name, newest), All / Used / Unused, the **Jump to** letters, and one row per tag with what applies it and how many movements carry it, opening the editor dialog on a click with **Edit** and the confirmed cascade **delete** beside it, paged eight at a time — over three notes: a taxonomy tip, the unused tags, and the case-insensitive matching |

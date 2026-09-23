@@ -19,14 +19,6 @@ import {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** What the period picker calls each preset, in the dashboard's own words. */
-const PRESET_LABELS: Record<MonthPreset, string> = {
-  month: "This month",
-  quarter: "Last 3 months",
-  year: "This year",
-  custom: "Custom months",
-};
-
 /** The period, said inside a label: "Spent this month", "Income this year". */
 const PERIOD_WORDS: Record<MonthPreset, string> = {
   month: "this month",
@@ -34,12 +26,6 @@ const PERIOD_WORDS: Record<MonthPreset, string> = {
   year: "this year",
   custom: "in this period",
 };
-
-function greetingOf(hour: number): string {
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
 
 /** The dashboard reads the ledger ten rows at a time; the ledger itself pages 25. */
 const RECENT_PAGE_SIZE = 10;
@@ -97,19 +83,9 @@ export function DashboardView({
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [recentTotal, setRecentTotal] = useState(0);
   const [recentPage, setRecentPage] = useState(1);
-  /** The period picker stays closed until the reader asks for it. */
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
-  const today = new Date();
-  const todayLabel = today.toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const greeting = `${greetingOf(today.getHours())}.`;
   const periodWord = PERIOD_WORDS[preset];
 
   const { from, to } = useMemo(() => monthsRange(months), [months]);
@@ -213,9 +189,6 @@ export function DashboardView({
 
   function applyPreset(next: "month" | "quarter" | "year" | "custom") {
     setPreset(next);
-    // A preset is a complete answer, so the picker folds away; "Custom" keeps
-    // it open, because that is where the months get clicked.
-    if (next !== "custom") setPickerOpen(false);
     if (next === "custom") return;
     const nextMonths = presetMonths(next);
     setMonths(nextMonths);
@@ -244,55 +217,28 @@ export function DashboardView({
   }
 
   return (
-    <section className="view" aria-labelledby="dashboard-title">
-      <div className="dash-head">
-        <div className="dash-head-text">
-          <p className="eyebrow">{todayLabel}</p>
-          <h2 className="display-headline">{greeting}</h2>
+    <section
+      className={loading ? "view is-refreshing" : "view"}
+      aria-busy={loading || undefined}
+      aria-labelledby="dashboard-title"
+    >
+      <div className="section-intro">
+        <div className="section-intro-main">
+          <p className="eyebrow primary">
+            <Icon name="dashboard" size={14} />
+            Analysis &amp; trend
+          </p>
+          <h2>Where the money went, and what is left.</h2>
           <p className="lead">
-            A clear view of what came in, what went out, and what is still yours. Every figure is
-            aggregated on this device from the booked movements of the encrypted vault.
+            Where the money went, and what is left. Every figure is aggregated on this device from
+            the booked movements of the encrypted vault, and each currency keeps its own numbers.
           </p>
         </div>
-        <div className="dash-head-actions">
-          <div className="period-picker">
-            <button
-              type="button"
-              className="period-trigger"
-              aria-expanded={pickerOpen}
-              aria-controls="dashboard-period"
-              onClick={() => setPickerOpen((open) => !open)}
-            >
-              {PRESET_LABELS[preset]}
-              <span aria-hidden="true">▾</span>
-            </button>
-            <button
-              type="button"
-              className="btn"
-              aria-label="Choose months"
-              title="Choose months"
-              aria-expanded={pickerOpen}
-              aria-controls="dashboard-period"
-              onClick={() => setPickerOpen((open) => !open)}
-            >
-              <Icon name="calendar" size={16} />
-            </button>
-            {pickerOpen ? (
-              <div className="period-popover" id="dashboard-period">
-                <DashboardFilters
-                  months={months}
-                  preset={preset}
-                  anchorYear={anchorYear}
-                  onPreset={applyPreset}
-                  onAnchorYear={setAnchorYear}
-                  onToggleMonth={toggleMonth}
-                  onSelectYear={selectYear}
-                  onClear={clearMonths}
-                  onRemoveMonth={toggleMonth}
-                />
-              </div>
-            ) : null}
-          </div>
+        <div className="section-intro-actions">
+          <button type="button" className="btn ghost" onClick={onExportData}>
+            <Icon name="download" size={16} />
+            Export data
+          </button>
           <button type="button" className="btn primary" onClick={onNewTransaction}>
             <Icon name="plus" size={16} />
             New transaction
@@ -300,8 +246,19 @@ export function DashboardView({
         </div>
       </div>
 
+      <DashboardFilters
+        months={months}
+        preset={preset}
+        anchorYear={anchorYear}
+        onPreset={applyPreset}
+        onAnchorYear={setAnchorYear}
+        onToggleMonth={toggleMonth}
+        onSelectYear={selectYear}
+        onClear={clearMonths}
+        onRemoveMonth={toggleMonth}
+      />
+
       {error ? <Banner tone="error">{error}</Banner> : null}
-      {loading ? <Banner>Reading the vault…</Banner> : null}
       {months.length === 0 ? <Empty>Select at least one month to see the figures.</Empty> : null}
 
       {/* The metric row spans the whole content column, as in the mockups: the
@@ -564,7 +521,7 @@ export function DashboardView({
           Your vault is stored on this device and ready for an encrypted backup.
         </p>
         <button type="button" className="btn" onClick={onExportData}>
-          Export data
+          Create backup
         </button>
       </div>
     </section>

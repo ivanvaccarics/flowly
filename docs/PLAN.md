@@ -1739,6 +1739,25 @@ Status: **complete** (2026-09-23), corrections to `docs/adr/0037`.
   top under the pointer that clicked it, so the row that changed was never the
   row that was clicked. Two API tests cover the order and the usage counts.
 
+#### Task `bring-the-period-controls-back-and-stop-the-flicker`
+
+Status: **complete** (2026-09-23), corrections to `docs/adr/0037`.
+
+- The dashboard's period controls are part of the page again: the preset
+  segments, the year strip, the months and the selected chips sit in their own
+  card under the headline, exactly as the other sections hold their filters. The
+  compact trigger and its popover are gone — hiding the months behind a click
+  cost more than it saved — and the headline carries **Export data** and **New
+  transaction** beside it, with **Create backup** on the strip under the page.
+- A read in flight no longer inserts a banner. **Reading the vault…** and the
+  ledger's **Searching…** are gone; the figures that are being re-read dim for a
+  moment and the view carries `aria-busy`, so changing a preset, a filter or a
+  chart category never moves the page under the pointer.
+- The tag directory's pager counted the vault instead of the page — `1–11 of 11`
+  then `9–19 of 11`, because the last row was `(page − 1) × size + total`. It now
+  counts what the page holds, and a test renders eleven tags and walks to the
+  second page to hold it there.
+
 ### Phase 6 - Enable Banking for Server
 
 #### Task `design-banking-connector`

@@ -90,8 +90,8 @@ export function TagsView({ csrf }: { csrf: string }) {
   const pageCount = Math.max(1, Math.ceil(directory.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const firstRow = directory.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
-  const lastRow = (currentPage - 1) * PAGE_SIZE + directory.length;
   const visible = directory.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const lastRow = firstRow === 0 ? 0 : firstRow + visible.length - 1;
 
   // A narrower filter can leave the reader on a page that no longer exists.
   useEffect(() => {

@@ -316,9 +316,9 @@ kill %1 && rm -rf /tmp/flowly-demo
   per section into `docs/images/`. Pass `--chrome=/path/to/chrome` or set
   `CHROME_PATH` if Chrome is not where the script looks.
 - The viewport is 1440 px wide and `FLOWLY_SCREENSHOT_HEIGHT` (default 1400) px
-  tall; the dashboard is captured at 2100 px because its page is long. The
-  script opens the dashboard's period picker to set the trend preset and closes
-  it again by picking one, so the screenshots show the page, not its menus.
+  tall; the dashboard is captured at 2300 px because its page is long. The
+  dashboard's period controls are part of the page, so the script picks the
+  three-month preset the way a reader would.
 - The demo data is dated relative to the day it is seeded, so the dashboard's
   period, the ledger's month and the rules' coverage stay sensible whenever the
   screenshots are retaken.

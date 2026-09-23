@@ -18,6 +18,15 @@ other sections stand.
 > the serif headline, the dashboard's layout and the mockups' semantic accents
 > stand.
 
+> **Update (2026-09-23, later again).** Two things the page said and did not
+> keep. The dashboard keeps its **period controls open**, in the card the other
+> sections use for filters — the compact trigger and its popover went, because
+> hiding the months behind a click cost more than it saved. And a read in flight
+> no longer inserts a **Reading the vault…** banner: the figures that are being
+> re-read dim for a moment (`aria-busy` on the view), so changing a preset or a
+> category never moves the page under the pointer. The ledger's **Searching…**
+> banner went the same way.
+
 ## Context
 
 The interface had grown a cool slate canvas, a tinted sidebar, a gradient tile
@@ -42,10 +51,10 @@ canvas (`#f7f8f5`), warm white cards (`#fffefb`), a hairline `#e1e8e3`, ink
 navigation pill and the filled balance card. Inflows are `#1f7a58`, outflows a
 muted `#a8515d`, and the engine keeps its violet. `docs/DESIGN.md` carries the
 table.
-- **The dashboard opens with a sentence, not a banner.** The date, the hour's
-  greeting in the page's serif, one line about what the page shows, and the
-  period control — the banner and the intro pair stays on the five other
-  sections, with the same flat card and the same serif headline.
+- **The dashboard opens with a sentence, not a banner.** The eyebrow, the
+  page's serif headline, one line about the figures, and the two actions the
+  page is for; the period controls sit open under it. The banner and intro pair
+  stays on the five other sections, with the same flat card.
 - **Three metric cards, one of them filled.** The balance across accounts is the
   page's single green surface, with the period's net flow and the savings rate;
   what was spent and what came in sit beside it. The dashboard's cards then
