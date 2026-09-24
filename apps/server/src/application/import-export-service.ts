@@ -58,8 +58,6 @@ export interface CsvImportReport {
   invalid: number;
   tagsCreated: number;
   transactionsTaggedByRules: number;
-  /** Pairs of imported movements the transfer rules recognised as one transfer. */
-  transferPairs: number;
   errors: CsvParseError[];
 }
 
@@ -323,11 +321,9 @@ export class ImportExportService {
       invalid: parsed.errors.length,
       tagsCreated: 0,
       transactionsTaggedByRules: 0,
-      transferPairs: 0,
       errors: [...parsed.errors],
     };
     let createdTags = 0;
-    const written: Transaction[] = [];
 
     await this.vault.transaction(async () => {
       for (const row of parsed.rows) {
@@ -394,7 +390,6 @@ export class ImportExportService {
           rules,
         );
         await this.vault.transactions.create(tagged);
-        written.push(tagged);
         if (addedTagIds.length > 0) report.transactionsTaggedByRules += 1;
         knownIds.add(tagged.id);
         knownFingerprints.add(fingerprint);
@@ -402,7 +397,6 @@ export class ImportExportService {
       }
     });
 
-    report.transferPairs = await this.taggingRules.markTransfers(written);
     report.tagsCreated = createdTags;
     return report;
   }

@@ -8,7 +8,6 @@ import {
   draftProblem,
   draftFromRule,
   emptyDraft,
-  isMatchRule,
   type RuleDraft,
 } from "../components/RuleFields.js";
 import { Icon } from "../components/icons.js";
@@ -21,23 +20,12 @@ import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
 const PREVIEW_DEBOUNCE_MS = 300;
 
 /** One condition as the registry reads it; amounts carry their currency. */
-function describeCondition(condition: NonNullable<TaggingRule["conditions"]>[number]): string {
+function describeCondition(condition: TaggingRule["conditions"][number]): string {
   const value =
     condition.field === "amount"
       ? `${condition.value} ${condition.currency ?? "EUR"}`
       : String(condition.value);
   return `${condition.field} ${condition.operator.toUpperCase()} "${value}"`;
-}
-
-/**
- * A transfer rule in one line: the two sides it pairs, and how far apart their
- * dates may sit. The rule never names an amount — one side carries N and the
- * other -N, whatever N is that day.
- */
-function describeTransferRule(rule: TaggingRule): string {
-  const side = (set: TaggingRule["outgoing"]) =>
-    set ? set.conditions.map(describeCondition).join(` ${set.combinator.toUpperCase()} `) : "?";
-  return `${side(rule.outgoing)} ⇄ ${side(rule.incoming)} (±${rule.windowDays ?? 0}d)`;
 }
 
 export function RulesView({ csrf }: { csrf: string }) {
@@ -107,9 +95,6 @@ export function RulesView({ csrf }: { csrf: string }) {
   }
 
   function openEditor(rule: TaggingRule, opener: HTMLElement | null) {
-    // Only the tagging kind is editable here: a transfer rule pairs two
-    // movements, and this form has room for one condition set.
-    if (!isMatchRule(rule)) return;
     // Kept so the dialog can hand focus back where the user left it.
     openerRef.current = opener;
     setEditor({ rule, draft: draftFromRule(rule) });
@@ -141,8 +126,7 @@ export function RulesView({ csrf }: { csrf: string }) {
     }
     const now = new Date().toISOString();
     const created = await rules.create({
-      formatVersion: 3,
-      kind: "match",
+      formatVersion: 2,
       revision: 1,
       id: crypto.randomUUID(),
       name: draft.name,
@@ -488,36 +472,26 @@ export function RulesView({ csrf }: { csrf: string }) {
                       </span>
                     </td>
                     <td>
-                      {isMatchRule(rule) ? (
-                        <code>
-                          IF{" "}
-                          {rule.conditions
-                            .map(describeCondition)
-                            .join(` ${rule.combinator.toUpperCase()} `)}
-                        </code>
-                      ) : (
-                        <code title="A transfer between two of your own accounts">
-                          TRANSFER {describeTransferRule(rule)}
-                        </code>
-                      )}
+                      <code>
+                        IF{" "}
+                        {rule.conditions
+                          .map(describeCondition)
+                          .join(` ${rule.combinator.toUpperCase()} `)}
+                      </code>
                     </td>
                     <td>
-                      {isMatchRule(rule) ? (
-                        rule.tagIds.map((id) => {
-                          const tag = tagItems.find((candidate) => candidate.id === id);
-                          return (
-                            <span
-                              key={id}
-                              className="tag-pill"
-                              style={tagPillStyle(tag?.color ?? DEFAULT_TAG_COLOR)}
-                            >
-                              #{tag?.name ?? "…"}
-                            </span>
-                          );
-                        })
-                      ) : (
-                        <span className="chip neutral">transfer</span>
-                      )}
+                      {rule.tagIds.map((id) => {
+                        const tag = tagItems.find((candidate) => candidate.id === id);
+                        return (
+                          <span
+                            key={id}
+                            className="tag-pill"
+                            style={tagPillStyle(tag?.color ?? DEFAULT_TAG_COLOR)}
+                          >
+                            #{tag?.name ?? "…"}
+                          </span>
+                        );
+                      })}
                     </td>
                     <td className="cell-amount mono">
                       {matchesByRule.has(rule.id) ? matchesByRule.get(rule.id) : "—"}
@@ -535,16 +509,14 @@ export function RulesView({ csrf }: { csrf: string }) {
                             <span className="switch-knob" />
                           </span>
                         </button>
-                        {isMatchRule(rule) ? (
-                          <button
-                            type="button"
-                            className="btn small"
-                            aria-label={`Edit rule ${rule.name}`}
-                            onClick={(event) => openEditor(rule, event.currentTarget)}
-                          >
-                            <Icon name="edit" size={14} />
-                          </button>
-                        ) : null}
+                        <button
+                          type="button"
+                          className="btn small"
+                          aria-label={`Edit rule ${rule.name}`}
+                          onClick={(event) => openEditor(rule, event.currentTarget)}
+                        >
+                          <Icon name="edit" size={14} />
+                        </button>
                         <button
                           type="button"
                           className="btn small danger"

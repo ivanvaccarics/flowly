@@ -59,7 +59,7 @@ describe.each(["sqlcipher", "record-encryption"] as const)("vault lifecycle (%s)
     }
   });
 
-  it("upgrades a stored v1 tagging rule into the current format", async () => {
+  it("upgrades tagging rules stored before format version 2", async () => {
     const dir = tempDir();
     const ruleId = "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081";
     try {
@@ -90,7 +90,7 @@ describe.each(["sqlcipher", "record-encryption"] as const)("vault lifecycle (%s)
 
       const reopened = await Vault.open(dir, PASSPHRASE, { engine });
       const [rule] = await reopened.taggingRules.list();
-      expect(rule?.formatVersion).toBe(3);
+      expect(rule?.formatVersion).toBe(2);
       expect(rule?.conditions).toEqual([
         { field: "amount", operator: "lessThan", value: "-500.00", currency: "EUR" },
       ]);

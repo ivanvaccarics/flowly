@@ -102,7 +102,7 @@ the build, the tests or the release.
 | Delivery order | Release the server, then Enable Banking for Server, then the desktop application |
 | Bank integration | Enable Banking, implemented inside the server (`docs/adr/0016`): credentials live in the encrypted vault, raw provider JSON is stored per account, and the vault keeps the canonical ledger |
 | Additional MVP scope | Dashboard, advanced search, multi-currency, manual tagging rules |
-| Auto-tagging rules | Server MVP, Phase 3: a rule is either a `match` rule — one AND/OR condition group over note, description, payee, amount, or account, adding one or more tags — or a `transfer-pair` rule, which recognises the two legs of one transfer between own accounts and marks them (`docs/adr/0040`). Tags are only added, provenance is not tracked, and editing a transaction does not re-run rules |
+| Auto-tagging rules | Server MVP, Phase 3: one AND/OR condition group over note, description, payee, amount, or account, adding one or more tags; tags are only added, provenance is not tracked, and editing a transaction does not re-run rules |
 | Next feature after the MVP | Desktop application foundation in Phase 8; Enable Banking for Server (Phase 6) is delivered |
 
 ## 4. Architecture Options Considered
@@ -404,14 +404,9 @@ apply automatically to new and imported transactions.
 - `id`
 - `name`
 - `enabled`
-- `kind`: `match` or `transfer-pair`
-- `combinator`: `and` or `or` — `match` rules only
-- `conditions`: ordered list of `{ field, operator, value }` — `match` rules only
-- `tagIds`: the tags to add; one or more on a `match` rule, none on a
-  `transfer-pair` rule
-- `outgoing`, `incoming`: the two condition sets a `transfer-pair` rule reads,
-  one per leg
-- `windowDays`: how many days apart the two legs may book, 0 to 30
+- `combinator`: `and` or `or`
+- `conditions`: ordered list of `{ field, operator, value }`
+- `tagIds`: one or more tags to add
 - `createdAt`
 - `updatedAt`
 
@@ -428,29 +423,17 @@ Supported condition fields and operators:
   conversion
 - `accountId is` — exact account identifier
 
-A rule joins the conditions of one set with a single AND or OR. Nested groups are
-out of scope for the MVP. Every `match` rule that matches applies its tags, and
-the resulting tags are a set, so evaluation is order-independent.
-
-A `transfer-pair` rule matches two movements at once instead of one: the same
-currency, exactly opposite amounts, two different accounts, booked within the
-rule's window, with the negative leg matching `outgoing` and the positive leg
-matching `incoming`. The amounts are never written in the rule — one account has
-N and the other -N, whatever N is that day (`docs/adr/0040`). Only movements
-whose transfer flag is still undecided take part, and one movement belongs to at
-most one pair, so a flag the user already set is never overturned.
+A rule joins its conditions with a single AND or OR. Nested groups are out of
+scope for the MVP. Every rule that matches applies its tags, and the resulting
+tags are a set, so evaluation is order-independent.
 
 A rule holds at most 25 conditions and assigns at most 25 tags; the API and the
 editor enforce both limits.
 
 Rules run when a transaction is created manually, merged from CSV, or imported
 from Enable Banking (Phase 6). Editing an existing transaction does not re-run
-rules, and neither do the pair rules: they mark the movements a sync or an import
-just wrote, together with the rows they paired with. An explicit backfill
-action applies rules to existing transactions and is idempotent; it is what
-marks the history after a transfer rule is written, and it reports how many pairs
-it recognised. The rules page lists `transfer-pair` rules read-only, because its
-editor has room for one condition set.
+rules. An explicit backfill
+action applies rules to existing transactions and is idempotent.
 `GET /api/tagging-rules/stats` counts what the stored rules cover across the
 whole ledger — per rule, per applied tag and in total — and
 `POST /api/tagging-rules/preview` runs the same evaluation for an unsaved

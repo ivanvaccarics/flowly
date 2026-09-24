@@ -39,8 +39,7 @@ async function setupVault(): Promise<{ vault: Vault; dir: string; service: Taggi
 
 function coffeeRule(overrides: Partial<TaggingRule> = {}): TaggingRule {
   return {
-    formatVersion: 3,
-    kind: "match",
+    formatVersion: 2,
     revision: 1,
     id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
     name: "Coffee",
@@ -145,9 +144,9 @@ describe("tagging rules in the vault", () => {
       );
 
       const first = await service.backfill();
-      expect(first).toMatchObject({ evaluated: 2, changed: 2 });
+      expect(first).toEqual({ evaluated: 2, changed: 2 });
       const second = await service.backfill();
-      expect(second).toMatchObject({ evaluated: 2, changed: 0 });
+      expect(second).toEqual({ evaluated: 2, changed: 0 });
 
       const transactions = await vault.transactions.list();
       const rent = transactions.find((transaction) => transaction.bookingDate === "2026-10-01");
@@ -275,134 +274,6 @@ describe("tagging rules in the vault", () => {
           conditions: [{ field: "userNote", operator: "contains", value: "" }],
         }),
       ).rejects.toThrow(DomainError);
-    } finally {
-      await vault.lock();
-      cleanup(dir);
-    }
-  });
-});
-
-function transferRule(overrides: Partial<TaggingRule> = {}): TaggingRule {
-  return {
-    formatVersion: 3,
-    kind: "transfer-pair",
-    revision: 1,
-    id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7082",
-    name: "Giroconti",
-    enabled: true,
-    tagIds: [],
-    outgoing: {
-      combinator: "and",
-      conditions: [{ field: "payee", operator: "contains", value: "savings" }],
-    },
-    incoming: {
-      combinator: "and",
-      conditions: [{ field: "payee", operator: "contains", value: "everyday" }],
-    },
-    windowDays: 3,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...overrides,
-  };
-}
-
-async function seedLeg(
-  vault: Vault,
-  id: string,
-  input: { accountId: string; amountMinor: number; payee: string; bookingDate?: string },
-) {
-  return vault.transactions.create(
-    createTransaction(
-      {
-        accountId: input.accountId,
-        bookingDate: input.bookingDate ?? "2026-09-28",
-        amountMinor: input.amountMinor,
-        currency: "EUR",
-        payee: input.payee,
-      },
-      { id, now: NOW },
-    ),
-  );
-}
-
-describe("transfer rules in the vault", () => {
-  it("marks both legs of a transfer and leaves them in the ledger", async () => {
-    const { vault, dir, service } = await setupVault();
-    try {
-      await vault.taggingRules.create(transferRule());
-      await seedLeg(vault, "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f80", {
-        accountId: ACCOUNT_ID,
-        amountMinor: -50000,
-        payee: "Savings account",
-      });
-      const incoming = await seedLeg(vault, "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f81", {
-        accountId: OTHER_ACCOUNT_ID,
-        amountMinor: 50000,
-        payee: "Everyday account",
-        bookingDate: "2026-09-30",
-      });
-
-      // The second leg arriving is what completes the pair: the sync and the CSV
-      // import hand the rows they just wrote to exactly this call.
-      expect(await service.markTransfers([incoming])).toBe(1);
-      const stored = await vault.transactions.list();
-      expect(stored.map((transaction) => transaction.transfer)).toEqual([true, true]);
-
-      // Idempotent: nothing is left to decide, so nothing happens again.
-      expect(await service.markTransfers(stored)).toBe(0);
-    } finally {
-      await vault.lock();
-      cleanup(dir);
-    }
-  });
-
-  it("never overturns an answer the user already gave", async () => {
-    const { vault, dir, service } = await setupVault();
-    try {
-      await vault.taggingRules.create(transferRule());
-      await seedLeg(vault, "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f82", {
-        accountId: ACCOUNT_ID,
-        amountMinor: -50000,
-        payee: "Savings account",
-      });
-      const incoming = await seedLeg(vault, "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f83", {
-        accountId: OTHER_ACCOUNT_ID,
-        amountMinor: 50000,
-        payee: "Everyday account",
-      });
-      await vault.transactions.update({ ...incoming, transfer: false }, incoming.revision);
-
-      expect(await service.markTransfers([incoming])).toBe(0);
-      const stored = await vault.transactions.list();
-      expect(stored.filter((transaction) => transaction.transfer === true)).toHaveLength(0);
-    } finally {
-      await vault.lock();
-      cleanup(dir);
-    }
-  });
-
-  it("reports the pairs a backfill recognised", async () => {
-    const { vault, dir, service } = await setupVault();
-    try {
-      await vault.taggingRules.create(transferRule());
-      await seedLeg(vault, "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f84", {
-        accountId: ACCOUNT_ID,
-        amountMinor: -50000,
-        payee: "Savings account",
-      });
-      await seedLeg(vault, "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f85", {
-        accountId: OTHER_ACCOUNT_ID,
-        amountMinor: 50000,
-        payee: "Everyday account",
-      });
-
-      const first = await service.backfill();
-      expect(first).toMatchObject({ evaluated: 2, changed: 0, transferPairs: 1 });
-      const stored = await vault.transactions.list();
-      expect(stored.every((transaction) => transaction.transfer === true)).toBe(true);
-
-      const second = await service.backfill();
-      expect(second).toMatchObject({ transferPairs: 0 });
     } finally {
       await vault.lock();
       cleanup(dir);

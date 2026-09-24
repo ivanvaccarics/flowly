@@ -18,7 +18,6 @@ import { cleanup, tempDir, TEST_KDF } from "./helpers/test-utils.js";
 
 const NOW = "2026-09-01T08:00:00.000Z";
 const ACCOUNT_ID = "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f";
-const SECOND_ACCOUNT_ID = "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e70";
 const COFFEE_TAG = "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081";
 const ARCHIVE_PASSWORD = "archive password 1234";
 
@@ -39,8 +38,7 @@ async function seed(service: ImportExportService, vault: Vault): Promise<void> {
   );
   await vault.tags.create(createTag({ name: "Coffee" }, { id: COFFEE_TAG, now: NOW }));
   await vault.taggingRules.create({
-    formatVersion: 3,
-    kind: "match",
+    formatVersion: 2,
     revision: 1,
     id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
     name: "Coffee",
@@ -258,59 +256,6 @@ describe("transaction CSV", () => {
       cleanup(target.dir);
     }
   });
-
-  it("marks the two legs of a transfer it imports", async () => {
-    const { dir, vault, service } = await setupVault("flowly-csv-pair-");
-    try {
-      const accounts = [
-        { id: ACCOUNT_ID, name: "Everyday", type: "checking" as const },
-        { id: SECOND_ACCOUNT_ID, name: "Savings", type: "savings" as const },
-      ];
-      for (const account of accounts) {
-        await vault.accounts.create(
-          createAccount(
-            { name: account.name, type: account.type, defaultCurrency: "EUR" },
-            { id: account.id, now: NOW },
-          ),
-        );
-      }
-      await vault.taggingRules.create({
-        formatVersion: 3,
-        kind: "transfer-pair",
-        revision: 1,
-        id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7090",
-        name: "Giroconti",
-        enabled: true,
-        tagIds: [],
-        outgoing: {
-          combinator: "and",
-          conditions: [{ field: "payee", operator: "contains", value: "savings" }],
-        },
-        incoming: {
-          combinator: "and",
-          conditions: [{ field: "payee", operator: "contains", value: "everyday" }],
-        },
-        windowDays: 3,
-        createdAt: NOW,
-        updatedAt: NOW,
-      });
-
-      // A file with both legs and no flag: the rule is what recognises them.
-      const csv = [
-        "id,account_id,booking_date,value_date,amount,currency,payee,description,user_note,status,source,tags,transfer",
-        `${generateId()},${ACCOUNT_ID},2026-09-28,,-500.00,EUR,Savings account,,,booked,csv-import,,`,
-        `${generateId()},${SECOND_ACCOUNT_ID},2026-09-30,,500.00,EUR,Everyday account,,,booked,csv-import,,`,
-      ].join("\r\n");
-      const report = await service.importTransactionCsv(csv);
-      expect(report).toMatchObject({ created: 2, transferPairs: 1 });
-      const stored = await vault.transactions.list();
-      expect(stored).toHaveLength(2);
-      expect(stored.every((transaction) => transaction.transfer === true)).toBe(true);
-    } finally {
-      await vault.lock();
-      cleanup(dir);
-    }
-  });
 });
 
 describe("complete portable archive", () => {
@@ -456,8 +401,7 @@ describe("complete portable archive", () => {
       const report = await target.service.importArchive(archivePath, ARCHIVE_PASSWORD);
       expect(report.taggingRules).toBe(1);
       const [rule] = await target.vault.taggingRules.list();
-      expect(rule?.formatVersion).toBe(3);
-      expect(rule?.kind).toBe("match");
+      expect(rule?.formatVersion).toBe(2);
       expect(rule?.conditions).toEqual([
         { field: "amount", operator: "lessThan", value: "-500.00", currency: "EUR" },
       ]);

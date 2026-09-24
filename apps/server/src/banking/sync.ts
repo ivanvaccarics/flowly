@@ -305,9 +305,6 @@ export class BankSyncService {
     const now = this.clock.nowIso();
     const existing = await this.vault.transactions.list({ refA: accountId });
     const rules = await this.taggingRules.rules();
-    // The rows this run wrote, so the transfer rules can pair them with the
-    // other leg — which may be on another account, imported minutes earlier.
-    const written: Transaction[] = [];
     let earliest: string | undefined;
 
     await this.vault.transaction(async () => {
@@ -374,7 +371,6 @@ export class BankSyncService {
               continue;
             }
             const updated = await this.vault.transactions.update(next, match.revision);
-            written.push(updated);
             if (normalized.providerTransactionId) {
               byProviderId.set(normalized.providerTransactionId, updated);
             }
@@ -404,7 +400,6 @@ export class BankSyncService {
           );
           const { transaction: tagged } = this.taggingRules.withRuleTags(created, rules);
           const stored = await this.vault.transactions.create(tagged);
-          written.push(stored);
           if (normalized.providerTransactionId) {
             byProviderId.set(normalized.providerTransactionId, stored);
           }
@@ -423,8 +418,6 @@ export class BankSyncService {
         }
       }
     });
-
-    await this.taggingRules.markTransfers(written);
 
     const nextSyncFrom =
       earliest && (!account.syncFrom || earliest < account.syncFrom) ? earliest : account.syncFrom;

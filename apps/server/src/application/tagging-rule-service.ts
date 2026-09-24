@@ -3,8 +3,6 @@ import type { RuleConditionSet, TaggingRule } from "../domain/tagging-rule.js";
 import {
   conditionSetMatches,
   evaluateTaggingRules,
-  findTransferPairs,
-  isTransferPairRule,
   ruleMatches,
   validateConditionSet,
 } from "../domain/tagging-rule.js";
@@ -20,10 +18,7 @@ export interface BackfillScope {
 
 export interface BackfillReport {
   evaluated: number;
-  /** Rows whose tags changed. */
   changed: number;
-  /** Pairs of movements the transfer rules recognised as one transfer. */
-  transferPairs: number;
 }
 
 /** How many stored transactions each rule and each applied tag would cover. */
@@ -44,13 +39,6 @@ export interface TaggingRulePreview {
 
 /** How many recent transactions a preview reads by default. */
 export const PREVIEW_LIMIT = 100;
-
-/** Calendar-day arithmetic on ISO dates, independent of the local time zone. */
-function shiftDays(date: string, days: number): string {
-  const value = new Date(`${date}T00:00:00.000Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
-}
 
 /**
  * Applies user-authored tagging rules. Rules only add tags, so the operation is
@@ -115,54 +103,7 @@ export class TaggingRuleService {
         changed += 1;
       }
     });
-    const inScope = transactions.filter((transaction) => {
-      if (scope.fromDate && transaction.bookingDate < scope.fromDate) return false;
-      if (scope.toDate && transaction.bookingDate > scope.toDate) return false;
-      return true;
-    });
-    const transferPairs = await this.markTransfers(inScope);
-    return { evaluated: transactions.length, changed, transferPairs };
-  }
-
-  /**
-   * Marks the transfers the pair rules recognise among the movements given and
-   * the ones already stored near them.
-   *
-   * Only undecided movements take part, so a flag the user set is never
-   * overturned, and one movement belongs to at most one pair. Returns how many
-   * pairs were marked.
-   */
-  async markTransfers(transactions: readonly Transaction[]): Promise<number> {
-    if (transactions.length === 0) return 0;
-    const rules = await this.rules();
-    const pairRules = rules.filter(isTransferPairRule).filter((rule) => rule.enabled);
-    if (pairRules.length === 0) return 0;
-
-    // The other leg can book up to the widest window away, so the vault is read
-    // across that span and not only on the dates in hand: a movement imported
-    // today often pairs with one that arrived in the previous sync.
-    const window = Math.max(...pairRules.map((rule) => rule.windowDays));
-    const dates = transactions.map((transaction) => transaction.bookingDate).sort();
-    const stored = await this.vault.transactions.list({
-      refBFrom: shiftDays(dates[0]!, -window),
-      refBTo: shiftDays(dates[dates.length - 1]!, window),
-    });
-    const candidates = new Map<string, Transaction>();
-    // The vault's copy wins where there is one: it carries the revision a write
-    // needs, and a flag the user set between the import and this call.
-    for (const transaction of transactions) candidates.set(transaction.id, transaction);
-    for (const transaction of stored) candidates.set(transaction.id, transaction);
-
-    const pairs = findTransferPairs(pairRules, [...candidates.values()]);
-    if (pairs.length === 0) return 0;
-    await this.vault.transaction(async () => {
-      for (const pair of pairs) {
-        for (const leg of [pair.outgoing, pair.incoming]) {
-          await this.vault.transactions.update({ ...leg, transfer: true }, leg.revision);
-        }
-      }
-    });
-    return pairs.length;
+    return { evaluated: transactions.length, changed };
   }
 
   nowIso(): string {
@@ -178,7 +119,7 @@ export class TaggingRuleService {
     const [rules, transactions] = await Promise.all([this.rules(), this.vault.transactions.list()]);
     const matchesByRule = new Map(rules.map((rule) => [rule.id, 0]));
     const transactionsByTag = new Map<string, number>();
-    const matchedIds = new Set<string>();
+    let matched = 0;
     for (const transaction of transactions) {
       const tags = new Set<string>();
       for (const rule of rules) {
@@ -187,25 +128,14 @@ export class TaggingRuleService {
         for (const tagId of rule.tagIds) tags.add(tagId);
       }
       if (tags.size === 0) continue;
-      matchedIds.add(transaction.id);
+      matched += 1;
       for (const tagId of tags) {
         transactionsByTag.set(tagId, (transactionsByTag.get(tagId) ?? 0) + 1);
       }
     }
-    // A transfer rule covers two movements at a time, so it is counted on its
-    // own: how many pairs it would mark across the vault, doubled into rows.
-    for (const rule of rules) {
-      if (!isTransferPairRule(rule)) continue;
-      const pairs = findTransferPairs([rule], transactions);
-      matchesByRule.set(rule.id, pairs.length * 2);
-      for (const pair of pairs) {
-        matchedIds.add(pair.outgoing.id);
-        matchedIds.add(pair.incoming.id);
-      }
-    }
     return {
       evaluated: transactions.length,
-      matched: matchedIds.size,
+      matched,
       byRule: rules.map((rule) => ({
         ruleId: rule.id,
         matches: matchesByRule.get(rule.id) ?? 0,

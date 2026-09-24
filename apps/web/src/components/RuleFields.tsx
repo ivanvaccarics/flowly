@@ -41,27 +41,12 @@ export interface RuleDraft {
   tagIds: string[];
 }
 
-/**
- * The rules this form writes: the tagging kind, with its condition set. A
- * transfer rule reads two movements at once and is built elsewhere, so the
- * builder never holds one.
- */
-export type MatchRule = TaggingRule & {
-  kind: "match";
-  combinator: "and" | "or";
-  conditions: NonNullable<TaggingRule["conditions"]>;
-};
-
-export function isMatchRule(rule: TaggingRule): rule is MatchRule {
-  return rule.kind === "match" && rule.combinator !== undefined && rule.conditions !== undefined;
-}
-
 export function emptyDraft(): RuleDraft {
   return { name: "", combinator: "and", conditions: [{ ...EMPTY_CONDITION }], tagIds: [] };
 }
 
 /** A stored rule as the builder holds it; the id stays on the rule itself. */
-export function draftFromRule(rule: MatchRule): RuleDraft {
+export function draftFromRule(rule: TaggingRule): RuleDraft {
   return {
     name: rule.name,
     combinator: rule.combinator,
@@ -75,7 +60,7 @@ export function draftFromRule(rule: MatchRule): RuleDraft {
   };
 }
 
-export function conditionsOf(draft: RuleDraft): NonNullable<TaggingRule["conditions"]> {
+export function conditionsOf(draft: RuleDraft): TaggingRule["conditions"] {
   return draft.conditions.map((condition) =>
     condition.field === "amount"
       ? {
@@ -85,7 +70,7 @@ export function conditionsOf(draft: RuleDraft): NonNullable<TaggingRule["conditi
           currency: condition.currency ?? DEFAULT_CURRENCY,
         }
       : { field: condition.field, operator: condition.operator, value: condition.value },
-  ) as unknown as NonNullable<TaggingRule["conditions"]>;
+  ) as unknown as TaggingRule["conditions"];
 }
 
 /** A dot separates the decimals in the contract, whatever the person typed. */

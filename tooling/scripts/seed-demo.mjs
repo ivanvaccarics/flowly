@@ -235,8 +235,7 @@ for (const spec of ruleSpecs) {
   await create(
     "tagging-rules",
     {
-      formatVersion: 3,
-      kind: "match",
+      formatVersion: 2,
       revision: 1,
       id,
       name: spec.name,

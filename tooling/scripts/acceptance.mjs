@@ -163,8 +163,7 @@ await step("tagging rule is created", async () => {
     method: "POST",
     body: {
       entity: {
-        formatVersion: 3,
-        kind: "match",
+        formatVersion: 2,
         revision: 1,
         id: created.rule,
         name: "Acceptance espresso rule",

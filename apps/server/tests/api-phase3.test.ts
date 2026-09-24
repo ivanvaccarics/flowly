@@ -76,7 +76,7 @@ describe("core finance API", () => {
         payload: {},
       });
       expect(backfill.statusCode).toBe(200);
-      expect(backfill.json<{ evaluated: number; changed: number }>()).toMatchObject({
+      expect(backfill.json<{ evaluated: number; changed: number }>()).toEqual({
         evaluated: 1,
         changed: 1,
       });
