@@ -380,6 +380,8 @@ Optional interoperability fields:
 - `provider`
 - `providerAccountId`
 - `providerTransactionId`
+- `transfer` — `true` on a movement between the user's own accounts, `false` when
+  the user said it is not one, absent while nobody has decided (`docs/adr/0039`)
 - `importFingerprint`
 
 `Enable Banking` is reserved for forward-compatible contracts and becomes an

@@ -2,6 +2,12 @@
 
 Status: Accepted (2026-09-24)
 
+> **Update (2026-09-25).** The transfer *rules* that were to set this flag
+> automatically — a second rule kind pairing the two legs — were removed before
+> release, and `docs/adr/0040`, which recorded them, went with them. Everything
+> below stands; the flag is the user's to set, by hand, on the movement they are
+> looking at.
+
 ## Context
 
 Money moved between two accounts the same person owns is not income and not
@@ -53,5 +59,5 @@ payee of the other account and no field that says "these two belong together".
 - `analytics.test.ts` pins the behaviour: adding both legs of a tagged transfer
   leaves `cashFlow`, `cashFlowBuckets` and `spendingByTag` byte-identical while
   the account's balance and movement count move.
-- Nothing decides the flag automatically yet. `docs/adr/0040` records the rules
-  that do it, and they only ever write where the field is absent.
+- Nothing decides the flag automatically: it is set by hand, and a movement
+  nobody has touched stays undecided.
