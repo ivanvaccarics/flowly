@@ -59,9 +59,12 @@ pnpm --filter @flowly/web test
 node tooling/scripts/vault-smoke.mjs create   # against a running server
 node tooling/scripts/vault-smoke.mjs verify   # asserts it starts locked
 
-# What a transfer rule would pair in a vault, read-only. The passphrase comes
-# from the environment, so it stays out of your shell history:
-FLOWLY_PASSPHRASE='…' pnpm --filter @flowly/server transfer-report data/vault
+# What a transfer rule would pair in a vault, read-only. Enter the passphrase
+# without echoing it, so it stays out of your shell history:
+read -s FLOWLY_PASSPHRASE && export FLOWLY_PASSPHRASE
+pnpm --filter @flowly/server transfer-report              # this checkout's data/vault
+pnpm --filter @flowly/server transfer-report /path/to/vault
+unset FLOWLY_PASSPHRASE
 ```
 
 Ready to try the whole product? [TESTING.md](./TESTING.md) has the acceptance
