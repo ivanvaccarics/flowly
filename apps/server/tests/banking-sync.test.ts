@@ -315,7 +315,8 @@ describe("Enable Banking sync", () => {
     await post(session, "/api/tags", { entity: SAMPLE_TAG });
     await post(session, "/api/tagging-rules", {
       entity: {
-        formatVersion: 2,
+        formatVersion: 3,
+        kind: "match",
         revision: 1,
         id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7081",
         name: "Bar",

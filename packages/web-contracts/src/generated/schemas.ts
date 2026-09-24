@@ -374,7 +374,7 @@ export const schemas = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowly.local/contracts/schemas/tagging-rule.schema.json",
     "title": "TaggingRule",
-    "description": "User-authored rule that adds tags to matching transactions. Conditions in one rule join with a single AND or OR. An `amount` condition carries a canonical decimal string in its own `currency` (`-5.10` means an outflow of 5.10), not a count of minor units, and only matches transactions in that currency.",
+    "description": "User-authored rule, of one of two kinds. A `match` rule adds tags to the movements that satisfy its conditions; a `transfer-pair` rule recognises the two legs of one transfer between the user's own accounts — one leg leaving an account, one arriving on another, with opposite amounts that the rule never writes down — and marks both as transfers. Conditions in one condition set join with a single AND or OR. An `amount` condition carries a canonical decimal string in its own `currency` (`-5.10` means an outflow of 5.10), not a count of minor units, and only matches transactions in that currency.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -383,15 +383,14 @@ export const schemas = {
       "id",
       "name",
       "enabled",
-      "combinator",
-      "conditions",
+      "kind",
       "tagIds",
       "createdAt",
       "updatedAt"
     ],
     "properties": {
       "formatVersion": {
-        "const": 2
+        "const": 3
       },
       "revision": {
         "type": "integer",
@@ -409,6 +408,12 @@ export const schemas = {
       "enabled": {
         "type": "boolean"
       },
+      "kind": {
+        "enum": [
+          "match",
+          "transfer-pair"
+        ]
+      },
       "combinator": {
         "enum": [
           "and",
@@ -425,13 +430,23 @@ export const schemas = {
       },
       "tagIds": {
         "type": "array",
-        "minItems": 1,
         "maxItems": 25,
         "uniqueItems": true,
         "items": {
           "type": "string",
           "format": "uuid"
         }
+      },
+      "outgoing": {
+        "$ref": "#/$defs/conditionSet"
+      },
+      "incoming": {
+        "$ref": "#/$defs/conditionSet"
+      },
+      "windowDays": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 30
       },
       "createdAt": {
         "type": "string",
@@ -442,7 +457,113 @@ export const schemas = {
         "format": "date-time"
       }
     },
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "kind": {
+              "const": "match"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "then": {
+          "required": [
+            "combinator",
+            "conditions"
+          ],
+          "properties": {
+            "combinator": {
+              "enum": [
+                "and",
+                "or"
+              ]
+            },
+            "conditions": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 25,
+              "items": {
+                "$ref": "#/$defs/condition"
+              }
+            },
+            "tagIds": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 25,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "kind": {
+              "const": "transfer-pair"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "then": {
+          "required": [
+            "outgoing",
+            "incoming",
+            "windowDays"
+          ],
+          "properties": {
+            "outgoing": {
+              "$ref": "#/$defs/conditionSet"
+            },
+            "incoming": {
+              "$ref": "#/$defs/conditionSet"
+            },
+            "windowDays": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "tagIds": {
+              "type": "array",
+              "maxItems": 0
+            }
+          }
+        }
+      }
+    ],
     "$defs": {
+      "conditionSet": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "combinator",
+          "conditions"
+        ],
+        "properties": {
+          "combinator": {
+            "enum": [
+              "and",
+              "or"
+            ]
+          },
+          "conditions": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 25,
+            "items": {
+              "$ref": "#/$defs/condition"
+            }
+          }
+        }
+      },
       "condition": {
         "type": "object",
         "additionalProperties": false,

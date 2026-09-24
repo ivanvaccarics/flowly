@@ -4,6 +4,7 @@ import { RulesView } from "./RulesView.js";
 
 const RULE_ID = "018f2c1e-6d5b-7c3a-9f2e-5b3c4d5e6f70";
 const PAUSED_ID = "018f2c1e-6d5b-7c3a-9f2e-5b3c4d5e6f71";
+const PAIR_ID = "018f2c1e-6d5b-7c3a-9f2e-5b3c4d5e6f72";
 const TAG_ID = "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081";
 
 const tag = {
@@ -18,7 +19,8 @@ const tag = {
 };
 
 const rule = {
-  formatVersion: 2,
+  formatVersion: 3,
+  kind: "match",
   revision: 1,
   id: RULE_ID,
   name: "Coffee rule",
@@ -202,7 +204,8 @@ describe("rules view", () => {
       (call) => call.method === "POST" && call.path === "/api/tagging-rules",
     );
     expect(posted?.entity).toMatchObject({
-      formatVersion: 2,
+      formatVersion: 3,
+      kind: "match",
       conditions: [{ field: "amount", operator: "greaterThan", value: "-5.10", currency: "EUR" }],
     });
   });
@@ -323,5 +326,35 @@ describe("rules view", () => {
     // One rule is paused, so the header offers the flip that changes something.
     fireEvent.click(screen.getByRole("button", { name: "Enable all" }));
     await waitFor(() => expect(calls.filter((call) => call.method === "PUT")).toHaveLength(1));
+  });
+
+  it("shows a transfer rule as a pair, without the tagging editor", async () => {
+    const pairRule = {
+      ...rule,
+      kind: "transfer-pair",
+      id: PAIR_ID,
+      name: "Giroconti",
+      tagIds: [],
+      combinator: undefined,
+      conditions: undefined,
+      outgoing: {
+        combinator: "and",
+        conditions: [{ field: "payee", operator: "contains", value: "savings" }],
+      },
+      incoming: {
+        combinator: "and",
+        conditions: [{ field: "payee", operator: "contains", value: "everyday" }],
+      },
+      windowDays: 3,
+    };
+    mockApi([rule, pairRule] as never);
+    render(<RulesView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Giroconti")).toBeTruthy());
+
+    // The two sides, in one line, and no tag pills: a pair rule marks movements.
+    expect(screen.getByText(/TRANSFER/)).toBeTruthy();
+    // Editing through a form with room for one condition set would lose a side.
+    expect(screen.queryByRole("button", { name: "Edit rule Giroconti" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit rule Coffee rule" })).toBeTruthy();
   });
 });

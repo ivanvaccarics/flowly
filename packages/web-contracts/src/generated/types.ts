@@ -104,12 +104,48 @@ export interface Tag {
   updatedAt: string;
 }
 
+/**
+ * User-authored rule, of one of two kinds. A `match` rule adds tags to the movements that satisfy its conditions; a `transfer-pair` rule recognises the two legs of one transfer between the user's own accounts — one leg leaving an account, one arriving on another, with opposite amounts that the rule never writes down — and marks both as transfers. Conditions in one condition set join with a single AND or OR. An `amount` condition carries a canonical decimal string in its own `currency` (`-5.10` means an outflow of 5.10), not a count of minor units, and only matches transactions in that currency.
+ */
+export type TaggingRule = {
+  formatVersion: 3;
+  revision: number;
+  id: string;
+  name: string;
+  enabled: boolean;
+  kind: "match" | "transfer-pair";
+  combinator?: "and" | "or";
+  /**
+   * @minItems 1
+   * @maxItems 25
+   */
+  conditions?: [Condition, ...Condition[]];
+  /**
+   * @maxItems 25
+   */
+  tagIds: string[];
+  outgoing?: ConditionSet;
+  incoming?: ConditionSet;
+  windowDays?: number;
+  createdAt: string;
+  updatedAt: string;
+};
 export type Condition = {
   field: "userNote" | "description" | "payee" | "amount" | "accountId";
   operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
   value: string | number;
   currency?: string;
 } & Condition1 & {
+    field: "userNote" | "description" | "payee" | "amount" | "accountId";
+    operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
+    value: string | number;
+    currency?: string;
+  } & Condition1 & {
+    field: "userNote" | "description" | "payee" | "amount" | "accountId";
+    operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
+    value: string | number;
+    currency?: string;
+  } & Condition1 & {
     field: "userNote" | "description" | "payee" | "amount" | "accountId";
     operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
     value: string | number;
@@ -148,28 +184,13 @@ export type Condition1 =
       [k: string]: unknown;
     };
 
-/**
- * User-authored rule that adds tags to matching transactions. Conditions in one rule join with a single AND or OR. An `amount` condition carries a canonical decimal string in its own `currency` (`-5.10` means an outflow of 5.10), not a count of minor units, and only matches transactions in that currency.
- */
-export interface TaggingRule {
-  formatVersion: 2;
-  revision: number;
-  id: string;
-  name: string;
-  enabled: boolean;
+export interface ConditionSet {
   combinator: "and" | "or";
   /**
    * @minItems 1
    * @maxItems 25
    */
   conditions: [Condition, ...Condition[]];
-  /**
-   * @minItems 1
-   * @maxItems 25
-   */
-  tagIds: [string, ...string[]];
-  createdAt: string;
-  updatedAt: string;
 }
 
 /**

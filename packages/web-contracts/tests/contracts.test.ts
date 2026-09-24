@@ -64,4 +64,37 @@ describe("canonical contracts", () => {
       expect(result.errors.some((error) => error.includes("state"))).toBe(true);
     }
   });
+
+  it("accepts a transfer rule, and keeps it out of the tagging shape", () => {
+    const rule = readJson(join(fixturesDir, "tagging-rule.json")) as Record<string, unknown>;
+    const sides = {
+      outgoing: {
+        combinator: "and",
+        conditions: [{ field: "payee", operator: "contains", value: "savings" }],
+      },
+      incoming: {
+        combinator: "and",
+        conditions: [{ field: "payee", operator: "contains", value: "everyday" }],
+      },
+    };
+    const transferRule = {
+      ...rule,
+      kind: "transfer-pair",
+      tagIds: [],
+      combinator: undefined,
+      conditions: undefined,
+      ...sides,
+      windowDays: 3,
+    };
+    expect(validateContract("taggingRule", transferRule).valid).toBe(true);
+    // A pair rule marks movements; it does not assign tags, and it needs both
+    // sides and a day window to be able to pair anything at all.
+    expect(validateContract("taggingRule", { ...transferRule, tagIds: [rule["id"]] }).valid).toBe(
+      false,
+    );
+    expect(validateContract("taggingRule", { ...transferRule, incoming: undefined }).valid).toBe(
+      false,
+    );
+    expect(validateContract("taggingRule", { ...transferRule, windowDays: 31 }).valid).toBe(false);
+  });
 });

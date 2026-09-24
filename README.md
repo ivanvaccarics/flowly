@@ -56,7 +56,10 @@ throwaway vault full of invented data, never from a real one.
 - **Rules** — AND/OR conditions over note, payee, description, amount or account,
   with decimal amounts in their own currency (never a count of cents), a live
   preview of what a draft would match, and a coverage count per rule and tag.
-  Rules only add tags, and deleting one never takes a tag away.
+  Rules only add tags, and deleting one never takes a tag away. A second kind of
+  rule recognises the two legs of one transfer between your own accounts — one
+  side leaves an account, the other arrives, and the amounts are opposite
+  without anyone writing them down — and marks both as transfers.
 - **Multi-currency, honestly** — amounts are integers in minor units and every
   transaction keeps its original currency, so no total ever blends unlike
   currencies without a real exchange rate.

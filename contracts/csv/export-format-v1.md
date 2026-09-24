@@ -64,9 +64,12 @@ Rules for reading:
 
 - `accounts.csv`, `tags.csv` and `transactions.csv` use the column order
   documented above, so the ledger can be merged back through the CSV import.
-- `tagging_rules.csv` carries `id, name, enabled, combinator, conditions,
-  tag_names, created_at, updated_at`; `conditions` is the JSON condition array in
-  a single cell and `tag_names` joins tag names with `|`.
+- `tagging_rules.csv` carries `id, name, enabled, kind, combinator, conditions,
+  outgoing, incoming, window_days, tag_names, created_at, updated_at`.
+  `conditions`, `outgoing` and `incoming` are the JSON condition sets in a single
+  cell; a `match` rule fills `combinator`, `conditions` and `tag_names`, while a
+  `transfer-pair` rule fills `outgoing`, `incoming` and `window_days`. (The
+  archive's `tagging_rules.json` is the lossless copy; this file is for reading.)
 - `manifest.json` holds `format`, `exportedAt`, the vault id, `encrypted: false`,
   per-table row counts and a SHA-256 for every file.
 - The export is plain text and is **not** a restore format; the encrypted archive
