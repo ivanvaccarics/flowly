@@ -49,7 +49,9 @@ throwaway vault full of invented data, never from a real one.
   with server-side filters and paging over the whole ledger. A movement between
   two accounts you own can be marked as a transfer: it stays in the ledger and
   in the balances, and it is left out of income, expenses and the spending
-  breakdown, because the same money is not earned or spent twice.
+  breakdown, because the same money is not earned or spent twice. The ledger
+  filters on account, tag, status, source, transfer and amount, as well as on
+  free text.
 - **Tags** — Unicode-aware and case-insensitive, keeping the casing you typed,
   colour-coded and renameable in place. Tags added by hand and by a rule share
   one set, and a rule never removes a tag you chose.

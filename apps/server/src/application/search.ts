@@ -12,6 +12,13 @@ export interface TransactionQuery {
   currency?: string;
   status?: TransactionStatus;
   source?: TransactionSource;
+  /**
+   * `true` asks for the movements marked as transfers between own accounts,
+   * `false` for everything else. Absent means no narrowing, and the undecided
+   * rows are "everything else" — the filter asks what the user marked, not what
+   * a rule might later decide.
+   */
+  transfer?: boolean;
   minAmountMinor?: number;
   maxAmountMinor?: number;
   text?: string;
@@ -71,6 +78,9 @@ export function parseTransactionQuery(query: Record<string, unknown>): Transacti
   if (status === "booked" || status === "pending") result.status = status;
   const source = string("source");
   if (source) result.source = source as TransactionSource;
+  const transfer = string("transfer");
+  if (transfer === "true") result.transfer = true;
+  else if (transfer === "false") result.transfer = false;
   const min = number("minAmountMinor");
   if (min !== undefined) result.minAmountMinor = min;
   const max = number("maxAmountMinor");
@@ -92,6 +102,9 @@ export function matchesQuery(transaction: Transaction, query: TransactionQuery):
   if (query.currency && transaction.currency !== query.currency) return false;
   if (query.status && transaction.status !== query.status) return false;
   if (query.source && transaction.source !== query.source) return false;
+  if (query.transfer !== undefined && (transaction.transfer === true) !== query.transfer) {
+    return false;
+  }
   if (query.minAmountMinor !== undefined && transaction.amountMinor < query.minAmountMinor)
     return false;
   if (query.maxAmountMinor !== undefined && transaction.amountMinor > query.maxAmountMinor)

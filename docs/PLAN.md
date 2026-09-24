@@ -1258,9 +1258,11 @@ Delivered:
   three states: absent means nobody has decided, `true` and `false` are the
   user's own word.
 - Server-side transaction search: date range, account, tag, currency, status,
-  source, amount range, free text across payee/description/notes, pagination and
-  a total. The SQL layer narrows on the indexed columns and the rest is filtered
-  in memory.
+  source, the transfer flag, amount range, free text across
+  payee/description/notes, pagination and a total. The SQL layer narrows on the
+  indexed columns and the rest is filtered in memory. The ledger's filter panel
+  offers the account, tag, status, source, transfer and amount fields, and reads
+  the amount in the selected account's currency.
 - Migration 2 adds date and update indexes for the dashboard ranges, and an
   in-memory aggregate cache keyed by a cheap table fingerprint keeps repeated
   dashboard reads fast without persisting anything derived from decrypted data.

@@ -23,10 +23,29 @@ interface Filters {
   to: string;
   tagId: string;
   status: string;
+  source: string;
+  /** "" is any movement, "true" only transfers, "false" everything else. */
+  transfer: string;
+  minAmount: string;
+  maxAmount: string;
   q: string;
 }
 
-const EMPTY_FILTERS: Filters = { accountId: "", from: "", to: "", tagId: "", status: "", q: "" };
+const EMPTY_FILTERS: Filters = {
+  accountId: "",
+  from: "",
+  to: "",
+  tagId: "",
+  status: "",
+  source: "",
+  transfer: "",
+  minAmount: "",
+  maxAmount: "",
+  q: "",
+};
+
+/** Where a movement came from; the same three the server knows. */
+const SOURCES = ["manual", "csv-import", "enable-banking"] as const;
 
 /** Row counts the ledger offers per page. The API accepts up to 500. */
 const PAGE_SIZES = [25, 50, 100] as const;
@@ -69,6 +88,25 @@ export function TransactionsView({
   const [rawOpen, setRawOpen] = useState<string | undefined>(undefined);
 
   const composerCurrency = draftCurrency(composer, accounts.items);
+  // The amount filter is written in one currency: the account's own when the
+  // filter names one, the app default otherwise, exactly like the composer.
+  const filterCurrency =
+    accounts.items.find((candidate) => candidate.id === filters.accountId)?.defaultCurrency ??
+    "EUR";
+  const filterAmountMinor = (value: string): number | undefined => {
+    if (value.trim() === "") return undefined;
+    try {
+      return parseAmountToMinor(value, filterCurrency);
+    } catch {
+      return Number.NaN;
+    }
+  };
+  const minAmountMinor = filterAmountMinor(filters.minAmount);
+  const maxAmountMinor = filterAmountMinor(filters.maxAmount);
+  const amountFilterBroken =
+    Number.isNaN(minAmountMinor) || Number.isNaN(maxAmountMinor)
+      ? `Write the amount as a number, like ${filterCurrency === "JPY" ? "1500" : "-12.30"}, in ${filterCurrency}.`
+      : undefined;
   // An edit keeps the movement's own currency unless the account changes: a USD
   // movement booked on a EUR account must stay USD.
   const editorCurrency = editor
@@ -100,6 +138,10 @@ export function TransactionsView({
         ...(filters.to ? { to: filters.to } : {}),
         ...(filters.tagId ? { tags: filters.tagId } : {}),
         ...(filters.status ? { status: filters.status } : {}),
+        ...(filters.source ? { source: filters.source } : {}),
+        ...(filters.transfer ? { transfer: filters.transfer === "true" } : {}),
+        ...(minAmountMinor === undefined || Number.isNaN(minAmountMinor) ? {} : { minAmountMinor }),
+        ...(maxAmountMinor === undefined || Number.isNaN(maxAmountMinor) ? {} : { maxAmountMinor }),
         ...(filters.q ? { q: filters.q } : {}),
         limit: pageSize,
         offset,
@@ -380,6 +422,49 @@ export function TransactionsView({
             </select>
           </label>
           <label>
+            Source
+            <select
+              value={filters.source}
+              onChange={(event) => updateFilters({ ...filters, source: event.target.value })}
+            >
+              <option value="">Any</option>
+              {SOURCES.map((source) => (
+                <option key={source} value={source}>
+                  {source}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Filter by transfer
+            <select
+              value={filters.transfer}
+              onChange={(event) => updateFilters({ ...filters, transfer: event.target.value })}
+            >
+              <option value="">Any</option>
+              <option value="true">Only transfers</option>
+              <option value="false">Everything else</option>
+            </select>
+          </label>
+          <label>
+            Min amount ({filterCurrency})
+            <input
+              value={filters.minAmount}
+              inputMode="decimal"
+              placeholder="-100.00"
+              onChange={(event) => updateFilters({ ...filters, minAmount: event.target.value })}
+            />
+          </label>
+          <label>
+            Max amount ({filterCurrency})
+            <input
+              value={filters.maxAmount}
+              inputMode="decimal"
+              placeholder="100.00"
+              onChange={(event) => updateFilters({ ...filters, maxAmount: event.target.value })}
+            />
+          </label>
+          <label>
             From
             <input
               type="date"
@@ -396,6 +481,11 @@ export function TransactionsView({
             />
           </label>
         </fieldset>
+        {amountFilterBroken ? (
+          <p className="muted" role="alert">
+            {amountFilterBroken}
+          </p>
+        ) : null}
         <div className="quick-filters">
           <span className="eyebrow" style={{ margin: 0 }}>
             View
@@ -407,6 +497,10 @@ export function TransactionsView({
               filters.accountId === "" &&
               filters.tagId === "" &&
               filters.status === "" &&
+              filters.source === "" &&
+              filters.transfer === "" &&
+              filters.minAmount === "" &&
+              filters.maxAmount === "" &&
               filters.from === "" &&
               filters.to === ""
                 ? "tag-pill active"

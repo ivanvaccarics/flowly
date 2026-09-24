@@ -47,6 +47,7 @@ async function setup() {
       currency: "EUR",
       payee: "Supermarket",
       description: "CARD PURCHASE",
+      transfer: true,
     },
     {
       id: "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f03",
@@ -119,6 +120,22 @@ describe("transaction search", () => {
     }
   });
 
+  it("filters on the transfer flag, and on the source beside it", async () => {
+    const { dir, vault, service } = await setup();
+    try {
+      // The flag and the source are different questions: one asks what the
+      // movement is, the other where it came from.
+      expect((await service.search({ transfer: true })).total).toBe(1);
+      expect((await service.search({ transfer: false })).total).toBe(3);
+      expect((await service.search({ transfer: true, source: "enable-banking" })).total).toBe(0);
+      expect((await service.search({ transfer: false, source: "manual" })).total).toBe(3);
+      expect((await service.search()).total).toBe(4);
+    } finally {
+      await vault.lock();
+      cleanup(dir);
+    }
+  });
+
   it("searches text case-insensitively across payee, description and notes", async () => {
     const { dir, vault, service } = await setup();
     try {
@@ -160,6 +177,7 @@ describe("transaction search", () => {
         limit: "1000",
         offset: "-3",
         status: "sideways",
+        transfer: "true",
       }),
     ).toEqual({
       accountId: CHECKING,
@@ -168,6 +186,7 @@ describe("transaction search", () => {
       tagIds: [COFFEE, COFFEE],
       text: "espresso",
       minAmountMinor: -5000,
+      transfer: true,
       limit: 500,
     });
   });

@@ -241,6 +241,49 @@ describe("transactions view", () => {
     );
   });
 
+  it("filters by source, by transfer and by amount", async () => {
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const parsed = new URL(raw, "http://localhost");
+        requests.push(`${parsed.pathname}${parsed.search}`);
+        if (parsed.pathname === "/api/accounts") return json({ items: [account] });
+        if (parsed.pathname === "/api/tags") return json({ items: [tag] });
+        if (parsed.pathname === "/api/transactions") {
+          return json({ items: [transaction], total: 1, limit: 100, offset: 0 });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
+
+    // Where it came from, and what it is: two different questions.
+    fireEvent.change(screen.getByLabelText("Source"), { target: { value: "enable-banking" } });
+    await waitFor(() =>
+      expect(requests.some((url) => url.includes("source=enable-banking"))).toBe(true),
+    );
+    fireEvent.change(screen.getByLabelText("Filter by transfer"), { target: { value: "true" } });
+    await waitFor(() => expect(requests.some((url) => url.includes("transfer=true"))).toBe(true));
+
+    // The amount is written in the account's currency and sent in minor units.
+    fireEvent.change(screen.getByLabelText("Min amount (EUR)"), {
+      target: { value: "-100.00" },
+    });
+    await waitFor(() =>
+      expect(requests.some((url) => url.includes("minAmountMinor=-10000"))).toBe(true),
+    );
+
+    // A value that is not a number is never sent, and the ledger says why.
+    fireEvent.change(screen.getByLabelText("Max amount (EUR)"), { target: { value: "abc" } });
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(requests.every((url) => !url.includes("maxAmountMinor"))).toBe(true);
+  });
+
   it("edits note and tags together, without the old ± tag control", async () => {
     const calls: Array<{ method: string; url: string; body: string }> = [];
     vi.stubGlobal(

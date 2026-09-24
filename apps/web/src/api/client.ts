@@ -291,15 +291,24 @@ export const api = {
     tags?: string;
     currency?: string;
     status?: string;
+    source?: string;
+    transfer?: boolean;
     q?: string;
     minAmountMinor?: number;
     maxAmountMinor?: number;
     limit?: number;
     offset?: number;
-  }) =>
-    request<{ items: Transaction[]; total: number; limit: number; offset: number }>(
-      `/api/transactions${queryString(params)}`,
-    ),
+  }) => {
+    // `transfer` is the one boolean in the set; the query string carries the
+    // word the server parses, like every other filter.
+    const { transfer, ...rest } = params;
+    return request<{ items: Transaction[]; total: number; limit: number; offset: number }>(
+      `/api/transactions${queryString({
+        ...rest,
+        ...(transfer === undefined ? {} : { transfer: String(transfer) }),
+      })}`,
+    );
+  },
   create: <T>(csrf: string, kind: string, entity: unknown) =>
     request<{ entity: T }>(`/api/${kind}`, { method: "POST", csrf, body: { entity } }),
   update: <T>(csrf: string, kind: string, id: string, entity: unknown) =>
