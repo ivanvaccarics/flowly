@@ -87,6 +87,11 @@ architecture is built, so a failed secret scan cannot publish an image. The
 sole `.gitleaksignore` entry identifies one historical synthetic sandbox fixture
 by its exact finding fingerprint; it does not exempt a file, path or rule.
 
+The container image is built for both architectures on every pull request, each
+one on a runner of its own architecture, reusing the cache of the image `main`
+published (`.github/workflows/ci.yml`, `docs/adr/0038`). A push to `main` is
+built and published once, by `.github/workflows/image.yml`.
+
 ## 3. Manual test plan
 
 Work through the list with a scratch vault; each line says what to do and what

@@ -54,21 +54,51 @@ jobs:
             docs/security/sbom.json
             docs/security/third-party-licenses.md
 
+  # One job per architecture on a runner of that architecture, the same pairing
+  # the Container image workflow uses: without QEMU the SQLCipher compile takes
+  # minutes instead of the better part of an hour, and the two legs run at the
+  # same time (docs/adr/0038). The matrix mirrors that workflow's cache scopes,
+  # so the layers up to and including the compile come from the image it
+  # published for main.
   containers:
-    name: Build container images
-    runs-on: ubuntu-latest
+    name: Build ${{ matrix.platform }}
+    # A push to main is already covered: the Container image workflow builds
+    # this same image natively for both architectures and publishes it. Building
+    # it here too only doubled the work (docs/adr/0038).
+    if: github.event_name == 'pull_request'
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ubuntu-24.04-arm is a standard runner for public repositories; if the
+          # label is retired, swap this row for ubuntu-latest and accept the
+          # emulated build.
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
-      - name: Build linux/amd64 and linux/arm64
+      - name: Build and attest ${{ matrix.platform }}
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/server/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: false
-          # Supply-chain evidence travels with the image.
+          # Supply-chain evidence is generated on every pull request, so a broken
+          # attestation surfaces here rather than at publish time.
           provenance: true
           sbom: true
+          # Read only, on purpose. The 10 GB cache budget is per repository, and
+          # the entry worth keeping resident is the one the Container image
+          # workflow grows on main: a pull request that writes its own would
+          # eventually evict it and leave every later build compiling SQLCipher
+          # from source again.
+          cache-from: type=gha,scope=${{ matrix.arch }}

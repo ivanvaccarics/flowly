@@ -58,7 +58,10 @@ foundation:
   container checks. It is retained as reference evidence and is excluded from
   the workspace, lint and formatting surface.
 - CI (`.github/workflows/ci.yml`) verifies formatting, lint, types, tests,
-  contract freshness, builds, and both container architectures.
+  contract freshness and builds, and builds the server image for both
+  architectures on every pull request — one native runner per architecture,
+  reading the build cache the Container image workflow keeps warm on `main`
+  (`docs/adr/0038`).
 - The vault is implemented and encrypted at rest, and the browser UI covers the
   unlock flow, accounts, transactions, tags, tagging rules, import/export and
   the Enable Banking connection. It is aligned with the Sovereign Ledger

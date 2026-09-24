@@ -22,7 +22,7 @@ open before a public release.
 | UI behaviour and accessibility structure | `apps/web/src/**/*.test.tsx` |
 | End-to-end acceptance run | `tooling/scripts/acceptance.mjs` (16 checks against a running server) |
 | License policy and SBOM generation | `pnpm release:check`, `pnpm release:report` |
-| Container build on both architectures | `.github/workflows/ci.yml` |
+| Container build on both architectures | `.github/workflows/ci.yml` (pull requests), `.github/workflows/image.yml` (`main`, tags) |
 
 Run everything with `pnpm verify`, then `pnpm build`.
 

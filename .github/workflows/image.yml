@@ -9,6 +9,11 @@ name: Container image
 # Only what ends up in the image triggers a build, which is why the path filter
 # lists the same files the stamp covers. A documentation-only push publishes
 # nothing, because the image would be identical.
+#
+# On a push to `main` this is the only build of the image: the CI workflow
+# validates the same Dockerfile on pull requests, on the same runners and
+# against these cache scopes, and deliberately does not rebuild it here
+# (docs/adr/0038).
 
 on:
   push:
