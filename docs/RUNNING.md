@@ -38,6 +38,10 @@ What works today (end of Phase 6):
 - accounts, transactions with notes and tags (paged on the server, 25 rows per
   page by default), and tag management
 - tagging rules with an explicit backfill over existing transactions
+- transfers between accounts you own: mark one by hand in the movement editor,
+  or write a two-sided rule that pairs both legs and keeps them out of income
+  and spending; the ledger filters on the transfer flag, on the source and on an
+  amount range
 - transaction CSV export/import with preview, a plain ZIP with one CSV per
   table for taking your data elsewhere, plus the encrypted complete archive
 - Enable Banking: connect a bank from Settings, choose for each shared account
