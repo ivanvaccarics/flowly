@@ -374,7 +374,7 @@ export const schemas = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowly.local/contracts/schemas/tagging-rule.schema.json",
     "title": "TaggingRule",
-    "description": "User-authored rule, of one of two kinds. A `match` rule adds tags to the movements that satisfy its conditions; a `transfer-pair` rule recognises the two legs of one transfer between the user's own accounts — one leg leaving an account, one arriving on another, with opposite amounts that the rule never writes down — and marks both as transfers. Conditions in one condition set join with a single AND or OR. An `amount` condition carries a canonical decimal string in its own `currency` (`-5.10` means an outflow of 5.10), not a count of minor units, and only matches transactions in that currency. A `counterpartyIban` condition matches the bank's own record of who was on the other side, which is what makes 'the other account is mine' a fact rather than a reading of the payee.",
+    "description": "User-authored rule, of one of two kinds. A `match` rule adds tags to the movements that satisfy its conditions; a `transfer-pair` rule recognises the two legs of one transfer between the user's own accounts — one leg leaving an account, one arriving on another, with opposite amounts that the rule never writes down — and marks both as transfers. Conditions in one condition set join with a single AND or OR. An `amount` condition carries a canonical decimal string in its own `currency` (`-5.10` means an outflow of 5.10), not a count of minor units, and only matches transactions in that currency.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -578,7 +578,6 @@ export const schemas = {
               "userNote",
               "description",
               "payee",
-              "counterpartyIban",
               "amount",
               "accountId"
             ]
@@ -634,22 +633,6 @@ export const schemas = {
             "properties": {
               "field": {
                 "const": "payee"
-              },
-              "operator": {
-                "enum": [
-                  "is",
-                  "contains"
-                ]
-              },
-              "value": {
-                "type": "string"
-              }
-            }
-          },
-          {
-            "properties": {
-              "field": {
-                "const": "counterpartyIban"
               },
               "operator": {
                 "enum": [
@@ -809,10 +792,6 @@ export const schemas = {
       "providerTransactionId": {
         "type": "string",
         "maxLength": 200
-      },
-      "counterpartyIban": {
-        "type": "string",
-        "pattern": "^[A-Z]{2}[A-Z0-9]{11,32}$"
       },
       "importFingerprint": {
         "type": "string",

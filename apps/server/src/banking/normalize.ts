@@ -44,8 +44,6 @@ export type NormalizedTransaction =
       description?: string;
       status: TransactionStatus;
       providerTransactionId?: string;
-      /** The other side of the movement, when the bank names its account. */
-      counterpartyIban?: string;
       /** The provider status code (BOOK, PDNG, …) kept for the raw record. */
       providerStatus: string;
     }
@@ -198,11 +196,6 @@ export function normalizeTransaction(transaction: EbTransaction): NormalizedTran
   const valueDate = firstDate(transaction.value_date ?? transaction.valueDate);
   const providerTransactionId =
     firstText(transaction.entry_reference) ?? firstText(transaction.transaction_id);
-  // Whose account the money went to or came from: what a transfer rule needs to
-  // say "the other side is one of mine" instead of reading the payee.
-  const counterpartyIban = normalizeIban(
-    (outgoing ? transaction.creditor_account?.iban : transaction.debtor_account?.iban) ?? undefined,
-  );
 
   return {
     ok: true,
@@ -214,7 +207,6 @@ export function normalizeTransaction(transaction: EbTransaction): NormalizedTran
     ...(description ? { description } : {}),
     status: transactionStatus(transaction.status),
     ...(providerTransactionId ? { providerTransactionId } : {}),
-    ...(counterpartyIban ? { counterpartyIban } : {}),
     providerStatus: (transaction.status ?? "BOOK").toUpperCase(),
   };
 }

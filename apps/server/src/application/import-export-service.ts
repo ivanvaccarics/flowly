@@ -388,7 +388,6 @@ export class ImportExportService {
           ...(row.value.description ? { description: row.value.description } : {}),
           ...(row.value.userNote ? { userNote: row.value.userNote } : {}),
           ...(row.value.transfer === undefined ? {} : { transfer: row.value.transfer }),
-          ...(row.value.counterpartyIban ? { counterpartyIban: row.value.counterpartyIban } : {}),
         };
         const { transaction: tagged, addedTagIds } = this.taggingRules.withRuleTags(
           transaction,

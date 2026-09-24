@@ -365,9 +365,6 @@ export class BankSyncService {
               ...(normalized.providerTransactionId
                 ? { providerTransactionId: normalized.providerTransactionId }
                 : {}),
-              ...(normalized.counterpartyIban
-                ? { counterpartyIban: normalized.counterpartyIban }
-                : {}),
               ...(normalized.valueDate ? { valueDate: normalized.valueDate } : {}),
               ...(normalized.payee ? { payee: normalized.payee } : {}),
               ...(normalized.description ? { description: normalized.description } : {}),
@@ -398,9 +395,6 @@ export class BankSyncService {
               importFingerprint: fingerprint,
               ...(normalized.providerTransactionId
                 ? { providerTransactionId: normalized.providerTransactionId }
-                : {}),
-              ...(normalized.counterpartyIban
-                ? { counterpartyIban: normalized.counterpartyIban }
                 : {}),
               ...(normalized.valueDate ? { valueDate: normalized.valueDate } : {}),
               ...(normalized.payee ? { payee: normalized.payee } : {}),
@@ -581,7 +575,6 @@ function sameProviderFields(current: Transaction, next: Transaction): boolean {
     current.description === next.description &&
     current.valueDate === next.valueDate &&
     current.providerTransactionId === next.providerTransactionId &&
-    current.counterpartyIban === next.counterpartyIban &&
     current.importFingerprint === next.importFingerprint
   );
 }

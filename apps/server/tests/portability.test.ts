@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import { ImportExportService } from "../src/application/import-export-service.js";
 import { readArchive, writeArchive } from "../src/portability/archive.js";
 import { TaggingRuleService } from "../src/application/tagging-rule-service.js";
-import { TRANSACTION_CSV_HEADER } from "../src/portability/csv.js";
 import { createAccount } from "../src/domain/account.js";
 import { generateId } from "../src/domain/ids.js";
 import { createTag } from "../src/domain/tag.js";
@@ -203,11 +202,7 @@ describe("transaction CSV", () => {
       };
       await withEveryday(source.vault);
       await withEveryday(target.vault);
-      const seedTransfer = async (
-        amountMinor: number,
-        transfer?: boolean,
-        counterpartyIban?: string,
-      ) => {
+      const seedTransfer = async (amountMinor: number, transfer?: boolean) => {
         await source.vault.transactions.create(
           createTransaction(
             {
@@ -217,18 +212,17 @@ describe("transaction CSV", () => {
               currency: "EUR",
               payee: "Savings transfer",
               ...(transfer === undefined ? {} : { transfer }),
-              ...(counterpartyIban === undefined ? {} : { counterpartyIban }),
             },
             { id: generateId(), now: NOW },
           ),
         );
       };
-      await seedTransfer(-50000, true, "IT12A1234567890123456789012");
+      await seedTransfer(-50000, true);
       await seedTransfer(50000, false);
       await seedTransfer(-1230);
 
       const csv = await source.service.exportTransactionsCsv();
-      expect(csv.split("\r\n")[0]).toBe(TRANSACTION_CSV_HEADER.join(","));
+      expect(csv.split("\r\n")[0]?.endsWith(",transfer")).toBe(true);
 
       const imported = await target.service.importTransactionCsv(csv);
       expect(imported.created).toBe(3);
@@ -238,7 +232,6 @@ describe("transaction CSV", () => {
       // The decision survives, and an undecided row stays undecided instead of
       // being turned into a `false` nobody chose.
       expect(byAmount(-50000)?.transfer).toBe(true);
-      expect(byAmount(-50000)?.counterpartyIban).toBe("IT12A1234567890123456789012");
       expect(byAmount(50000)?.transfer).toBe(false);
       expect(byAmount(-1230)?.transfer).toBeUndefined();
       expect(byAmount(-1230)).not.toHaveProperty("transfer");

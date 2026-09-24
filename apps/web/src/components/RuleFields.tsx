@@ -6,7 +6,7 @@ import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
 
 /** Local builder shape: the contract narrows operators per field. */
 export interface Condition {
-  field: "userNote" | "description" | "payee" | "counterpartyIban" | "amount" | "accountId";
+  field: "userNote" | "description" | "payee" | "amount" | "accountId";
   operator: "contains" | "is" | "greaterThan" | "lessThan" | "equals";
   /** The raw text while the rule is written; `conditionsOf` types it for the API. */
   value: string;
@@ -19,7 +19,6 @@ const FIELDS: Array<Condition["field"]> = [
   "userNote",
   "description",
   "payee",
-  "counterpartyIban",
   "amount",
   "accountId",
 ];
@@ -28,7 +27,6 @@ const OPERATORS_BY_FIELD: Record<Condition["field"], Array<Condition["operator"]
   userNote: ["contains"],
   description: ["contains"],
   payee: ["is", "contains"],
-  counterpartyIban: ["is", "contains"],
   amount: ["greaterThan", "lessThan", "equals"],
   accountId: ["is"],
 };

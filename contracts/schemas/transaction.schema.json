@@ -44,7 +44,6 @@
     "provider": { "type": "string", "maxLength": 60 },
     "providerAccountId": { "type": "string", "maxLength": 200 },
     "providerTransactionId": { "type": "string", "maxLength": 200 },
-    "counterpartyIban": { "type": "string", "pattern": "^[A-Z]{2}[A-Z0-9]{11,32}$" },
     "importFingerprint": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
     "transfer": { "type": "boolean" },
     "createdAt": { "type": "string", "format": "date-time" },

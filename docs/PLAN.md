@@ -380,10 +380,6 @@ Optional interoperability fields:
 - `provider`
 - `providerAccountId`
 - `providerTransactionId`
-- `counterpartyIban` — the account the bank named on the other side of the
-  movement, compact and uppercase, when it sends one
-- `transfer` — `true` on a movement between the user's own accounts, `false`
-  when the user said it is not one, absent while nobody has decided
 - `importFingerprint`
 
 `Enable Banking` is reserved for forward-compatible contracts and becomes an
@@ -424,9 +420,6 @@ Supported condition fields and operators:
 - `userNote contains`, `description contains` — Unicode-normalized,
   case-insensitive substring match
 - `payee is`, `payee contains` — normalized equality or substring match
-- `counterpartyIban is`, `counterpartyIban contains` — the bank's own record of
-  the account on the other side, compacted to no spaces and one case before
-  comparing, so a value pasted from a statement still matches
 - `amount greater than`, `less than`, `equals` — the amount written as a
   canonical decimal string in the condition's own currency (`-5.10` is an
   outflow of 5.10), where inflows are positive and outflows are negative; the

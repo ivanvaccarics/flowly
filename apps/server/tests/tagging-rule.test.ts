@@ -159,45 +159,6 @@ describe("tagging rule invariants", () => {
     expect(ruleMatches(rule, { ...target, amountMinor: -510, currency: "USD" })).toBe(false);
   });
 
-  it("matches the counterparty IBAN as the bank writes it", () => {
-    const ibanRule: TaggingRule = {
-      ...base,
-      conditions: [
-        { field: "counterpartyIban", operator: "is", value: "it12a1234567890123456789012" },
-      ],
-    };
-    const ibanTarget = {
-      accountId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
-      amountMinor: -50000,
-      currency: "EUR",
-    };
-    expect(() => validateTaggingRule(ibanRule)).not.toThrow();
-    expect(
-      ruleMatches(ibanRule, { ...ibanTarget, counterpartyIban: "IT12A1234567890123456789012" }),
-    ).toBe(true);
-    expect(
-      ruleMatches(ibanRule, { ...ibanTarget, counterpartyIban: "IT99B9999999999999999999999" }),
-    ).toBe(false);
-    // A movement whose bank named nobody never matches an IBAN condition.
-    expect(ruleMatches(ibanRule, ibanTarget)).toBe(false);
-    // Pasted with spaces, from a statement: compacted before comparing.
-    expect(
-      ruleMatches(
-        {
-          ...ibanRule,
-          conditions: [
-            {
-              field: "counterpartyIban",
-              operator: "is",
-              value: "IT12 A123 4567 8901 2345 6789 012",
-            },
-          ],
-        },
-        { ...ibanTarget, counterpartyIban: "IT12A1234567890123456789012" },
-      ),
-    ).toBe(true);
-  });
-
   it("upgrades a stored v1 amount condition into the current format", () => {
     const legacy = {
       ...base,

@@ -27,8 +27,7 @@ export const TRANSFER_WINDOW_MAX_DAYS = 30;
  */
 export const TAGGING_RULE_FORMAT_VERSION = 3;
 
-export type RuleConditionField =
-  "userNote" | "description" | "payee" | "counterpartyIban" | "amount" | "accountId";
+export type RuleConditionField = "userNote" | "description" | "payee" | "amount" | "accountId";
 export type RuleConditionOperator = "contains" | "is" | "greaterThan" | "lessThan" | "equals";
 
 /**
@@ -103,7 +102,6 @@ export const OPERATORS_BY_FIELD: Readonly<
   userNote: ["contains"],
   description: ["contains"],
   payee: ["is", "contains"],
-  counterpartyIban: ["is", "contains"],
   amount: ["greaterThan", "lessThan", "equals"],
   accountId: ["is"],
 };
@@ -255,7 +253,6 @@ export interface RuleTarget {
   payee?: string;
   description?: string;
   userNote?: string;
-  counterpartyIban?: string;
 }
 
 export function ruleMatches(rule: TaggingRule, target: RuleTarget | Transaction): boolean {
@@ -288,15 +285,6 @@ function conditionMatches(condition: RuleCondition, target: RuleTarget | Transac
     }
     case "payee": {
       return textMatches(target.payee, condition, condition.operator === "is" ? "is" : "contains");
-    }
-    case "counterpartyIban": {
-      // IBANs are compared as the bank writes them: no spaces, one case, so a
-      // value pasted from a statement or a bank portal still matches.
-      const compact = (value: string | undefined) => value?.replace(/\s+/g, "").toUpperCase() ?? "";
-      const haystack = compact(target.counterpartyIban);
-      const needle = compact(String(condition.value));
-      if (haystack === "" || needle === "") return false;
-      return condition.operator === "is" ? haystack === needle : haystack.includes(needle);
     }
     case "accountId": {
       return target.accountId === condition.value;
