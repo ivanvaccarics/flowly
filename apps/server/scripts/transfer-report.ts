@@ -8,10 +8,6 @@
  *   FLOWLY_PASSPHRASE='…' pnpm --filter @flowly/server transfer-report ../../data/vault
  *   FLOWLY_PASSPHRASE='…' pnpm --filter @flowly/server transfer-report ../../data/vault --window=5
  *
- * With no directory it reads the `data/vault` of the repository, whatever
- * directory the command was started from; a path you give it is resolved
- * against the directory you are in.
- *
  * The report groups the candidate pairs by the two payees, because that is what
  * a transfer rule matches on. A signature with many pairs and the same two names
  * is a rule worth writing; a one-off pair is not, and wants the flag set by
@@ -19,9 +15,6 @@
  * sharing it anywhere.
  */
 import { Vault } from "../src/vault/vault.js";
-import { VaultKeyError } from "../src/crypto/errors.js";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 interface Leg {
   id: string;
@@ -36,8 +29,6 @@ interface Leg {
 }
 
 const DEFAULT_WINDOW_DAYS = 3;
-/** The vault of this checkout, so `pnpm --filter` finds it from anywhere. */
-const REPOSITORY_VAULT = fileURLToPath(new URL("../../../data/vault", import.meta.url));
 
 function fail(message: string): never {
   process.stderr.write(`${message}\n`);
@@ -54,7 +45,7 @@ function money(minor: number, currency: string): string {
 }
 
 function parseArgs(argv: string[]): { dir: string; window: number } {
-  let dir = REPOSITORY_VAULT;
+  let dir = "data/vault";
   let window = DEFAULT_WINDOW_DAYS;
   for (const arg of argv) {
     if (arg.startsWith("--window=")) {
@@ -65,7 +56,7 @@ function parseArgs(argv: string[]): { dir: string; window: number } {
       continue;
     }
     if (arg.startsWith("--")) fail(`unknown option: ${arg}`);
-    dir = resolve(arg);
+    dir = arg;
   }
   return { dir, window };
 }
@@ -88,21 +79,7 @@ async function main(): Promise<void> {
   }
   if (!Vault.exists(dir)) fail(`no vault at ${dir}`);
 
-  let vault: Vault;
-  try {
-    // Unwrapping the key is what a wrong passphrase fails, before the database
-    // is touched at all: reading a vault with the wrong key never opens it.
-    vault = await Vault.open(dir, passphrase);
-  } catch (error) {
-    if (error instanceof VaultKeyError) fail(`${dir} did not accept that passphrase`);
-    const detail = error instanceof Error ? error.message : String(error);
-    fail(
-      `could not open ${dir}: ${detail}` +
-        (detail.includes("locked")
-          ? "\nstop the server that has the vault open, then try again"
-          : ""),
-    );
-  }
+  const vault = await Vault.open(dir, passphrase);
   try {
     const [accounts, transactions] = await Promise.all([
       vault.accounts.list(),
