@@ -473,10 +473,11 @@ export function RulesView({ csrf }: { csrf: string }) {
                     </td>
                     <td>
                       <code>
-                        IF{" "}
-                        {rule.conditions
-                          .map(describeCondition)
-                          .join(` ${rule.combinator.toUpperCase()} `)}
+                        {Array.isArray(rule.conditions) && rule.conditions.length > 0
+                          ? `IF ${rule.conditions
+                              .map(describeCondition)
+                              .join(` ${rule.combinator.toUpperCase()} `)}`
+                          : "A rule this version cannot read."}
                       </code>
                     </td>
                     <td>

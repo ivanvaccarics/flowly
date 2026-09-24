@@ -171,6 +171,10 @@ export interface RuleTarget {
 
 export function ruleMatches(rule: TaggingRule, target: RuleTarget | Transaction): boolean {
   if (!rule.enabled) return false;
+  // A rule this build cannot read — one a newer or older version wrote — matches
+  // nothing. Reading is what the sync, the dashboard and the backfill all do, so
+  // one odd record must not take any of them down.
+  if (!Array.isArray(rule.conditions)) return false;
   return conditionSetMatches(rule, target);
 }
 

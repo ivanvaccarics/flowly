@@ -203,13 +203,18 @@ describe("tagging rule invariants", () => {
   });
 
   it("treats a missing field as no match", () => {
+    const target = {
+      accountId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+      amountMinor: -100,
+      currency: "EUR",
+    };
+    // A rule shape another build wrote — no condition set this engine knows —
+    // matches nothing instead of taking the sync or the dashboard down with it.
+    const unreadable = { ...base, conditions: undefined } as unknown as TaggingRule;
+    expect(ruleMatches(unreadable, target)).toBe(false);
+    expect(evaluateTaggingRules([unreadable], target)).toEqual([]);
+
     const rule = base;
-    expect(
-      ruleMatches(rule, {
-        accountId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
-        amountMinor: -100,
-        currency: "EUR",
-      }),
-    ).toBe(false);
+    expect(ruleMatches(rule, target)).toBe(false);
   });
 });
