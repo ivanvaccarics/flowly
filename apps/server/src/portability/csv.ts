@@ -19,6 +19,7 @@ export const TRANSACTION_CSV_HEADER = [
   "status",
   "source",
   "tags",
+  "transfer",
 ] as const;
 
 export const ACCOUNT_CSV_HEADER = [
@@ -141,6 +142,7 @@ export function transactionsToCsv(
         .map((id) => namesById.get(id) ?? "")
         .filter(Boolean)
         .join("|"),
+      transaction.transfer === undefined ? "" : String(transaction.transfer),
     ]),
   ]);
 }
@@ -248,6 +250,7 @@ export function parseTransactionCsv(text: string, generateId: () => string): Csv
       const payee = read("payee");
       const description = read("description");
       const userNote = read("user_note");
+      const transfer = readTransfer(read("transfer"));
       rows.push({
         line,
         value: {
@@ -263,6 +266,7 @@ export function parseTransactionCsv(text: string, generateId: () => string): Csv
           ...(payee ? { payee } : {}),
           ...(description ? { description } : {}),
           ...(userNote ? { userNote } : {}),
+          ...(transfer === undefined ? {} : { transfer }),
           tagNames: read("tags")
             .split("|")
             .map((name) => name.trim())
@@ -275,6 +279,19 @@ export function parseTransactionCsv(text: string, generateId: () => string): Csv
   });
 
   return { rows, errors };
+}
+
+/**
+ * The transfer flag as a CSV cell: an empty cell means undecided, which is what
+ * a file written before the column existed carries. Anything else is a typo and
+ * fails the row rather than guessing what the person meant.
+ */
+function readTransfer(cell: string): boolean | undefined {
+  const value = cell.trim().toLowerCase();
+  if (value === "") return undefined;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new DomainError("invalid-value", `unsupported transfer value: ${cell}`);
 }
 
 export function parseAccountsCsv(text: string): Account[] {

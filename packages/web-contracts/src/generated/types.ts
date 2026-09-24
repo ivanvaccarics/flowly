@@ -173,7 +173,7 @@ export interface TaggingRule {
 }
 
 /**
- * A transaction. `amountMinor` is signed: inflows positive, outflows negative.
+ * A transaction. `amountMinor` is signed: inflows positive, outflows negative. `transfer` marks a movement that only moves money between the user's own accounts: absent means undecided, a boolean is the user's decision, and `true` keeps the row out of income, expenses and spending.
  */
 export interface Transaction {
   formatVersion: 1;
@@ -199,6 +199,7 @@ export interface Transaction {
   providerAccountId?: string;
   providerTransactionId?: string;
   importFingerprint?: string;
+  transfer?: boolean;
   createdAt: string;
   updatedAt: string;
 }

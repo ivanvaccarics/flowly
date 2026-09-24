@@ -49,6 +49,17 @@ export interface Transaction {
   providerAccountId?: string;
   providerTransactionId?: string;
   importFingerprint?: string;
+  /**
+   * A movement that only moves money between accounts the user owns, so the
+   * dashboard leaves it out of income, expenses and spending while the ledger
+   * and the balances keep counting it.
+   *
+   * Absent means undecided: the transfer rules may still set it. A stored `true`
+   * or `false` is the user's own word, and no rule overwrites it — that is what
+   * editing the flag by hand buys, and why clearing the field hands the row back
+   * to the rules.
+   */
+  transfer?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -108,6 +119,9 @@ export function validateTransaction(transaction: Transaction): void {
       "transaction.importFingerprint must be 32 hex chars",
     );
   }
+  if (transaction.transfer !== undefined && typeof transaction.transfer !== "boolean") {
+    throw new DomainError("invalid-transaction", "transaction.transfer must be a boolean");
+  }
   assertIsoDateTime(transaction.createdAt, "transaction.createdAt");
   assertIsoDateTime(transaction.updatedAt, "transaction.updatedAt");
 }
@@ -127,6 +141,7 @@ export interface NewTransaction {
   provider?: string;
   providerTransactionId?: string;
   importFingerprint?: string;
+  transfer?: boolean;
 }
 
 export function createTransaction(
@@ -153,6 +168,7 @@ export function createTransaction(
     ...(input.provider ? { provider: input.provider } : {}),
     ...(input.providerTransactionId ? { providerTransactionId: input.providerTransactionId } : {}),
     ...(input.importFingerprint ? { importFingerprint: input.importFingerprint } : {}),
+    ...(input.transfer === undefined ? {} : { transfer: input.transfer }),
   };
   validateTransaction(transaction);
   return transaction;

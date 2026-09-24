@@ -291,6 +291,71 @@ describe("transactions view", () => {
     expect(calls[0]?.body).toContain('"tagIds":[]');
   });
 
+  it("marks a movement as a transfer, and says nothing while it is undecided", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const parsed = new URL(raw, "http://localhost");
+        if (parsed.pathname === "/api/accounts") return json({ items: [account] });
+        if (parsed.pathname === "/api/tags") return json({ items: [tag] });
+        if (parsed.pathname === "/api/transactions" && (init?.method ?? "GET") === "GET") {
+          return json({ items: [transaction], total: 1, limit: 100, offset: 0 });
+        }
+        if (parsed.pathname.startsWith("/api/transactions/")) {
+          calls.push(String(init?.body ?? ""));
+          return json({ entity: { ...transaction, revision: 2 } });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("Bar Centrale")).toBeTruthy());
+    // Nobody has decided, so the ledger says nothing about it.
+    expect(screen.queryByText("transfer")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Bar Centrale" }));
+    const editor = await screen.findByRole("dialog", { name: "Edit Bar Centrale" });
+    fireEvent.change(within(editor).getByDisplayValue("Automatic"), {
+      target: { value: "true" },
+    });
+    fireEvent.click(within(editor).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toContain('"transfer":true');
+    // A movement left alone keeps the flag it had, instead of being pinned to
+    // "not a transfer" by the mere act of opening the dialog.
+    expect(calls[0]).not.toContain('"transfer":false');
+  });
+
+  it("shows a transfer chip on a movement flagged as one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const raw =
+          typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const parsed = new URL(raw, "http://localhost");
+        if (parsed.pathname === "/api/accounts") return json({ items: [account] });
+        if (parsed.pathname === "/api/tags") return json({ items: [tag] });
+        if (parsed.pathname === "/api/transactions" && (init?.method ?? "GET") === "GET") {
+          return json({
+            items: [{ ...transaction, transfer: true }],
+            total: 1,
+            limit: 100,
+            offset: 0,
+          });
+        }
+        return json({ error: "not_found" });
+      }),
+    );
+
+    render(<TransactionsView csrf="csrf-token" />);
+    await waitFor(() => expect(screen.getByText("transfer")).toBeTruthy());
+  });
+
   it("edits payee and amount in the same dialog", async () => {
     const calls: Array<{ body: string }> = [];
     vi.stubGlobal(

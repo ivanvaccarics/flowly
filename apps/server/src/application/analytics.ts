@@ -238,6 +238,7 @@ export class AnalyticsService {
     const totals = new Map<string, CurrencyTotals>();
     for (const transaction of transactions) {
       if (transaction.status !== "booked") continue;
+      if (isOwnTransfer(transaction)) continue;
       const entry = totals.get(transaction.currency) ?? {
         currency: transaction.currency,
         incomeMinor: 0,
@@ -271,6 +272,7 @@ export class AnalyticsService {
 
     for (const transaction of transactions) {
       if (transaction.status !== "booked") continue;
+      if (isOwnTransfer(transaction)) continue;
       const booking = new Date(`${transaction.bookingDate}T00:00:00.000Z`);
       const index = Math.floor((booking.getTime() - start.getTime()) / (bucketDays * 86_400_000));
       const bucketStart = new Date(start.getTime() + index * bucketDays * 86_400_000);
@@ -321,6 +323,7 @@ export class AnalyticsService {
     const currencies = new Set<string>();
     for (const transaction of transactions) {
       if (transaction.status !== "booked") continue;
+      if (isOwnTransfer(transaction)) continue;
       currencies.add(transaction.currency);
       const key = `${transaction.currency}|${transaction.bookingDate.slice(0, 7)}`;
       const entry = totals.get(key) ?? { incomeMinor: 0, expensesMinor: 0 };
@@ -385,6 +388,7 @@ export class AnalyticsService {
 
     for (const transaction of transactions) {
       if (transaction.status !== "booked" || transaction.amountMinor >= 0) continue;
+      if (isOwnTransfer(transaction)) continue;
       for (const tagId of transaction.tagIds) {
         const key = `${tagId}|${transaction.currency}`;
         const entry = totals.get(key) ?? {
@@ -414,4 +418,14 @@ export class AnalyticsService {
   private async inRange(range: DateRange): Promise<Transaction[]> {
     return this.vault.transactions.list({ refBFrom: range.from, refBTo: range.to });
   }
+}
+
+/**
+ * A movement the user marked as a transfer between their own accounts is the
+ * same money seen twice, so it is neither income nor spending. It still counts
+ * in the ledger, in the balances and in every export: this only keeps the flow
+ * figures — income, expenses, net and the spending per tag — honest.
+ */
+function isOwnTransfer(transaction: Transaction): boolean {
+  return transaction.transfer === true;
 }

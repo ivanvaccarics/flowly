@@ -183,6 +183,79 @@ describe("transaction CSV", () => {
       cleanup(dir);
     }
   });
+
+  it("carries the transfer flag out and back, and reads a file that predates it", async () => {
+    const source = await setupVault("flowly-csv-transfer-");
+    const target = await setupVault("flowly-csv-transfer-target-");
+    try {
+      // The same account on both sides: the CSV names it by uuid, and an import
+      // into a vault that does not have it refuses the row.
+      const withEveryday = async (vault: Vault) => {
+        await vault.accounts.create(
+          createAccount(
+            { name: "Everyday", type: "checking", defaultCurrency: "EUR" },
+            { id: ACCOUNT_ID, now: NOW },
+          ),
+        );
+      };
+      await withEveryday(source.vault);
+      await withEveryday(target.vault);
+      const seedTransfer = async (amountMinor: number, transfer?: boolean) => {
+        await source.vault.transactions.create(
+          createTransaction(
+            {
+              accountId: ACCOUNT_ID,
+              bookingDate: "2026-09-12",
+              amountMinor,
+              currency: "EUR",
+              payee: "Savings transfer",
+              ...(transfer === undefined ? {} : { transfer }),
+            },
+            { id: generateId(), now: NOW },
+          ),
+        );
+      };
+      await seedTransfer(-50000, true);
+      await seedTransfer(50000, false);
+      await seedTransfer(-1230);
+
+      const csv = await source.service.exportTransactionsCsv();
+      expect(csv.split("\r\n")[0]?.endsWith(",transfer")).toBe(true);
+
+      const imported = await target.service.importTransactionCsv(csv);
+      expect(imported.created).toBe(3);
+      const stored = await target.vault.transactions.list();
+      const byAmount = (amountMinor: number) =>
+        stored.find((transaction) => transaction.amountMinor === amountMinor);
+      // The decision survives, and an undecided row stays undecided instead of
+      // being turned into a `false` nobody chose.
+      expect(byAmount(-50000)?.transfer).toBe(true);
+      expect(byAmount(50000)?.transfer).toBe(false);
+      expect(byAmount(-1230)?.transfer).toBeUndefined();
+      expect(byAmount(-1230)).not.toHaveProperty("transfer");
+
+      // A file written before the column existed imports the same way: the row
+      // is undecided, not "not a transfer".
+      const legacy = [
+        "id,account_id,booking_date,value_date,amount,currency,payee,description,user_note,status,source,tags",
+        `${generateId()},${ACCOUNT_ID},2026-09-13,,-12.30,EUR,Caffè,,,booked,csv-import,`,
+      ].join("\r\n");
+      const legacyTarget = await setupVault("flowly-csv-transfer-legacy-");
+      try {
+        await withEveryday(legacyTarget.vault);
+        expect((await legacyTarget.service.importTransactionCsv(legacy)).created).toBe(1);
+        expect((await legacyTarget.vault.transactions.list())[0]).not.toHaveProperty("transfer");
+      } finally {
+        await legacyTarget.vault.lock();
+        cleanup(legacyTarget.dir);
+      }
+    } finally {
+      await source.vault.lock();
+      await target.vault.lock();
+      cleanup(source.dir);
+      cleanup(target.dir);
+    }
+  });
 });
 
 describe("complete portable archive", () => {

@@ -166,6 +166,7 @@ export function TransactionsView({
         status: composer.status,
         source: "manual",
         tagIds: composer.tagIds,
+        ...(composer.transfer === undefined ? {} : { transfer: composer.transfer }),
         createdAt: now,
         updatedAt: now,
         ...(composer.payee ? { payee: composer.payee } : {}),
@@ -208,6 +209,7 @@ export function TransactionsView({
         userNote: editor.draft.note,
         status: editor.draft.status,
         tagIds: editor.draft.tagIds,
+        ...(editor.draft.transfer === undefined ? {} : { transfer: editor.draft.transfer }),
       });
       closeEditor();
       await load();
@@ -512,6 +514,14 @@ export function TransactionsView({
                         <Icon name="lock" size={12} />
                         {transaction.source}
                       </span>
+                      {transaction.transfer === true ? (
+                        <span
+                          className="chip neutral"
+                          title="Counted in the ledger and the balance, not as income or spending"
+                        >
+                          transfer
+                        </span>
+                      ) : null}
                     </td>
                     <td
                       className="cell-amount"

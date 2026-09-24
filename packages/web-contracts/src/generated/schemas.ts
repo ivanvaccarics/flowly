@@ -571,7 +571,7 @@ export const schemas = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowly.local/contracts/schemas/transaction.schema.json",
     "title": "Transaction",
-    "description": "A transaction. `amountMinor` is signed: inflows positive, outflows negative.",
+    "description": "A transaction. `amountMinor` is signed: inflows positive, outflows negative. `transfer` marks a movement that only moves money between the user's own accounts: absent means undecided, a boolean is the user's decision, and `true` keeps the row out of income, expenses and spending.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -675,6 +675,9 @@ export const schemas = {
       "importFingerprint": {
         "type": "string",
         "pattern": "^[0-9a-f]{32}$"
+      },
+      "transfer": {
+        "type": "boolean"
       },
       "createdAt": {
         "type": "string",

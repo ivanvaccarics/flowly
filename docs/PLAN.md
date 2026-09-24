@@ -1225,7 +1225,12 @@ Delivered:
 
 - Dashboard aggregates computed from signed minor units and ISO calendar dates:
   balances per account and currency, cash flow per currency and spending by tag.
-  Booked transactions only; currencies are never blended.
+  Booked transactions only; currencies are never blended. A movement flagged as
+  a transfer between the user's own accounts is left out of the flow figures —
+  income, expenses, the net and the spending per tag — and keeps counting in the
+  ledger, in the balances and in every export (`docs/adr/0039`). The flag has
+  three states: absent means nobody has decided, `true` and `false` are the
+  user's own word.
 - Server-side transaction search: date range, account, tag, currency, status,
   source, amount range, free text across payee/description/notes, pagination and
   a total. The SQL layer narrows on the indexed columns and the rest is filtered

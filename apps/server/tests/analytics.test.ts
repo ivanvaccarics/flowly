@@ -262,3 +262,76 @@ describe("dashboard", () => {
     }
   });
 });
+
+describe("transfers between the user's own accounts", () => {
+  const SEPTEMBER = { from: "2026-09-01", to: "2026-09-30", months: ["2026-09"] };
+
+  it("leaves them out of income, spending and the chart, and keeps them in the balance", async () => {
+    const { dir, vault, service } = await setup();
+    try {
+      const before = await service.dashboard(SEPTEMBER);
+      const leg = async (accountId: string, amountMinor: number, tagIds: string[] = []) => {
+        await vault.transactions.create(
+          createTransaction(
+            {
+              accountId,
+              bookingDate: "2026-09-28",
+              amountMinor,
+              currency: "EUR",
+              payee: "Savings transfer",
+              tagIds,
+              transfer: true,
+            },
+            { id: id(), now: NOW },
+          ),
+        );
+      };
+      // Both legs, one of them tagged: a transfer is not spending even when it
+      // carries a tag, which is exactly what the donut used to show.
+      await leg(CHECKING, -50000, [GROCERIES]);
+      await leg(CREDIT, 50000);
+
+      const after = await service.dashboard(SEPTEMBER);
+      expect(after.cashFlow).toEqual(before.cashFlow);
+      expect(after.cashFlowBuckets).toEqual(before.cashFlowBuckets);
+      expect(after.spendingByTag).toEqual(before.spendingByTag);
+
+      // The ledger and the balance keep counting the money that really moved.
+      const line = (dashboard: typeof after, accountId: string) =>
+        dashboard.balances.find((entry) => entry.accountId === accountId);
+      expect(line(after, CHECKING)).toMatchObject({
+        balanceMinor: (line(before, CHECKING)?.balanceMinor ?? 0) - 50000,
+        transactionCount: (line(before, CHECKING)?.transactionCount ?? 0) + 1,
+      });
+    } finally {
+      await vault.lock();
+      cleanup(dir);
+    }
+  });
+
+  it("still counts a movement nobody has decided on", async () => {
+    const { dir, vault, service } = await setup();
+    try {
+      const before = await service.dashboard(SEPTEMBER);
+      await vault.transactions.create(
+        createTransaction(
+          {
+            accountId: CHECKING,
+            bookingDate: "2026-09-29",
+            amountMinor: 70000,
+            currency: "EUR",
+            payee: "Undecided",
+          },
+          { id: id(), now: NOW },
+        ),
+      );
+      const after = await service.dashboard(SEPTEMBER);
+      const income = (dashboard: typeof before) =>
+        dashboard.cashFlow.find((entry) => entry.currency === "EUR")?.incomeMinor ?? 0;
+      expect(income(after)).toBe(income(before) + 70000);
+    } finally {
+      await vault.lock();
+      cleanup(dir);
+    }
+  });
+});

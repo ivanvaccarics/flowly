@@ -12,6 +12,12 @@ export interface TransactionDraft {
   note: string;
   status: "booked" | "pending";
   tagIds: string[];
+  /**
+   * Three states, and the third one is the point: `undefined` lets the transfer
+   * rules decide, while `true` and `false` are the reader's own word and stay
+   * that way. A row that was never touched keeps whatever it had.
+   */
+  transfer?: boolean;
 }
 
 export function emptyTransactionDraft(bookingDate: string): TransactionDraft {
@@ -36,6 +42,7 @@ export function draftFromTransaction(transaction: Transaction): TransactionDraft
     note: transaction.userNote ?? "",
     status: transaction.status,
     tagIds: [...transaction.tagIds],
+    ...(transaction.transfer === undefined ? {} : { transfer: transaction.transfer }),
   };
 }
 
@@ -127,6 +134,24 @@ export function TransactionFields({
           >
             <option value="booked">booked</option>
             <option value="pending">pending</option>
+          </select>
+        </label>
+        <label>
+          Transfer
+          <select
+            value={draft.transfer === undefined ? "" : String(draft.transfer)}
+            onChange={(event) => {
+              // "Automatic" means the field is not there at all, so the rules
+              // own the decision again.
+              const next: TransactionDraft = { ...draft };
+              delete next.transfer;
+              if (event.target.value !== "") next.transfer = event.target.value === "true";
+              onChange(next);
+            }}
+          >
+            <option value="">Automatic</option>
+            <option value="true">Between my accounts</option>
+            <option value="false">Not a transfer</option>
           </select>
         </label>
       </div>

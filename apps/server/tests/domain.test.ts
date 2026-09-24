@@ -86,6 +86,11 @@ describe("transactions", () => {
     expect(() => validateTransaction({ ...base, tagIds: [base.id, base.id] })).toThrow(DomainError);
     expect(() => validateTransaction({ ...base, amountMinor: 1.5 })).toThrow(DomainError);
     expect(() => validateTransaction({ ...base, importFingerprint: "ZZZ" })).toThrow(DomainError);
+    expect(() => validateTransaction({ ...base, transfer: "yes" as never })).toThrow(DomainError);
+
+    // The transfer flag is three states, and the middle one is a real answer.
+    expect(() => validateTransaction({ ...base, transfer: true })).not.toThrow();
+    expect(() => validateTransaction({ ...base, transfer: false })).not.toThrow();
   });
 
   it("computes a deterministic import fingerprint", () => {

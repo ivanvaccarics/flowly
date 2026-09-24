@@ -9,7 +9,7 @@ moves a whole vault between independent deployments.
 
 - UTF-8, RFC 4180 quoting, `\r\n` line endings, deterministic column order:
 
-  `id,account_id,booking_date,value_date,amount,currency,payee,description,user_note,status,source,tags`
+  `id,account_id,booking_date,value_date,amount,currency,payee,description,user_note,status,source,tags,transfer`
 
 - `amount` is a canonical decimal string in the transaction currency; it is
   parsed back into signed minor units with strict currency-aware validation.
@@ -23,6 +23,10 @@ moves a whole vault between independent deployments.
 - Duplicate detection order: Flowly UUID, then provider plus provider
   transaction id, then the deterministic import fingerprint defined in
   `contracts/README.md`.
+- `transfer` is `true` on a movement between the user's own accounts, `false`
+  when the user said it is not one, and empty while nobody has decided. A file
+  written before the column existed imports with every row undecided, and a
+  value that is neither of the two words fails the row instead of guessing.
 - Import is additive and reports created, skipped-duplicate and invalid rows.
   It never replaces a vault.
 

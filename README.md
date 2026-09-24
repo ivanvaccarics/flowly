@@ -46,7 +46,10 @@ throwaway vault full of invented data, never from a real one.
   each in its own currency, with archived accounts you can restore.
 - **Transactions** — payee, dates, status, tags and your own notes, kept
   separate from imported bank descriptions so nothing you write is overwritten,
-  with server-side filters and paging over the whole ledger.
+  with server-side filters and paging over the whole ledger. A movement between
+  two accounts you own can be marked as a transfer: it stays in the ledger and
+  in the balances, and it is left out of income, expenses and the spending
+  breakdown, because the same money is not earned or spent twice.
 - **Tags** — Unicode-aware and case-insensitive, keeping the casing you typed,
   colour-coded and renameable in place. Tags added by hand and by a rule share
   one set, and a rule never removes a tag you chose.
