@@ -4,19 +4,12 @@ import { api, type TaggingRulePreview, type TaggingRuleStats } from "../api/clie
 import { Modal } from "../components/Modal.js";
 import {
   RuleFields,
-  TransferRuleFields,
   conditionsOf,
   draftProblem,
   draftFromRule,
   emptyDraft,
-  emptyTransferDraft,
   isMatchRule,
-  isTransferPairRule,
-  transferDraftFromRule,
-  transferDraftProblem,
-  transferRuleOf,
   type RuleDraft,
-  type TransferRuleDraft,
 } from "../components/RuleFields.js";
 import { Icon } from "../components/icons.js";
 import { Banner, Chip, Empty, SectionIntro, tagPillStyle } from "../components/ui.js";
@@ -52,14 +45,10 @@ export function RulesView({ csrf }: { csrf: string }) {
   const tags = useCollection<Tag>("tags", csrf, true);
   /** The composer has a draft of its own that no edit ever touches. */
   const [draft, setDraft] = useState<RuleDraft>(emptyDraft);
-  /** A second draft, for the rule kind that reads two movements at once. */
-  const [transferDraft, setTransferDraft] = useState<TransferRuleDraft>(emptyTransferDraft);
-  const [kind, setKind] = useState<"match" | "transfer-pair">("match");
   /** The rule open in the edit dialog, with the draft being changed there. */
-  type Editor =
-    | { rule: TaggingRule; kind: "match"; draft: RuleDraft }
-    | { rule: TaggingRule; kind: "transfer-pair"; draft: TransferRuleDraft };
-  const [editor, setEditor] = useState<Editor | undefined>(undefined);
+  const [editor, setEditor] = useState<{ rule: TaggingRule; draft: RuleDraft } | undefined>(
+    undefined,
+  );
   const openerRef = useRef<HTMLElement | null>(null);
   const [report, setReport] = useState<string | undefined>(undefined);
   const [actionError, setActionError] = useState<string | undefined>(undefined);
@@ -96,12 +85,6 @@ export function RulesView({ csrf }: { csrf: string }) {
   // recent transactions, shortly after typing stops. A draft the server would
   // refuse is never sent, and a failed preview is simply left blank.
   useEffect(() => {
-    // A transfer rule reads two movements at once, so the single-row preview
-    // has nothing to answer for it.
-    if (kind !== "match") {
-      setPreview(undefined);
-      return;
-    }
     const ready =
       draftProblem(draft) === undefined &&
       draft.conditions.every((condition) => condition.value.trim() !== "");
@@ -116,7 +99,7 @@ export function RulesView({ csrf }: { csrf: string }) {
         .catch(() => setPreview(undefined));
     }, PREVIEW_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [csrf, draft, kind]);
+  }, [csrf, draft]);
 
   function updateDraft(next: RuleDraft) {
     setPreview(undefined);
@@ -124,17 +107,12 @@ export function RulesView({ csrf }: { csrf: string }) {
   }
 
   function openEditor(rule: TaggingRule, opener: HTMLElement | null) {
+    // Only the tagging kind is editable here: a transfer rule pairs two
+    // movements, and this form has room for one condition set.
+    if (!isMatchRule(rule)) return;
     // Kept so the dialog can hand focus back where the user left it.
     openerRef.current = opener;
-    // Each kind opens in the form that can hold it: the tagging one has a
-    // condition set and a tag list, the transfer one has two condition sets.
-    if (isTransferPairRule(rule)) {
-      setEditor({ rule, kind: "transfer-pair", draft: transferDraftFromRule(rule) });
-    } else if (isMatchRule(rule)) {
-      setEditor({ rule, kind: "match", draft: draftFromRule(rule) });
-    } else {
-      return;
-    }
+    setEditor({ rule, draft: draftFromRule(rule) });
     setEditorError(undefined);
     rules.clearError();
     setActionError(undefined);
@@ -152,35 +130,6 @@ export function RulesView({ csrf }: { csrf: string }) {
     event.preventDefault();
     setActionError(undefined);
     setReport(undefined);
-    const now = new Date().toISOString();
-
-    if (kind === "transfer-pair") {
-      const problem = transferDraftProblem(transferDraft);
-      if (problem) {
-        setActionError(problem);
-        return;
-      }
-      const saved = await rules.create({
-        formatVersion: 3,
-        kind: "transfer-pair",
-        revision: 1,
-        id: crypto.randomUUID(),
-        name: transferDraft.name,
-        enabled: true,
-        tagIds: [],
-        ...transferRuleOf(transferDraft),
-        createdAt: now,
-        updatedAt: now,
-      });
-      if (saved) {
-        setReport(
-          `Created "${transferDraft.name}". Apply it to all transactions to mark the transfers already in the vault.`,
-        );
-        setTransferDraft(emptyTransferDraft());
-      }
-      return;
-    }
-
     if (draft.tagIds.length === 0) {
       setActionError("Pick at least one tag to apply.");
       return;
@@ -190,6 +139,7 @@ export function RulesView({ csrf }: { csrf: string }) {
       setActionError(problem);
       return;
     }
+    const now = new Date().toISOString();
     const created = await rules.create({
       formatVersion: 3,
       kind: "match",
@@ -214,32 +164,6 @@ export function RulesView({ csrf }: { csrf: string }) {
     event.preventDefault();
     if (!editor) return;
     setEditorError(undefined);
-    const now = new Date().toISOString();
-
-    if (editor.kind === "transfer-pair") {
-      const problem = transferDraftProblem(editor.draft);
-      if (problem) {
-        setEditorError(problem);
-        return;
-      }
-      const { outgoing, incoming, windowDays } = transferRuleOf(editor.draft);
-      const savedPair = await rules.update({
-        // The id, the revision, the on/off state and the createdAt are the
-        // stored rule's: editing replaces its sides, never its identity.
-        ...editor.rule,
-        name: editor.draft.name,
-        outgoing,
-        incoming,
-        windowDays,
-        updatedAt: now,
-      });
-      if (savedPair) {
-        setReport(`Updated "${editor.rule.name}". Apply it to all transactions to re-pair.`);
-        closeEditor();
-      }
-      return;
-    }
-
     if (editor.draft.tagIds.length === 0) {
       setEditorError("Pick at least one tag to apply.");
       return;
@@ -257,7 +181,7 @@ export function RulesView({ csrf }: { csrf: string }) {
       combinator: editor.draft.combinator,
       conditions: conditionsOf(editor.draft),
       tagIds: editor.draft.tagIds as TaggingRule["tagIds"],
-      updatedAt: now,
+      updatedAt: new Date().toISOString(),
     });
     if (saved) {
       setReport(`Updated "${editor.rule.name}".`);
@@ -353,55 +277,20 @@ export function RulesView({ csrf }: { csrf: string }) {
             <header>
               <div>
                 <p className="eyebrow">Composer</p>
-                <h2>New {kind === "match" ? "categorisation" : "transfer"} rule</h2>
+                <h2>New categorisation rule</h2>
                 <span className="sub">
-                  {kind === "match"
-                    ? "Configure the matching pattern and assign the tags automatically."
-                    : "Describe the two sides of a transfer between your own accounts."}
+                  Configure the matching pattern and assign the tags automatically.
                 </span>
               </div>
-              {kind === "match" ? (
-                <Chip tone="info">
-                  <span className="pulse" />
-                  Live evaluation
-                </Chip>
-              ) : (
-                <Chip tone="vault">Pairs two movements</Chip>
-              )}
+              <Chip tone="info">
+                <span className="pulse" />
+                Live evaluation
+              </Chip>
             </header>
 
-            <div className="segmented" role="group" aria-label="Rule kind">
-              <button
-                type="button"
-                className={kind === "match" ? "segment active" : "segment"}
-                aria-pressed={kind === "match"}
-                onClick={() => setKind("match")}
-              >
-                Tags
-              </button>
-              <button
-                type="button"
-                className={kind === "transfer-pair" ? "segment active" : "segment"}
-                aria-pressed={kind === "transfer-pair"}
-                onClick={() => setKind("transfer-pair")}
-              >
-                Transfers
-              </button>
-            </div>
+            <RuleFields draft={draft} tags={tagItems} onChange={updateDraft} />
 
-            {kind === "match" ? (
-              <RuleFields draft={draft} tags={tagItems} onChange={updateDraft} />
-            ) : (
-              <TransferRuleFields
-                draft={transferDraft}
-                onChange={(next) => {
-                  setActionError(undefined);
-                  setTransferDraft(next);
-                }}
-              />
-            )}
-
-            {kind === "match" && preview ? (
+            {preview ? (
               <p className="preview-line" role="status">
                 <Icon name="check" size={14} />
                 {preview.evaluated === 0
@@ -415,8 +304,7 @@ export function RulesView({ csrf }: { csrf: string }) {
                 type="button"
                 className="btn ghost"
                 onClick={() => {
-                  if (kind === "match") setDraft(emptyDraft());
-                  else setTransferDraft(emptyTransferDraft());
+                  setDraft(emptyDraft());
                   setPreview(undefined);
                   setActionError(undefined);
                 }}
@@ -425,12 +313,10 @@ export function RulesView({ csrf }: { csrf: string }) {
                 Reset
               </button>
               <div className="cell-actions">
-                {kind === "match" ? (
-                  <button type="button" className="btn" onClick={() => void simulateNow()}>
-                    <Icon name="search" size={14} />
-                    Simulate on 100 tx
-                  </button>
-                ) : null}
+                <button type="button" className="btn" onClick={() => void simulateNow()}>
+                  <Icon name="search" size={14} />
+                  Simulate on 100 tx
+                </button>
                 <button type="submit" className="btn primary">
                   <Icon name="check" size={16} />
                   Save rule
@@ -649,14 +535,16 @@ export function RulesView({ csrf }: { csrf: string }) {
                             <span className="switch-knob" />
                           </span>
                         </button>
-                        <button
-                          type="button"
-                          className="btn small"
-                          aria-label={`Edit rule ${rule.name}`}
-                          onClick={(event) => openEditor(rule, event.currentTarget)}
-                        >
-                          <Icon name="edit" size={14} />
-                        </button>
+                        {isMatchRule(rule) ? (
+                          <button
+                            type="button"
+                            className="btn small"
+                            aria-label={`Edit rule ${rule.name}`}
+                            onClick={(event) => openEditor(rule, event.currentTarget)}
+                          >
+                            <Icon name="edit" size={14} />
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="btn small danger"
@@ -686,23 +574,14 @@ export function RulesView({ csrf }: { csrf: string }) {
         <Modal title={`Edit rule ${editor.rule.name}`} onClose={closeEditor}>
           <form className="stack" onSubmit={saveEdit}>
             <p className="muted">
-              Saving replaces what this rule matches on and keeps its id, its on/off state and its
+              Saving replaces the conditions of this rule and keeps its id, its on/off state and its
               place in the order. The composer behind keeps building a new one.
             </p>
-            {editor.kind === "match" ? (
-              <RuleFields
-                draft={editor.draft}
-                tags={tagItems}
-                onChange={(next) => setEditor({ rule: editor.rule, kind: "match", draft: next })}
-              />
-            ) : (
-              <TransferRuleFields
-                draft={editor.draft}
-                onChange={(next) =>
-                  setEditor({ rule: editor.rule, kind: "transfer-pair", draft: next })
-                }
-              />
-            )}
+            <RuleFields
+              draft={editor.draft}
+              tags={tagItems}
+              onChange={(next) => setEditor({ rule: editor.rule, draft: next })}
+            />
             {(editorError ?? rules.error) ? (
               <Banner tone="error">{editorError ?? rules.error}</Banner>
             ) : null}
