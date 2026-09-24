@@ -20,6 +20,7 @@ export const TRANSACTION_CSV_HEADER = [
   "source",
   "tags",
   "transfer",
+  "counterparty_iban",
 ] as const;
 
 export const ACCOUNT_CSV_HEADER = [
@@ -147,6 +148,7 @@ export function transactionsToCsv(
         .filter(Boolean)
         .join("|"),
       transaction.transfer === undefined ? "" : String(transaction.transfer),
+      transaction.counterpartyIban ?? "",
     ]),
   ]);
 }
@@ -259,6 +261,7 @@ export function parseTransactionCsv(text: string, generateId: () => string): Csv
       const description = read("description");
       const userNote = read("user_note");
       const transfer = readTransfer(read("transfer"));
+      const counterpartyIban = read("counterparty_iban").trim().toUpperCase();
       rows.push({
         line,
         value: {
@@ -275,6 +278,7 @@ export function parseTransactionCsv(text: string, generateId: () => string): Csv
           ...(description ? { description } : {}),
           ...(userNote ? { userNote } : {}),
           ...(transfer === undefined ? {} : { transfer }),
+          ...(counterpartyIban ? { counterpartyIban } : {}),
           tagNames: read("tags")
             .split("|")
             .map((name) => name.trim())

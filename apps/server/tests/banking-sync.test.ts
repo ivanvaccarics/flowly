@@ -47,6 +47,7 @@ interface TransactionRow {
   provider?: string;
   providerAccountId?: string;
   providerTransactionId?: string;
+  counterpartyIban?: string;
   tagIds: string[];
 }
 
@@ -186,6 +187,22 @@ describe("Enable Banking sync", () => {
       lastBalanceCurrency: "EUR",
       transactionCount: 1,
     });
+  });
+
+  it("keeps the IBAN the bank names on the other side", async () => {
+    // The IBAN is what lets a transfer rule say "the other side is mine"
+    // without reading the text the bank happened to write.
+    const bank = new FakeBank({
+      transactions: [
+        sampleTransaction({ creditor_account: { iban: "it60 x054 2811 1010 0000 0123 456" } }),
+      ],
+    });
+    const { harness: session } = await mappedHarness(bank);
+    expect((await post(session, "/api/banking/sync", {})).statusCode).toBe(200);
+    const items = (await get(session, "/api/transactions")).json<{
+      items: TransactionRow[];
+    }>().items;
+    expect(items[0]).toMatchObject({ counterpartyIban: "IT60X0542811101000000123456" });
   });
 
   it("imports a row whose payee only exists in a long remittance", async () => {

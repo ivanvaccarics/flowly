@@ -48,6 +48,13 @@ export interface Transaction {
   provider?: string;
   providerAccountId?: string;
   providerTransactionId?: string;
+  /**
+   * The IBAN of the other side, when the bank sends one. It is what turns
+   * "the counterparty looks like a savings account" into "the counterparty is
+   * one of my accounts", so a rule can pair a transfer without guessing from
+   * the text the bank happened to write.
+   */
+  counterpartyIban?: string;
   importFingerprint?: string;
   /**
    * A movement that only moves money between accounts the user owns, so the
@@ -122,6 +129,15 @@ export function validateTransaction(transaction: Transaction): void {
   if (transaction.transfer !== undefined && typeof transaction.transfer !== "boolean") {
     throw new DomainError("invalid-transaction", "transaction.transfer must be a boolean");
   }
+  if (
+    transaction.counterpartyIban !== undefined &&
+    !/^[A-Z]{2}[A-Z0-9]{11,32}$/.test(transaction.counterpartyIban)
+  ) {
+    throw new DomainError(
+      "invalid-transaction",
+      "transaction.counterpartyIban must be a compact uppercase IBAN",
+    );
+  }
   assertIsoDateTime(transaction.createdAt, "transaction.createdAt");
   assertIsoDateTime(transaction.updatedAt, "transaction.updatedAt");
 }
@@ -140,6 +156,7 @@ export interface NewTransaction {
   tagIds?: string[];
   provider?: string;
   providerTransactionId?: string;
+  counterpartyIban?: string;
   importFingerprint?: string;
   transfer?: boolean;
 }
@@ -167,6 +184,7 @@ export function createTransaction(
     ...(input.userNote ? { userNote: input.userNote } : {}),
     ...(input.provider ? { provider: input.provider } : {}),
     ...(input.providerTransactionId ? { providerTransactionId: input.providerTransactionId } : {}),
+    ...(input.counterpartyIban ? { counterpartyIban: input.counterpartyIban } : {}),
     ...(input.importFingerprint ? { importFingerprint: input.importFingerprint } : {}),
     ...(input.transfer === undefined ? {} : { transfer: input.transfer }),
   };

@@ -55,6 +55,40 @@ describe("Enable Banking normalization", () => {
     expect(credit).toMatchObject({ ok: true, amountMinor: 250000, payee: "MARIO ROSSI" });
   });
 
+  it("keeps the IBAN of the other side, compact and uppercase", () => {
+    // A debit: the money goes to the creditor, so its account is the one named.
+    const debit = normalizeTransaction({
+      transaction_amount: { currency: "EUR", amount: "500.00" },
+      creditor: { name: "Savings account" },
+      creditor_account: { iban: "it60 x054 2811 1010 0000 0123 456" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK",
+      booking_date: "2026-09-28",
+    });
+    expect(debit).toMatchObject({ ok: true, counterpartyIban: "IT60X0542811101000000123456" });
+
+    // A credit: the money comes from the debtor.
+    const credit = normalizeTransaction({
+      transaction_amount: { currency: "EUR", amount: "500.00" },
+      debtor: { name: "Everyday account" },
+      debtor_account: { iban: "IT12A1234567890123456789012" },
+      credit_debit_indicator: "CRDT",
+      status: "BOOK",
+      booking_date: "2026-09-28",
+    });
+    expect(credit).toMatchObject({ ok: true, counterpartyIban: "IT12A1234567890123456789012" });
+
+    // A bank that names nobody leaves the field out instead of inventing one.
+    const anonymous = normalizeTransaction({
+      transaction_amount: { currency: "EUR", amount: "5.00" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK",
+      booking_date: "2026-09-28",
+    });
+    expect(anonymous).toMatchObject({ ok: true });
+    expect(anonymous).not.toHaveProperty("counterpartyIban");
+  });
+
   it("treats anything that is not BOOK as pending", () => {
     const pending = normalizeTransaction(fixture("card-payment.json") as unknown as EbTransaction);
     expect(pending.ok).toBe(true);
