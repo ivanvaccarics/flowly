@@ -4,6 +4,13 @@ Status: Accepted (2026-09-24). Builds on
 [ADR 0039](./0039-transfers-stay-out-of-the-flow-figures.md), which gave the
 transfer flag its meaning and its three states.
 
+> **Update (2026-09-25).** The rules page edits a transfer rule now. The last
+> decision below — a pair rule is listed read-only, because the tagging editor
+> holds one condition set — is superseded: the composer offers **Tags** and
+> **Transfers**, the two-sided form carries both condition sets and the day
+> window, and the edit button opens it for a pair rule the same way it opens the
+> tagging form for a match rule. Everything else stands.
+
 ## Context
 
 ADR 0039 let a movement be marked as a transfer between the user's own accounts,

@@ -328,7 +328,7 @@ describe("rules view", () => {
     await waitFor(() => expect(calls.filter((call) => call.method === "PUT")).toHaveLength(1));
   });
 
-  it("shows a transfer rule as a pair, without the tagging editor", async () => {
+  it("shows a transfer rule as a pair, and edits it in its own form", async () => {
     const pairRule = {
       ...rule,
       kind: "transfer-pair",
@@ -353,8 +353,71 @@ describe("rules view", () => {
 
     // The two sides, in one line, and no tag pills: a pair rule marks movements.
     expect(screen.getByText(/TRANSFER/)).toBeTruthy();
-    // Editing through a form with room for one condition set would lose a side.
-    expect(screen.queryByRole("button", { name: "Edit rule Giroconti" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Edit rule Coffee rule" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Edit rule Giroconti" }));
+
+    // The two-sided form: each side keeps its own condition set and the window
+    // is the rule's own, so editing one side never touches the other.
+    const dialog = await screen.findByRole("dialog", { name: "Edit rule Giroconti" });
+    expect((within(dialog).getByLabelText("Outgoing Value 1") as HTMLInputElement).value).toBe(
+      "savings",
+    );
+    expect((within(dialog).getByLabelText("Incoming Value 1") as HTMLInputElement).value).toBe(
+      "everyday",
+    );
+    expect((within(dialog).getByLabelText("Days apart") as HTMLInputElement).value).toBe("3");
+    // The tagging form is not what a pair rule opened in.
+    expect(within(dialog).queryByText("Tags to apply automatically")).toBeNull();
+  });
+
+  it("writes a transfer rule from the composer", async () => {
+    const calls = mockApi();
+    render(<RulesView csrf="csrf-token" />);
+    const card = await screen.findByRole("form", { name: "New rule" });
+
+    fireEvent.click(within(card).getByRole("button", { name: "Transfers" }));
+    fireEvent.change(within(card).getByLabelText("Rule name"), {
+      target: { value: "Giroconti" },
+    });
+    fireEvent.change(within(card).getByLabelText("Days apart"), { target: { value: "5" } });
+    fireEvent.change(within(card).getByLabelText("Outgoing Field 1"), {
+      target: { value: "counterpartyIban" },
+    });
+    fireEvent.change(within(card).getByLabelText("Outgoing Value 1"), {
+      target: { value: "IT12A1234567890123456789012" },
+    });
+    fireEvent.change(within(card).getByLabelText("Incoming Field 1"), {
+      target: { value: "payee" },
+    });
+    fireEvent.change(within(card).getByLabelText("Incoming Value 1"), {
+      target: { value: "Everyday" },
+    });
+    fireEvent.click(within(card).getByRole("button", { name: "Save rule" }));
+
+    await waitFor(() =>
+      expect(
+        calls.some((call) => call.method === "POST" && call.path === "/api/tagging-rules"),
+      ).toBe(true),
+    );
+    const entity = calls.find((call) => call.method === "POST")?.entity;
+    expect(entity).toMatchObject({
+      kind: "transfer-pair",
+      name: "Giroconti",
+      tagIds: [],
+      windowDays: 5,
+      outgoing: {
+        combinator: "and",
+        conditions: [
+          {
+            field: "counterpartyIban",
+            operator: "is",
+            value: "IT12A1234567890123456789012",
+          },
+        ],
+      },
+      incoming: {
+        combinator: "and",
+        conditions: [{ field: "payee", operator: "is", value: "Everyday" }],
+      },
+    });
   });
 });

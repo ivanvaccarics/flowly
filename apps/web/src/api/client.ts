@@ -330,11 +330,14 @@ export const api = {
     csrf: string,
     scope: { accountId?: string; fromDate?: string; toDate?: string } = {},
   ) =>
-    request<{ evaluated: number; changed: number }>("/api/tagging-rules/backfill", {
-      method: "POST",
-      csrf,
-      body: scope,
-    }),
+    request<{ evaluated: number; changed: number; transferPairs: number }>(
+      "/api/tagging-rules/backfill",
+      {
+        method: "POST",
+        csrf,
+        body: scope,
+      },
+    ),
   ruleStats: () => request<TaggingRuleStats>("/api/tagging-rules/stats"),
   previewRule: (
     csrf: string,

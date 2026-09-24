@@ -456,8 +456,10 @@ rules, and neither do the pair rules: they mark the movements a sync or an impor
 just wrote, together with the rows they paired with. An explicit backfill
 action applies rules to existing transactions and is idempotent; it is what
 marks the history after a transfer rule is written, and it reports how many pairs
-it recognised. The rules page lists `transfer-pair` rules read-only, because its
-editor has room for one condition set.
+it recognised. The rules page builds both kinds: the composer switches between
+**Tags** and **Transfers**, the two-sided form holds one condition set per side
+plus the day window, and the edit dialog opens the form the stored rule belongs
+to.
 `GET /api/tagging-rules/stats` counts what the stored rules cover across the
 whole ledger — per rule, per applied tag and in total — and
 `POST /api/tagging-rules/preview` runs the same evaluation for an unsaved

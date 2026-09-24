@@ -59,7 +59,8 @@ throwaway vault full of invented data, never from a real one.
   Rules only add tags, and deleting one never takes a tag away. A second kind of
   rule recognises the two legs of one transfer between your own accounts — one
   side leaves an account, the other arrives, and the amounts are opposite
-  without anyone writing them down — and marks both as transfers.
+  without anyone writing them down — and marks both as transfers; it is written
+  from the same page, with a condition set per side.
 - **Multi-currency, honestly** — amounts are integers in minor units and every
   transaction keeps its original currency, so no total ever blends unlike
   currencies without a real exchange rate.
