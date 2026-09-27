@@ -173,7 +173,7 @@ export interface TaggingRule {
 }
 
 /**
- * A transaction. `amountMinor` is signed: inflows positive, outflows negative. `transfer` marks a movement that only moves money between the user's own accounts: absent means undecided, a boolean is the user's decision, and `true` keeps the row out of income, expenses and spending.
+ * A transaction. `amountMinor` is signed: inflows positive, outflows negative. `counterpartyIban` is the account on the other side when the bank names it, compacted and uppercased. `transfer` marks a movement that only moves money between the user's own accounts: absent means undecided, a boolean is the user's decision, and `true` keeps the row out of income, expenses and spending.
  */
 export interface Transaction {
   formatVersion: 1;
@@ -200,6 +200,10 @@ export interface Transaction {
   providerTransactionId?: string;
   importFingerprint?: string;
   transfer?: boolean;
+  /**
+   * The account on the other side of the movement, compacted and uppercased, when the bank prints it on its own leg. It is what lets transfer pairing compare against the user's own accounts instead of reading the payee.
+   */
+  counterpartyIban?: string;
   createdAt: string;
   updatedAt: string;
 }

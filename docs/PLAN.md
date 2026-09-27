@@ -382,6 +382,10 @@ Optional interoperability fields:
 - `providerTransactionId`
 - `transfer` — `true` on a movement between the user's own accounts, `false` when
   the user said it is not one, absent while nobody has decided (`docs/adr/0039`)
+- `counterpartyIban` — the account on the other side of the movement when the
+  bank prints it on its own leg, compacted and uppercased. It is what the
+  automatic transfer pairing compares against the user's own accounts
+  (`docs/adr/0041`)
 - `importFingerprint`
 
 `Enable Banking` is reserved for forward-compatible contracts and becomes an
@@ -492,6 +496,22 @@ Provider timestamps arrive as RFC 3339 with a `+00:00` offset and up to six
 fractional digits, so they are normalized to Flowly's canonical UTC form before
 they are stored. Amounts keep the provider sign convention (`CRDT`/`DBIT` plus
 an unsigned magnitude) and are converted to signed minor units.
+
+### 7.8 Transfer links
+
+The automatic transfer pairing (`docs/adr/0041`) adds one table, inside the same
+encrypted vault:
+
+- `transfer_links`: one row per recognised internal transfer. Holds the outgoing
+  and incoming movement ids, the method that joined them (`iban`, `counterparty`
+  or `amount`), the confidence score the matching ranked them by, and the gap in
+  days. The `transfer` flag on the two movements says *what* they are; the link
+  says *why* they were paired, which is what makes a weak pairing reviewable.
+
+The table is provenance, not the flag: the two boolean decisions live on the
+transactions, they are what the dashboard reads, and they travel in
+`transactions.csv`. Links are re-derived by the sweep that runs after an archive
+import, so the archive does not carry them.
 
 ## 8. Local Storage Strategy
 
@@ -1915,6 +1935,33 @@ Status: **complete** (2026-09-20), decision in `docs/adr/0025`.
   bank is refusing and when Flowly will try again, instead of printing the raw
   ASPSP code.
 
+#### Task `pair-internal-transfers`
+
+Status: **complete** (2026-09-27), decision in `docs/adr/0041`.
+
+- A movement keeps the counterparty IBAN the bank sends on the leg the money
+  went to or came from, and the transaction CSV carries it as
+  `counterparty_iban`; the canonical contract, the archive and the tables export
+  move with it.
+- The pairing recognises the two legs of one internal transfer — equal and
+  opposite amounts on two different accounts, in one currency, at most three days
+  apart — and grades its evidence: both legs naming each other's account IBAN, a
+  named counterparty when no account IBAN can be compared, or the amount and the
+  date alone. A leg naming a known account that is not the other leg refuses the
+  pair.
+- Among ambiguous candidates it takes the exact maximum-weight bipartite
+  matching, not a greedy closest-date pick, and records every pair in
+  `transfer_links` with its method, confidence and gap.
+- Both legs are marked `transfer: true` automatically — after a bank sync, after
+  a CSV import, when a movement is written or edited by hand, and in a
+  whole-ledger sweep on unlock (`POST /api/transfers/reconcile` asks for that
+  sweep again; `GET /api/transfers` lists the links).
+- Only undecided rows take part, so a `true` or `false` the user stored is never
+  overwritten: changing the flag by hand releases the link and returns the other
+  leg to undecided, clearing it hands the row back to the pairing, and an edit
+  that breaks the pair (another amount, account, currency or date) dissolves the
+  link on both sides.
+
 ### Phase 8 - Desktop application foundation
 
 #### Task `desktop-architecture-spike`
@@ -2033,6 +2080,7 @@ recovery point.
 | `build-server-release-pipeline` | `integrate-server-deployment`, `harden-server` |
 | `design-banking-connector` | `build-server-release-pipeline` |
 | `implement-server-banking-import` | `design-banking-connector` |
+| `pair-internal-transfers` | `implement-server-banking-import`, `implement-server-csv-transfer` |
 | `desktop-architecture-spike` | `implement-server-banking-import`, `build-server-release-pipeline` |
 | `scaffold-desktop` | `desktop-architecture-spike`, `define-contracts-and-server-domain` |
 | `implement-desktop-vault-storage` | `scaffold-desktop` |

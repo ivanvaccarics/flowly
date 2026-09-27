@@ -35,7 +35,9 @@ removes the application credentials too. The full picture is in
 ## What is stored
 
 - An encrypted vault file on your server's volume, containing your accounts,
-  transactions, notes, tags and rules.
+  transactions, notes, tags and rules. A transaction keeps the account on the
+  other side of the movement (its IBAN) when the bank prints it, which is how
+  transfers between your own accounts are recognised (`docs/adr/0041`).
 - A vault header with the Argon2id parameters, the salt and the wrapped data key.
   It contains no secrets in the clear.
 - Encrypted snapshots created before imports or migrations.

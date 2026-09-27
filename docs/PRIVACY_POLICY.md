@@ -96,7 +96,11 @@ Sent from your server to Enable Banking:
 
 Received back, and stored in your encrypted vault: the identity, balances and
 transactions of the accounts you approved at your bank, plus the raw provider
-responses.
+responses. Where the bank prints it on a movement, a transaction also keeps the
+account on the other side of that movement (its IBAN) — that is what lets Flowly
+recognise a transfer between two of your own accounts instead of counting it as
+income and spending (`docs/adr/0041`). Like everything else in the vault, it is
+encrypted at rest and is not sent anywhere.
 
 Your bank and Enable Banking process that data as independent controllers under
 their own privacy policies, for their own retention periods and on their own

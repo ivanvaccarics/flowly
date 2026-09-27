@@ -12,6 +12,7 @@ import { ImportExportService } from "../application/import-export-service.js";
 import { AnalyticsService, monthEnd, parseMonthKeys } from "../application/analytics.js";
 import { parseTransactionQuery, TransactionSearchService } from "../application/search.js";
 import { TaggingRuleService } from "../application/tagging-rule-service.js";
+import { TransferPairingService } from "../application/transfer-pairing-service.js";
 import { BankingService } from "../banking/banking-service.js";
 import { BankingError } from "../banking/errors.js";
 import type { EnableBankingClient } from "../banking/enable-banking-client.js";
@@ -102,9 +103,20 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     return bankingService;
   };
 
-  /** Refreshes linked banks after an unlock, without delaying the response. */
+  /**
+   * Refreshes linked banks after an unlock and sweeps the ledger for transfers,
+   * without delaying the response. The bank runs first so the movements it
+   * brings in are part of the same sweep.
+   */
   const autoSync = (opened: Vault, request: FastifyRequest): void => {
-    void bankingFor(opened).autoSync(psuFrom(request));
+    void (async () => {
+      await bankingFor(opened)
+        .autoSync(psuFrom(request))
+        .catch(() => undefined);
+      await new TransferPairingService({ vault: opened, newId: generateId })
+        .reconcile()
+        .catch(() => undefined);
+    })();
   };
 
   const logger: FastifyServerOptions["logger"] =
@@ -360,6 +372,31 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
         offset: result.offset,
       };
     },
+    // Writing a movement by hand can complete a pair, and changing the flag by
+    // hand is the user's answer: the link it belonged to is released first, so
+    // a correction is never quietly paired back. Clearing the flag hands the
+    // row back to the pairing, exactly as it hands it back to the rules.
+    {
+      afterWrite: async (transaction, context, previous) => {
+        const pairing = new TransferPairingService({
+          vault: context.vault,
+          newId: generateId,
+        });
+        if (previous && previous.transfer !== transaction.transfer) {
+          // The user just answered, and their value is the one that wins.
+          await pairing.release(transaction.id);
+        } else if (previous) {
+          // An edit that broke the pair — another amount, account, currency or
+          // date — must not leave the other leg marked by a link that is gone.
+          await pairing.releaseIfStale(transaction.id);
+        }
+        const stored = (await context.vault.transactions.get(transaction.id)) ?? transaction;
+        if (stored.transfer === undefined) {
+          await pairing.reconcileAround([stored]);
+        }
+        return (await context.vault.transactions.get(transaction.id)) ?? stored;
+      },
+    },
   );
   registerCollection(
     app,
@@ -428,6 +465,28 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       };
     }
     return record;
+  });
+
+  // --- transfers between the user's own accounts ------------------------------
+
+  /** Every recognised transfer, with the evidence that joined its two legs. */
+  app.get("/api/transfers", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    return {
+      items: await new TransferPairingService({ vault: context.vault, newId: generateId }).links(),
+    };
+  });
+
+  /**
+   * Sweeps the whole ledger. The pairing runs by itself when movements arrive
+   * and when the vault unlocks; this is the way to ask for it again without
+   * waiting for either.
+   */
+  app.post("/api/transfers/reconcile", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    return new TransferPairingService({ vault: context.vault, newId: generateId }).reconcile();
   });
 
   app.get("/api/dashboard", async (request, reply) => {
@@ -717,6 +776,14 @@ function registerCollection<T extends RepositoryEntity>(
     context: RequestContext,
     request: FastifyRequest,
   ) => Promise<Record<string, unknown>>,
+  hooks?: {
+    /**
+     * Runs after a create or an update with the entity as stored, and returns
+     * what the route answers with. The previous value is absent on a create:
+     * that is what lets a hook react to a field the user just changed.
+     */
+    afterWrite?: (entity: T, context: RequestContext, previous: T | undefined) => Promise<T>;
+  },
 ): void {
   const resolve = (request: FastifyRequest, reply: FastifyReply) => {
     const context = guard(request, reply);
@@ -753,7 +820,10 @@ function registerCollection<T extends RepositoryEntity>(
     const prepared = beforeCreate ? await beforeCreate(entity, resolved.context) : entity;
     const created = await resolved.repository.create(prepared);
     reply.code(201);
-    return { entity: created };
+    const after = hooks?.afterWrite
+      ? await hooks.afterWrite(created, resolved.context, undefined)
+      : created;
+    return { entity: after };
   });
 
   instance.put(`${path}/:id`, async (request, reply) => {
@@ -765,7 +835,12 @@ function registerCollection<T extends RepositoryEntity>(
       reply.code(400);
       return { error: "entity_required" };
     }
-    return { entity: await resolved.repository.update(entity, entity.revision) };
+    const previous = hooks?.afterWrite ? await resolved.repository.get(id) : undefined;
+    const updated = await resolved.repository.update(entity, entity.revision);
+    const after = hooks?.afterWrite
+      ? await hooks.afterWrite(updated, resolved.context, previous)
+      : updated;
+    return { entity: after };
   });
 
   instance.delete(`${path}/:id`, async (request, reply) => {

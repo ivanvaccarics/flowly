@@ -4,7 +4,13 @@ import type { Tag } from "../domain/tag.js";
 import type { TaggingRule } from "../domain/tagging-rule.js";
 import type { Transaction, TransactionSource, TransactionStatus } from "../domain/transaction.js";
 import { DomainError } from "../domain/errors.js";
-import { assertIsoDate, assertUuid, isUuid, normalizeTagName } from "../domain/values.js";
+import {
+  assertIban,
+  assertIsoDate,
+  assertUuid,
+  isUuid,
+  normalizeTagName,
+} from "../domain/values.js";
 
 export const TRANSACTION_CSV_HEADER = [
   "id",
@@ -20,6 +26,7 @@ export const TRANSACTION_CSV_HEADER = [
   "source",
   "tags",
   "transfer",
+  "counterparty_iban",
 ] as const;
 
 export const ACCOUNT_CSV_HEADER = [
@@ -143,6 +150,7 @@ export function transactionsToCsv(
         .filter(Boolean)
         .join("|"),
       transaction.transfer === undefined ? "" : String(transaction.transfer),
+      transaction.counterpartyIban ?? "",
     ]),
   ]);
 }
@@ -251,6 +259,8 @@ export function parseTransactionCsv(text: string, generateId: () => string): Csv
       const description = read("description");
       const userNote = read("user_note");
       const transfer = readTransfer(read("transfer"));
+      const counterpartyIban = read("counterparty_iban").trim().toUpperCase().replace(/\s+/g, "");
+      if (counterpartyIban) assertIban(counterpartyIban, "counterparty_iban");
       rows.push({
         line,
         value: {
@@ -267,6 +277,7 @@ export function parseTransactionCsv(text: string, generateId: () => string): Csv
           ...(description ? { description } : {}),
           ...(userNote ? { userNote } : {}),
           ...(transfer === undefined ? {} : { transfer }),
+          ...(counterpartyIban ? { counterpartyIban } : {}),
           tagNames: read("tags")
             .split("|")
             .map((name) => name.trim())

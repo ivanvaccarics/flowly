@@ -7,6 +7,7 @@ import {
   assertUuid,
   assertUuidList,
   isCurrencyCode,
+  isIban,
   isIsoDate,
 } from "./values.js";
 
@@ -34,7 +35,6 @@ export const BANK_SYNC_OVERLAP_DAYS = 7;
 export const BANK_RATE_LIMIT_COOLDOWN_MS = 6 * 60 * 60_000;
 export const BANK_RATE_LIMIT_MAX_COOLDOWN_MS = 24 * 60 * 60_000;
 
-const IBAN_PATTERN = /^[A-Z]{2}[0-9A-Z]{11,32}$/;
 const PRIVATE_KEY_PATTERN = /-----BEGIN (?:RSA )?PRIVATE KEY-----/;
 const HTTP_URL_PATTERN = /^https?:\/\/[^\s]+$/i;
 const COUNTRY_PATTERN = /^[A-Z]{2}$/;
@@ -316,7 +316,7 @@ export function validateBankAccountLink(link: BankAccountLink): void {
       optional: true,
     });
   }
-  if (link.iban !== undefined && !IBAN_PATTERN.test(link.iban)) {
+  if (link.iban !== undefined && !isIban(link.iban)) {
     throw new DomainError("invalid-value", "bankAccountLink.iban is not a valid IBAN", {
       iban: link.iban,
     });

@@ -87,6 +87,18 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS bank_payloads_account_idx ON bank_payloads(ref_a, ref_b)`,
     ],
   },
+  {
+    // Automatic transfer pairing (docs/adr/0041): one link per recognised
+    // transfer, holding the two legs and the evidence that joined them. The
+    // link is provenance, not the flag: the boolean stays on the two rows.
+    version: 6,
+    name: "transfer-links",
+    statements: [
+      recordTable("transfer_links"),
+      `CREATE INDEX IF NOT EXISTS transfer_links_outgoing_idx ON transfer_links(ref_a)`,
+      `CREATE INDEX IF NOT EXISTS transfer_links_incoming_idx ON transfer_links(ref_b)`,
+    ],
+  },
 ];
 
 export const SCHEMA_VERSION = Math.max(...MIGRATIONS.map((migration) => migration.version));

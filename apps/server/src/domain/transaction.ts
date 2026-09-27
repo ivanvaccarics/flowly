@@ -3,6 +3,7 @@ import { DomainError } from "./errors.js";
 import { assertMinorAmount, isSupportedCurrency } from "./money.js";
 import {
   assertCurrencyCode,
+  assertIban,
   assertIsoDate,
   assertIsoDateTime,
   assertRevision,
@@ -48,6 +49,12 @@ export interface Transaction {
   provider?: string;
   providerAccountId?: string;
   providerTransactionId?: string;
+  /**
+   * The account on the other side of the movement, compacted and uppercased,
+   * when the bank names it. It is what lets the pairing recognise one of the
+   * user's own accounts instead of guessing from the payee text.
+   */
+  counterpartyIban?: string;
   importFingerprint?: string;
   /**
    * A movement that only moves money between accounts the user owns, so the
@@ -122,6 +129,9 @@ export function validateTransaction(transaction: Transaction): void {
   if (transaction.transfer !== undefined && typeof transaction.transfer !== "boolean") {
     throw new DomainError("invalid-transaction", "transaction.transfer must be a boolean");
   }
+  if (transaction.counterpartyIban !== undefined) {
+    assertIban(transaction.counterpartyIban, "transaction.counterpartyIban");
+  }
   assertIsoDateTime(transaction.createdAt, "transaction.createdAt");
   assertIsoDateTime(transaction.updatedAt, "transaction.updatedAt");
 }
@@ -140,6 +150,7 @@ export interface NewTransaction {
   tagIds?: string[];
   provider?: string;
   providerTransactionId?: string;
+  counterpartyIban?: string;
   importFingerprint?: string;
   transfer?: boolean;
 }
@@ -167,6 +178,7 @@ export function createTransaction(
     ...(input.userNote ? { userNote: input.userNote } : {}),
     ...(input.provider ? { provider: input.provider } : {}),
     ...(input.providerTransactionId ? { providerTransactionId: input.providerTransactionId } : {}),
+    ...(input.counterpartyIban ? { counterpartyIban: input.counterpartyIban } : {}),
     ...(input.importFingerprint ? { importFingerprint: input.importFingerprint } : {}),
     ...(input.transfer === undefined ? {} : { transfer: input.transfer }),
   };

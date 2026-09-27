@@ -7,6 +7,12 @@ Status: Accepted (2026-09-24)
 > release, and `docs/adr/0040`, which recorded them, went with them. Everything
 > below stands; the flag is the user's to set, by hand, on the movement they are
 > looking at.
+>
+> **Update (2026-09-27).** [ADR 0041](./0041-transfers-are-recognised-automatically.md)
+> supersedes the "nothing decides the flag automatically" sentence below: the
+> pairing now recognises the two legs by itself and fills the flag, still only on
+> rows nobody has decided. The flag's meaning, its three states and its effect on
+> the figures are unchanged.
 
 ## Context
 

@@ -35,6 +35,7 @@ import { createZip } from "../portability/zip.js";
 import { ImportError } from "../portability/errors.js";
 import type { Vault } from "../vault/vault.js";
 import type { TaggingRuleService } from "./tagging-rule-service.js";
+import { TransferPairingService } from "./transfer-pairing-service.js";
 
 export interface CsvPreview {
   rows: number;
@@ -58,6 +59,8 @@ export interface CsvImportReport {
   invalid: number;
   tagsCreated: number;
   transactionsTaggedByRules: number;
+  /** Pairs of imported movements the pairing recognised as one transfer. */
+  transferPairs: number;
   errors: CsvParseError[];
 }
 
@@ -70,6 +73,8 @@ export interface ArchiveImportReport {
   bankLinks: number;
   bankAccounts: number;
   bankPayloads: number;
+  /** Transfers recognised between the movements the archive brought in. */
+  transferPairs: number;
   snapshot: string;
   manifest: ArchiveManifest;
 }
@@ -101,12 +106,18 @@ export class ImportExportService {
   private readonly taggingRules: TaggingRuleService;
   private readonly clock: Clock;
   private readonly newId: () => string;
+  private readonly transferPairing: TransferPairingService;
 
   constructor(options: ImportExportServiceOptions) {
     this.vault = options.vault;
     this.taggingRules = options.taggingRules;
     this.clock = options.clock ?? systemClock;
     this.newId = options.newId;
+    this.transferPairing = new TransferPairingService({
+      vault: options.vault,
+      newId: options.newId,
+      ...(options.clock ? { clock: options.clock } : {}),
+    });
   }
 
   async exportTransactionsCsv(): Promise<string> {
@@ -321,9 +332,11 @@ export class ImportExportService {
       invalid: parsed.errors.length,
       tagsCreated: 0,
       transactionsTaggedByRules: 0,
+      transferPairs: 0,
       errors: [...parsed.errors],
     };
     let createdTags = 0;
+    const written: Transaction[] = [];
 
     await this.vault.transaction(async () => {
       for (const row of parsed.rows) {
@@ -384,12 +397,14 @@ export class ImportExportService {
           ...(row.value.description ? { description: row.value.description } : {}),
           ...(row.value.userNote ? { userNote: row.value.userNote } : {}),
           ...(row.value.transfer === undefined ? {} : { transfer: row.value.transfer }),
+          ...(row.value.counterpartyIban ? { counterpartyIban: row.value.counterpartyIban } : {}),
         };
         const { transaction: tagged, addedTagIds } = this.taggingRules.withRuleTags(
           transaction,
           rules,
         );
-        await this.vault.transactions.create(tagged);
+        const stored = await this.vault.transactions.create(tagged);
+        written.push(stored);
         if (addedTagIds.length > 0) report.transactionsTaggedByRules += 1;
         knownIds.add(tagged.id);
         knownFingerprints.add(fingerprint);
@@ -397,6 +412,11 @@ export class ImportExportService {
       }
     });
 
+    // Both legs of a transfer usually arrive in the same file, so the batch is
+    // paired as a whole once it is stored; the other leg may already be in the
+    // vault from an earlier import, which is why the service reads across the
+    // window rather than only these rows.
+    report.transferPairs = (await this.transferPairing.reconcileAround(written)).paired;
     report.tagsCreated = createdTags;
     return report;
   }
@@ -461,6 +481,11 @@ export class ImportExportService {
       );
     }
 
+    // The archive carries the flags but not the pairing links, so the imported
+    // vault is swept once: rows already marked stay as they came, and the
+    // undecided ones get the same recognition the ledger gets on unlock.
+    const { paired: transferPairs } = await this.transferPairing.reconcile();
+
     return {
       accounts: accounts.length,
       transactions: transactions.length,
@@ -470,6 +495,7 @@ export class ImportExportService {
       bankLinks: banking?.links.length ?? 0,
       bankAccounts: banking?.accounts.length ?? 0,
       bankPayloads: banking?.payloads.length ?? 0,
+      transferPairs,
       snapshot,
       manifest,
     };
@@ -597,6 +623,8 @@ export class ImportExportService {
         ...(row.value.payee ? { payee: row.value.payee } : {}),
         ...(row.value.description ? { description: row.value.description } : {}),
         ...(row.value.userNote ? { userNote: row.value.userNote } : {}),
+        ...(row.value.transfer === undefined ? {} : { transfer: row.value.transfer }),
+        ...(row.value.counterpartyIban ? { counterpartyIban: row.value.counterpartyIban } : {}),
       } satisfies Transaction;
     });
   }

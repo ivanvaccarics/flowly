@@ -5,6 +5,8 @@ const UUID_V7_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;
+/** IBAN in electronic form: country, two check digits, then the account part. */
+const IBAN_PATTERN = /^[A-Z]{2}[0-9A-Z]{11,32}$/;
 
 /** Any RFC 4122 UUID is accepted on import; Flowly only generates v7. */
 export function isUuid(value: unknown): value is string {
@@ -60,6 +62,20 @@ export function isCurrencyCode(value: unknown): value is string {
 export function assertCurrencyCode(value: unknown, field: string): asserts value is string {
   if (!isCurrencyCode(value)) {
     throw new DomainError("invalid-value", `${field} must be an ISO 4217 code`, { field, value });
+  }
+}
+
+/**
+ * The compact, uppercase form a bank prints: no spaces, no lowercase. Callers
+ * normalize before they store or compare, so this only accepts what they wrote.
+ */
+export function isIban(value: unknown): value is string {
+  return typeof value === "string" && IBAN_PATTERN.test(value);
+}
+
+export function assertIban(value: unknown, field: string): asserts value is string {
+  if (!isIban(value)) {
+    throw new DomainError("invalid-value", `${field} is not a valid IBAN`, { field });
   }
 }
 

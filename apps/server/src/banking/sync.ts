@@ -1,4 +1,5 @@
 import { systemClock, type Clock } from "../domain/clock.js";
+import { TransferPairingService } from "../application/transfer-pairing-service.js";
 import {
   BANK_INITIAL_SYNC_DAYS,
   BANK_RATE_LIMIT_COOLDOWN_MS,
@@ -70,6 +71,7 @@ export interface BankSyncDependencies {
 export class BankSyncService {
   private readonly vault: Vault;
   private readonly taggingRules: TaggingRuleService;
+  private readonly transferPairing: TransferPairingService;
   private readonly clientFor: (connection: BankConnection) => EnableBankingClient;
   private readonly newId: () => string;
   private readonly clock: Clock;
@@ -78,6 +80,11 @@ export class BankSyncService {
   constructor(dependencies: BankSyncDependencies) {
     this.vault = dependencies.vault;
     this.taggingRules = dependencies.taggingRules;
+    this.transferPairing = new TransferPairingService({
+      vault: dependencies.vault,
+      newId: dependencies.newId,
+      ...(dependencies.clock ? { clock: dependencies.clock } : {}),
+    });
     this.clientFor = dependencies.clientFor;
     this.newId = dependencies.newId;
     this.clock = dependencies.clock ?? systemClock;
@@ -305,6 +312,9 @@ export class BankSyncService {
     const now = this.clock.nowIso();
     const existing = await this.vault.transactions.list({ refA: accountId });
     const rules = await this.taggingRules.rules();
+    // The rows this run wrote, so the transfer pairing can look for their other
+    // leg — which may live on another account, imported minutes earlier.
+    const written: Transaction[] = [];
     let earliest: string | undefined;
 
     await this.vault.transaction(async () => {
@@ -362,6 +372,9 @@ export class BankSyncService {
               ...(normalized.providerTransactionId
                 ? { providerTransactionId: normalized.providerTransactionId }
                 : {}),
+              ...(normalized.counterpartyIban
+                ? { counterpartyIban: normalized.counterpartyIban }
+                : {}),
               ...(normalized.valueDate ? { valueDate: normalized.valueDate } : {}),
               ...(normalized.payee ? { payee: normalized.payee } : {}),
               ...(normalized.description ? { description: normalized.description } : {}),
@@ -371,6 +384,7 @@ export class BankSyncService {
               continue;
             }
             const updated = await this.vault.transactions.update(next, match.revision);
+            written.push(updated);
             if (normalized.providerTransactionId) {
               byProviderId.set(normalized.providerTransactionId, updated);
             }
@@ -392,6 +406,9 @@ export class BankSyncService {
               ...(normalized.providerTransactionId
                 ? { providerTransactionId: normalized.providerTransactionId }
                 : {}),
+              ...(normalized.counterpartyIban
+                ? { counterpartyIban: normalized.counterpartyIban }
+                : {}),
               ...(normalized.valueDate ? { valueDate: normalized.valueDate } : {}),
               ...(normalized.payee ? { payee: normalized.payee } : {}),
               ...(normalized.description ? { description: normalized.description } : {}),
@@ -400,6 +417,7 @@ export class BankSyncService {
           );
           const { transaction: tagged } = this.taggingRules.withRuleTags(created, rules);
           const stored = await this.vault.transactions.create(tagged);
+          written.push(stored);
           if (normalized.providerTransactionId) {
             byProviderId.set(normalized.providerTransactionId, stored);
           }
@@ -418,6 +436,8 @@ export class BankSyncService {
         }
       }
     });
+
+    await this.transferPairing.reconcileAround(written);
 
     const nextSyncFrom =
       earliest && (!account.syncFrom || earliest < account.syncFrom) ? earliest : account.syncFrom;
@@ -568,6 +588,7 @@ function sameProviderFields(current: Transaction, next: Transaction): boolean {
     current.description === next.description &&
     current.valueDate === next.valueDate &&
     current.providerTransactionId === next.providerTransactionId &&
+    current.counterpartyIban === next.counterpartyIban &&
     current.importFingerprint === next.importFingerprint
   );
 }

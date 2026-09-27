@@ -118,6 +118,8 @@ export interface FakeBankOptions {
   accounts?: EbAccountResource[];
   balances?: EbBalance[];
   transactions?: EbTransaction[] | EbTransaction[][];
+  /** Transactions per provider account, when a test needs two accounts at once. */
+  transactionsByAccount?: Record<string, EbTransaction[]>;
   sessionStatus?: string;
   failSessionStatusOnce?: boolean;
 }
@@ -135,6 +137,7 @@ export class FakeBank {
   accounts: EbAccountResource[];
   balances: EbBalance[];
   transactionPages: EbTransaction[][];
+  transactionsByAccount: Record<string, EbTransaction[]> | undefined;
   sessionStatus: string;
   failSessionStatusOnce: boolean;
   calls: string[] = [];
@@ -167,6 +170,7 @@ export class FakeBank {
         : Array.isArray(options.transactions[0])
           ? (options.transactions as EbTransaction[][])
           : [options.transactions as EbTransaction[]];
+    this.transactionsByAccount = options.transactionsByAccount;
     this.sessionStatus = options.sessionStatus ?? "AUTHORIZED";
     this.failSessionStatusOnce = options.failSessionStatusOnce ?? false;
   }
@@ -274,9 +278,12 @@ export class FakeBank {
   ): Promise<Array<{ transactions: EbTransaction[]; continuationKey?: string }>> {
     this.calls.push(`getTransactions:${accountUid}:${params.dateFrom ?? "*"}`);
     this.refuseWhenRateLimited(accountUid, "getTransactions");
-    return this.transactionPages.map((transactions, index) => ({
+    const pages = this.transactionsByAccount
+      ? [this.transactionsByAccount[accountUid] ?? []]
+      : this.transactionPages;
+    return pages.map((transactions, index) => ({
       transactions,
-      ...(index < this.transactionPages.length - 1 ? { continuationKey: `page-${index + 1}` } : {}),
+      ...(index < pages.length - 1 ? { continuationKey: `page-${index + 1}` } : {}),
     }));
   }
 

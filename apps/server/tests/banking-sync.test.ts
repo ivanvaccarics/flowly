@@ -9,6 +9,7 @@ import {
   connectBank,
   get,
   post,
+  sampleAccountResource,
   sampleTransaction,
   startBankingHarness,
   type BankingHarness,
@@ -186,6 +187,85 @@ describe("Enable Banking sync", () => {
       lastBalanceCurrency: "EUR",
       transactionCount: 1,
     });
+  });
+
+  it("marks the two legs of an internal transfer and keeps the counterparty IBAN", async () => {
+    const everydayIban = "IT60X0542811101000000123456";
+    const savingsIban = "IT60X0542811101000000987654";
+    const everydayUid = "0f7d3d1c-3f4e-4b0e-9f1a-2b3c4d5e6f70";
+    const savingsUid = "0f7d3d1c-3f4e-4b0e-9f1a-2b3c4d5e6f71";
+    const bank = new FakeBank({
+      accounts: [
+        sampleAccountResource({ uid: everydayUid, account_id: { iban: everydayIban } }),
+        sampleAccountResource({
+          uid: savingsUid,
+          account_id: { iban: savingsIban },
+          details: "Conto deposito",
+          cash_account_type: "SVGS",
+        }),
+      ],
+      transactionsByAccount: {
+        [everydayUid]: [
+          sampleTransaction({
+            entry_reference: "everyday-leg",
+            credit_debit_indicator: "DBIT",
+            transaction_amount: { currency: "EUR", amount: "500.00" },
+            creditor: { name: "Savings account" },
+            creditor_account: { iban: savingsIban },
+          }),
+        ],
+        [savingsUid]: [
+          sampleTransaction({
+            entry_reference: "savings-leg",
+            credit_debit_indicator: "CRDT",
+            transaction_amount: { currency: "EUR", amount: "500.00" },
+            debtor: { name: "Everyday account" },
+            debtor_account: { iban: everydayIban },
+          }),
+        ],
+      },
+    });
+    const session = await harness(bank);
+    const { linkId } = await connectBank(session, { autoSync: false });
+    const status = await get(session, "/api/banking/status");
+    const uids = status
+      .json<StatusBody>()
+      .links[0]!.accounts.map((account) => account.providerAccountUid);
+    expect(uids).toHaveLength(2);
+    for (const [index, uid] of uids.entries()) {
+      const mapped = await post(session, `/api/banking/enable-banking/links/${linkId}/accounts`, {
+        providerAccountUid: uid,
+        mode: "create",
+        name: `Account ${index + 1}`,
+      });
+      expect(mapped.statusCode).toBe(200);
+    }
+
+    const report = await syncNow(session);
+    expect(report.created).toBe(2);
+
+    const items = (await get(session, "/api/transactions")).json<{ items: TransactionRow[] }>()
+      .items;
+    expect(items).toHaveLength(2);
+    expect(items.map((item) => item.amountMinor).sort()).toEqual([-50000, 50000]);
+    const outgoing = items.find((item) => item.amountMinor === -50000) as TransactionRow & {
+      transfer?: boolean;
+      counterpartyIban?: string;
+    };
+    const incoming = items.find((item) => item.amountMinor === 50000) as TransactionRow & {
+      transfer?: boolean;
+      counterpartyIban?: string;
+    };
+    expect(outgoing.transfer).toBe(true);
+    expect(incoming.transfer).toBe(true);
+    expect(outgoing.counterpartyIban).toBe(savingsIban);
+    expect(incoming.counterpartyIban).toBe(everydayIban);
+
+    const links = (await get(session, "/api/transfers")).json<{
+      items: Array<{ link: { method: string; confidence: number; gapDays: number } }>;
+    }>().items;
+    expect(links).toHaveLength(1);
+    expect(links[0]?.link).toMatchObject({ method: "iban", gapDays: 0 });
   });
 
   it("imports a row whose payee only exists in a long remittance", async () => {

@@ -13,7 +13,8 @@ export type VaultTable =
   | "bank_connections"
   | "bank_links"
   | "bank_accounts"
-  | "bank_payloads";
+  | "bank_payloads"
+  | "transfer_links";
 
 export const VAULT_TABLES: readonly VaultTable[] = [
   "accounts",
@@ -25,6 +26,7 @@ export const VAULT_TABLES: readonly VaultTable[] = [
   "bank_links",
   "bank_accounts",
   "bank_payloads",
+  "transfer_links",
 ];
 
 export interface StoredRefs {

@@ -140,6 +140,18 @@ you should see.
 | Confirm the cascade delete | The account and its transactions are gone |
 | Delete a tag that is in use, then confirm the cascade | The tag disappears from transactions and rules everywhere |
 
+### Transfers between your own accounts
+
+| Do this | Expect |
+| --- | --- |
+| Add two movements by hand — the same amount, opposite signs, on two different accounts, within three days | After the second save both rows carry the `transfer` chip, and the dashboard's income and expenses drop by that amount while the balances do not move |
+| Look at the same pair on the dashboard | Neither leg appears in income, expenses, the net or the spending breakdown; both stay in the ledger and in the account balances |
+| Open one leg, choose **Not a transfer** and save | The chip goes, the other leg returns to undecided, and pressing **Apply rules**/re-sweeping does not pair them again |
+| Edit the amount of a paired leg so the two no longer mirror each other | The pair dissolves on both sides and both rows return to undecided, instead of a stale link keeping them out of the figures |
+| Open a paired leg and clear the flag back to **Automatic** | The row is handed back to the pairing, which may mark it again (that is the point of Automatic) |
+| Import a CSV that carries both legs with the flags empty | The report counts the pair, and both rows are marked |
+| Sync a bank whose current account paid the savings account, with the counterparty IBAN on both legs | Both rows are marked and `GET /api/transfers` shows the link with method `iban` |
+
 ### Tagging rules
 
 | Do this | Expect |

@@ -12,6 +12,7 @@
   "userNote": "espresso with Luca",
   "status": "booked",
   "source": "manual",
+  "counterpartyIban": "IT60X0542811101000000123456",
   "tagIds": ["018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081"],
   "createdAt": "2026-09-03T18:12:00.000Z",
   "updatedAt": "2026-09-03T18:12:00.000Z"

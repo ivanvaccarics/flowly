@@ -220,7 +220,7 @@ describe("transaction CSV", () => {
       await seedTransfer(-1230);
 
       const csv = await source.service.exportTransactionsCsv();
-      expect(csv.split("\r\n")[0]?.endsWith(",transfer")).toBe(true);
+      expect(csv.split("\r\n")[0]?.endsWith(",transfer,counterparty_iban")).toBe(true);
 
       const imported = await target.service.importTransactionCsv(csv);
       expect(imported.created).toBe(3);
@@ -254,6 +254,48 @@ describe("transaction CSV", () => {
       await target.vault.lock();
       cleanup(source.dir);
       cleanup(target.dir);
+    }
+  });
+
+  it("marks both legs of an internal transfer the file brings in, and honours a refusal", async () => {
+    const { dir, vault, service } = await setupVault("flowly-csv-transfers-");
+    const savingsId = "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7082";
+    try {
+      await vault.accounts.create(
+        createAccount(
+          { name: "Everyday", type: "checking", defaultCurrency: "EUR" },
+          { id: ACCOUNT_ID, now: NOW },
+        ),
+      );
+      await vault.accounts.create(
+        createAccount(
+          { name: "Savings", type: "savings", defaultCurrency: "EUR" },
+          { id: savingsId, now: NOW },
+        ),
+      );
+      const csv = [
+        "id,account_id,booking_date,amount,currency,payee,description,transfer",
+        `${generateId()},${ACCOUNT_ID},2026-09-01,-500.00,EUR,Savings transfer,,`,
+        `${generateId()},${savingsId},2026-09-01,500.00,EUR,Everyday account,,`,
+        // A pair the user already refused must survive the import untouched.
+        `${generateId()},${ACCOUNT_ID},2026-09-02,-300.00,EUR,Savings transfer,,false`,
+        `${generateId()},${savingsId},2026-09-02,300.00,EUR,Everyday account,,`,
+      ].join("\r\n");
+
+      const report = await service.importTransactionCsv(csv);
+      expect(report.created).toBe(4);
+      expect(report.transferPairs).toBe(1);
+
+      const stored = await vault.transactions.list();
+      const byAmount = (amountMinor: number) =>
+        stored.find((transaction) => transaction.amountMinor === amountMinor);
+      expect(byAmount(-50000)?.transfer).toBe(true);
+      expect(byAmount(50000)?.transfer).toBe(true);
+      expect(byAmount(-30000)?.transfer).toBe(false);
+      expect(byAmount(30000)).not.toHaveProperty("transfer");
+    } finally {
+      await vault.lock();
+      cleanup(dir);
     }
   });
 });

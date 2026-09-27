@@ -9,7 +9,7 @@ moves a whole vault between independent deployments.
 
 - UTF-8, RFC 4180 quoting, `\r\n` line endings, deterministic column order:
 
-  `id,account_id,booking_date,value_date,amount,currency,payee,description,user_note,status,source,tags,transfer`
+  `id,account_id,booking_date,value_date,amount,currency,payee,description,user_note,status,source,tags,transfer,counterparty_iban`
 
 - `amount` is a canonical decimal string in the transaction currency; it is
   parsed back into signed minor units with strict currency-aware validation.
@@ -27,6 +27,13 @@ moves a whole vault between independent deployments.
   when the user said it is not one, and empty while nobody has decided. A file
   written before the column existed imports with every row undecided, and a
   value that is neither of the two words fails the row instead of guessing.
+- `counterparty_iban` is the account on the other side of the movement when the
+  bank prints it on its own leg, compacted and uppercased. Empty is the ordinary
+  case for a hand-entered row and for a bank that does not name the other side.
+  A file written before the column existed imports with the field absent, and a
+  value that is not an IBAN fails the row instead of guessing. It is what the
+  automatic transfer pairing compares against the user's own accounts
+  (`docs/adr/0041`).
 - Import is additive and reports created, skipped-duplicate and invalid rows.
   It never replaces a vault.
 

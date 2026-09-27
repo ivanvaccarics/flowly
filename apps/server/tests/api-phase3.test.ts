@@ -317,6 +317,163 @@ describe("core finance API", () => {
       await harness.close();
     }
   });
+
+  it("pairs a transfer written through the API, and lets the user undo it", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    const savings = {
+      ...SAMPLE_ACCOUNT,
+      id: "018f2c1e-6d5b-7c3a-9f2e-1c2d3e4f5a6b",
+      name: "Savings",
+      type: "savings",
+    };
+    const outgoingId = "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f71";
+    const incomingId = "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f72";
+    try {
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/accounts",
+        payload: { entity: SAMPLE_ACCOUNT },
+      });
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/accounts",
+        payload: { entity: savings },
+      });
+
+      const first = await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/transactions",
+        payload: {
+          entity: sampleTransaction({ id: outgoingId, amountMinor: -50000, payee: "Savings" }),
+        },
+      });
+      // One leg alone is not a transfer, so nothing is decided yet.
+      expect(first.json<{ entity: { transfer?: boolean } }>().entity.transfer).toBeUndefined();
+
+      const second = await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/transactions",
+        payload: {
+          entity: sampleTransaction({
+            id: incomingId,
+            accountId: savings.id,
+            amountMinor: 50000,
+            payee: "Everyday",
+          }),
+        },
+      });
+      const incoming = second.json<{ entity: Record<string, unknown> }>().entity;
+      expect(incoming["transfer"]).toBe(true);
+
+      const listed = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/transactions",
+      });
+      const items = listed.json<{ items: Array<{ id: string; transfer?: boolean }> }>().items;
+      expect(items.filter((item) => item.transfer === true)).toHaveLength(2);
+      expect(
+        (await call(harness.app, harness.client, { method: "GET", url: "/api/transfers" })).json<{
+          items: unknown[];
+        }>().items,
+      ).toHaveLength(1);
+
+      // The user says the pair is wrong. The correction sticks, and the other
+      // leg goes back to undecided instead of staying marked by the old link.
+      const corrected = await call(harness.app, harness.client, {
+        method: "PUT",
+        url: `/api/transactions/${incomingId}`,
+        payload: { entity: { ...incoming, transfer: false } },
+      });
+      expect(corrected.statusCode).toBe(200);
+      expect(corrected.json<{ entity: { transfer?: boolean } }>().entity.transfer).toBe(false);
+      expect(
+        (await call(harness.app, harness.client, { method: "GET", url: "/api/transfers" })).json<{
+          items: unknown[];
+        }>().items,
+      ).toHaveLength(0);
+
+      const after = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/transactions",
+      });
+      const rows = after.json<{ items: Array<{ id: string; transfer?: boolean }> }>().items;
+      expect(rows.find((row) => row.id === incomingId)?.transfer).toBe(false);
+      expect(rows.find((row) => row.id === outgoingId)?.transfer).toBeUndefined();
+
+      // And a later sweep does not pair them again behind the user's back.
+      const swept = await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/transfers/reconcile",
+      });
+      expect(swept.json<{ paired: number }>().paired).toBe(0);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("dissolves an automatic pair when an edit breaks it", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    const savings = {
+      ...SAMPLE_ACCOUNT,
+      id: "018f2c1e-6d5b-7c3a-9f2e-1c2d3e4f5a6b",
+      name: "Savings",
+      type: "savings",
+    };
+    const outgoingId = "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f73";
+    const incomingId = "018f2c1e-6d5b-7c3a-9f2e-2b3c4d5e6f74";
+    try {
+      for (const account of [SAMPLE_ACCOUNT, savings]) {
+        await call(harness.app, harness.client, {
+          method: "POST",
+          url: "/api/accounts",
+          payload: { entity: account },
+        });
+      }
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/transactions",
+        payload: { entity: sampleTransaction({ id: outgoingId, amountMinor: -50000 }) },
+      });
+      await call(harness.app, harness.client, {
+        method: "POST",
+        url: "/api/transactions",
+        payload: {
+          entity: sampleTransaction({
+            id: incomingId,
+            accountId: savings.id,
+            amountMinor: 50000,
+          }),
+        },
+      });
+      const listed = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/transactions",
+      });
+      const outgoing = listed
+        .json<{ items: Array<Record<string, unknown>> }>()
+        .items.find((item) => item["id"] === outgoingId)!;
+      expect(outgoing["transfer"]).toBe(true);
+
+      // The amount changes, so the pair cannot be one any more. Keeping the flag
+      // as it was must not leave both rows out of the figures by a stale link.
+      const edited = await call(harness.app, harness.client, {
+        method: "PUT",
+        url: `/api/transactions/${outgoingId}`,
+        payload: { entity: { ...outgoing, amountMinor: -30000 } },
+      });
+      expect(edited.statusCode).toBe(200);
+      expect(edited.json<{ entity: { transfer?: boolean } }>().entity.transfer).toBeUndefined();
+      expect(
+        (await call(harness.app, harness.client, { method: "GET", url: "/api/transfers" })).json<{
+          items: unknown[];
+        }>().items,
+      ).toHaveLength(0);
+    } finally {
+      await harness.close();
+    }
+  });
 });
 
 describe("data portability API", () => {

@@ -47,6 +47,7 @@ import {
   type TaggingRule,
 } from "../domain/tagging-rule.js";
 import { validateTransaction, type Transaction } from "../domain/transaction.js";
+import { validateTransferLink, type TransferLink } from "../domain/transfer.js";
 import { EXPORT_FORMAT_VERSION, VAULT_FORMAT_VERSION } from "../version.js";
 
 export class VaultLockedError extends Error {
@@ -135,6 +136,7 @@ export class Vault {
   readonly bankLinks: StoreRepository<BankLink>;
   readonly bankAccounts: StoreRepository<BankAccountLink>;
   readonly bankPayloads: StoreRepository<BankPayload>;
+  readonly transferLinks: StoreRepository<TransferLink>;
 
   private readonly clock: Clock;
   private readonly headerValue: VaultHeader;
@@ -198,6 +200,16 @@ export class Vault {
       "bank_payloads",
       validateBankPayload,
       (payload) => ({ refA: payload.providerAccountUid, refB: payload.fetchedAt }),
+    );
+    // Both legs are ordinary transactions, so each one is its own index: the
+    // pairing reads the links to know what it has already joined.
+    this.transferLinks = repository<TransferLink>(
+      "transfer_links",
+      validateTransferLink,
+      (link) => ({
+        refA: link.outgoingTransactionId,
+        refB: link.incomingTransactionId,
+      }),
     );
   }
 

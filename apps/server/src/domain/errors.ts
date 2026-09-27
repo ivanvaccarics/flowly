@@ -4,6 +4,7 @@ export type DomainErrorCode =
   | "invalid-value"
   | "invalid-tagging-rule"
   | "invalid-transaction"
+  | "invalid-transfer-link"
   | "invalid-account";
 
 export class DomainError extends Error {

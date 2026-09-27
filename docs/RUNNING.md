@@ -38,10 +38,10 @@ What works today (end of Phase 6):
 - accounts, transactions with notes and tags (paged on the server, 25 rows per
   page by default), and tag management
 - tagging rules with an explicit backfill over existing transactions
-- transfers between accounts you own, marked by hand on the movement: they stay
-  in the ledger and in the balances and out of income, expenses and the spending
-  breakdown, and the ledger filters on the flag, on the source and on an amount
-  range
+- transfers between accounts you own, recognised automatically when the two legs
+  arrive: they stay in the ledger and in the balances and out of income, expenses
+  and the spending breakdown, the ledger filters on the flag, on the source and
+  on an amount range, and a flag you set by hand wins over the pairing
 - transaction CSV export/import with preview, a plain ZIP with one CSV per
   table for taking your data elsewhere, plus the encrypted complete archive
 - Enable Banking: connect a bank from Settings, choose for each shared account
@@ -212,6 +212,39 @@ refresh can be replayed or audited. The ledger makes that visible without a CLI:
 fields and the bank's fields, flattened into tables, plus the exact JSON. The
 plain-text tables ZIP redacts the private key, and only the password-encrypted
 archive carries it.
+
+### Transfers between your own accounts
+
+Money that moves between two accounts you own is not income and not spending, so
+Flowly pairs the two movements and marks both as a transfer; the dashboard then
+leaves them out of income, expenses and the spending breakdown while the ledger,
+the balances and every export keep counting them.
+
+The pairing runs by itself. After a bank sync or a CSV import it looks at the
+rows that just arrived together with the undecided ones within three days of
+them, which is how the two legs complete when they come from different accounts
+or different files; writing or editing a movement by hand does the same, and
+unlocking the vault sweeps the whole ledger, so history imported before the
+feature is marked too. It only ever decides rows nobody has decided: a
+`Between my accounts` or `Not a transfer` you set stays exactly as you left it,
+and changing the flag by hand releases the pair instead of being overwritten.
+
+How sure the pairing is depends on what the bank sent. When each leg names the
+account on the other side, the pair is corroborated by the IBANs; when a bank
+does not name it, the fallback is the amount and the date, which is weaker
+evidence. Four things move the decision back to you:
+
+- flip the flag in the movement editor to **Not a transfer** (or to **Between my
+  accounts**) and the pair is released, so a later sweep will not put it back;
+- editing a paired movement until the two no longer match — another amount,
+  account, currency or date — dissolves the pair on both sides;
+- clearing the flag to **Automatic** hands the row back to the pairing;
+- `GET /api/transfers` lists every link with its two movements, its method
+  (`iban`, `counterparty`, `amount`), its confidence and the day gap;
+- `POST /api/transfers/reconcile` runs the whole-ledger sweep again on demand.
+
+A transfer booked with a fee, or one booked in two currencies, does not pair and
+stays undecided — mark it by hand.
 
 ## 3. Self-hosted on your own network (Docker Compose)
 

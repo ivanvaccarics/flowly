@@ -47,11 +47,10 @@ throwaway vault full of invented data, never from a real one.
 - **Transactions** — payee, dates, status, tags and your own notes, kept
   separate from imported bank descriptions so nothing you write is overwritten,
   with server-side filters and paging over the whole ledger. A movement between
-  two accounts you own can be marked as a transfer: it stays in the ledger and
-  in the balances, and it is left out of income, expenses and the spending
-  breakdown, because the same money is not earned or spent twice. The ledger
-  filters on account, tag, status, source, transfer and amount, as well as on
-  free text.
+  two accounts you own is recognised as a transfer and stays in the ledger and
+  in the balances while leaving income, expenses and the spending breakdown
+  alone, because the same money is not earned or spent twice. The ledger filters
+  on account, tag, status, source, transfer and amount, as well as on free text.
 - **Tags** — Unicode-aware and case-insensitive, keeping the casing you typed,
   colour-coded and renameable in place. Tags added by hand and by a rule share
   one set, and a rule never removes a tag you chose.
@@ -59,6 +58,12 @@ throwaway vault full of invented data, never from a real one.
   with decimal amounts in their own currency (never a count of cents), a live
   preview of what a draft would match, and a coverage count per rule and tag.
   Rules only add tags, and deleting one never takes a tag away.
+- **Transfers between your own accounts** — the pairing recognises the two legs
+  of one internal transfer (equal and opposite amounts on two accounts, with the
+  counterparty IBAN the bank printed as its best evidence) and marks both, so the
+  money that only moved does not count as income or spending. It runs on every
+  sync, import and edit; a flag you set by hand wins, and a wrong pair is one
+  edit away.
 - **Multi-currency, honestly** — amounts are integers in minor units and every
   transaction keeps its original currency, so no total ever blends unlike
   currencies without a real exchange rate.

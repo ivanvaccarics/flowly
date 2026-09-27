@@ -571,7 +571,7 @@ export const schemas = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowly.local/contracts/schemas/transaction.schema.json",
     "title": "Transaction",
-    "description": "A transaction. `amountMinor` is signed: inflows positive, outflows negative. `transfer` marks a movement that only moves money between the user's own accounts: absent means undecided, a boolean is the user's decision, and `true` keeps the row out of income, expenses and spending.",
+    "description": "A transaction. `amountMinor` is signed: inflows positive, outflows negative. `counterpartyIban` is the account on the other side when the bank names it, compacted and uppercased. `transfer` marks a movement that only moves money between the user's own accounts: absent means undecided, a boolean is the user's decision, and `true` keeps the row out of income, expenses and spending.",
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -678,6 +678,11 @@ export const schemas = {
       },
       "transfer": {
         "type": "boolean"
+      },
+      "counterpartyIban": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}[0-9A-Z]{11,32}$",
+        "description": "The account on the other side of the movement, compacted and uppercased, when the bank prints it on its own leg. It is what lets transfer pairing compare against the user's own accounts instead of reading the payee."
       },
       "createdAt": {
         "type": "string",
