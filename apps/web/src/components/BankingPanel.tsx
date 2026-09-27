@@ -13,6 +13,7 @@ import { Icon } from "./icons.js";
 import { Banner, Chip, Empty, FileField } from "./ui.js";
 import { describeBankAuthorizationError } from "../lib/banking-errors.js";
 import { formatMoney } from "../lib/money.js";
+import { formatStamp } from "../lib/stamps.js";
 
 const STATUS_LABEL: Record<BankLinkSummary["status"], string> = {
   pending: "waiting for the bank",
@@ -1073,10 +1074,6 @@ function LinkCard({
       ) : null}
     </section>
   );
-}
-
-function formatStamp(value: string): string {
-  return new Date(value).toISOString().replace("T", " ").slice(0, 16);
 }
 
 interface StartedAuthorization {

@@ -3,6 +3,7 @@ import { api, type BankLinkSummary } from "../api/client.js";
 import { useBanking } from "../hooks/use-banking.js";
 import { Icon } from "./icons.js";
 import { Chip } from "./ui.js";
+import { formatStamp } from "../lib/stamps.js";
 
 /**
  * Dashboard entry point for Enable Banking: shows when the vault last pulled
@@ -139,10 +140,6 @@ export function BankingSyncCard({
       {message ? <p className="banner ok">{message}</p> : null}
     </section>
   );
-}
-
-function formatStamp(value: string): string {
-  return new Date(value).toISOString().replace("T", " ").slice(0, 16);
 }
 
 /** The first instant at which a linked bank stops refusing reads for the day. */
