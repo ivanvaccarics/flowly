@@ -257,9 +257,10 @@ docker compose up -d
 
 Using `deployment/self-hosted/startup.sh` instead? It notices the new commit by
 itself, pulls the published image for it, and builds only when the registry has
-nothing for that commit. It also clears the image layers the new one replaced,
-which is what keeps a small disk from filling up: see
-[AUTOMATIC_STARTUP.md](./AUTOMATIC_STARTUP.md#when-the-image-is-built).
+nothing for that commit. Once the new image is the one running, it keeps only
+that one — the previous tags and the project's unused volumes go — which is what
+keeps a small disk from filling up: see
+[AUTOMATIC_STARTUP.md](./AUTOMATIC_STARTUP.md#disk-housekeeping).
 
 On startup the server applies pending migrations. Every migration runs in a
 transaction, and any failure rolls back to the previous schema, so an
@@ -278,10 +279,15 @@ curl -k https://127.0.0.1:8443/api/system/info
 1. Stop the stack: `docker compose ... down`.
 2. Take the archive export from **before** the upgrade, or the snapshot the
    upgrade created under `data/vault/snapshots/`.
-3. Start the previous image tag (`docker compose ... up -d` with that tag, or
-   rebuild from the previous commit).
+3. Start the previous image tag: pull it again if it is not on disk any more
+   (`FLOWLY_IMAGE=ghcr.io/ivanvaccarics/flowly:<version> docker compose pull`,
+   then `docker compose ... up -d`), or rebuild from the previous commit.
 4. If the newer schema had been applied and you need the old one, restore from
    the pre-upgrade archive export: create a fresh vault and import it.
+
+`startup.sh` keeps only the image the stack is running, so an older version is
+normally gone from disk after an update. Its tag is not gone from the registry:
+publishing never deletes, so the pull above brings it back.
 
 The vault never migrates backwards on its own; restoring the pre-upgrade data is
 an explicit, user-driven action.

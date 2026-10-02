@@ -11,7 +11,10 @@
 #      GitHub Actions published when the checkout moved on since the local one
 #      was built, and only compiles here as a last resort (see "The source stamp"
 #      below), then starts the stack with `docker compose up -d`,
-#   3. publishes it to the tailnet with `tailscale serve` (never Funnel).
+#   3. once the new image is the one running, clears the disk of the old ones:
+#      every other Flowly image and this project's unused volumes go, so only the
+#      version in use stays,
+#   4. publishes it to the tailnet with `tailscale serve` (never Funnel).
 #
 # The source stamp: the image records a hash of the files it was built from, and
 # this script compares it with the checkout on every run. Same hash, nothing to
@@ -71,6 +74,12 @@ Options:
   --stamp-files    Print one line per file — `<path> <sha256>` — that feeds the
                    stamp, to diff two checkouts and see what actually differs.
   --help           Show this message.
+
+Whenever the image changes — pulled from the registry or built here — the script
+keeps only the Flowly image the stack now runs. The other images of the same
+repository, the local build tag, and the volumes of this Compose project that no
+container uses are removed after the stack is back up. Other applications on the
+same Docker daemon are never touched: there is no machine-wide `prune` here.
 
 Environment (read from .env, optional):
   FLOWLY_BIND_IP, FLOWLY_SITE_PORT, FLOWLY_SITE_ADDRESS   See .env.example
@@ -394,14 +403,103 @@ if [ -n "$build_reason" ] && [ "$build" = "pull" ]; then
   log "         Wait for the workflow, or run: docker compose pull server"
 fi
 
-# A new image leaves the previous one untagged on disk, and on a Raspberry Pi's SD
-# card that is the difference between months and weeks of room. Only dangling
-# images are removed — no tag points at them and no container uses them — so what
-# is running, what you named and every volume stay exactly where they are.
+# A new image leaves the previous one on disk, and on a Raspberry Pi's SD card
+# that is the difference between months and weeks of room. The point of a pull is
+# to run the newest version, so the newest one is all that stays: its
+# predecessors go, and so do the volumes of this Compose project that nothing
+# uses. Nothing here is machine-wide — every command is scoped to the Flowly
+# image repositories and to the project's own label — so another application on
+# the same Docker daemon is never a candidate.
+
+# The repository part of an image reference: `ghcr.io/owner/flowly:1.2.3` turns
+# into `ghcr.io/owner/flowly`, and `flowly-server:local` into `flowly-server`. A
+# colon is a tag only when it comes after the last slash, so the port of a
+# registry (`localhost:5000/flowly`) is not mistaken for one.
+image_repository() {
+  local ref="${1%%@*}" last
+  case "$ref" in
+    */*)
+      last="${ref##*/}"
+      case "$last" in
+        *:*) printf '%s' "${ref%:*}" ;;
+        *) printf '%s' "$ref" ;;
+      esac
+      ;;
+    *)
+      printf '%s' "${ref%%:*}"
+      ;;
+  esac
+}
+
+# The Compose project name, read from the running server container so it follows
+# the `name:` in the compose file (`flowly` today) instead of being hard-coded.
+compose_project() {
+  local container
+  container="$(cd "$REPO_ROOT" && docker compose ps -q server 2>/dev/null | head -n1 || true)"
+  [ -n "$container" ] || return 0
+  docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "$container" 2>/dev/null || true
+}
+
+# Every Flowly image except the one the stack runs now: the previous versions of
+# the same repository and the local build tag this script creates. The running
+# image is matched by ID, so its other names are not touched — the same image
+# under another tag is not another version. Shared layers are freed by the
+# dangling-image prune that follows.
+remove_stale_flowly_images() {
+  local keep repos=() repo tag id match candidate removed=0
+  keep="$(docker image inspect --format '{{.Id}}' "$image" 2>/dev/null || true)"
+  repos+=("$(image_repository "$image")")
+  [ "${repos[0]}" = "flowly-server" ] || repos+=("flowly-server")
+  while IFS='|' read -r repo tag id; do
+    [ -n "$repo" ] || continue
+    match=0
+    for candidate in "${repos[@]}"; do
+      if [ "$repo" = "$candidate" ]; then
+        match=1
+      fi
+    done
+    [ "$match" -eq 1 ] || continue
+    if [ -n "$keep" ] && [ "$id" = "$keep" ]; then
+      continue
+    fi
+    if docker image rm "$repo:$tag" >/dev/null 2>&1; then
+      removed=$((removed + 1))
+      log "Disk: removed the old image $repo:$tag"
+    fi
+  done < <(docker image ls --no-trunc --format '{{.Repository}}|{{.Tag}}|{{.ID}}' 2>/dev/null || true)
+  if [ "$removed" -eq 0 ]; then
+    log "Disk: no older Flowly image to remove"
+  else
+    log "Disk: removed $removed older Flowly image(s)"
+  fi
+}
+
+# The volumes of this Compose project that no container uses. Flowly keeps its
+# data in bind mounts (`data/`), so this normally finds nothing: it is here for
+# the volumes an older layout could have left behind. `--all` is what lets a
+# named volume be removed at all — plain `docker volume prune` only takes
+# anonymous ones — and the label filter is what keeps the command scoped: a
+# machine-wide `docker volume prune --all`, which would delete every other
+# application's data on the same Docker daemon, is never run.
+remove_stale_flowly_volumes() {
+  local project reclaimed
+  project="$(compose_project)"
+  if [ -z "$project" ]; then
+    log "Disk: could not read the Compose project name; leaving volumes alone"
+    return 0
+  fi
+  reclaimed="$(docker volume prune --force --all --filter "label=com.docker.compose.project=$project" 2>&1 | tail -n1 || true)"
+  log "Disk: cleared the unused '$project' volumes (${reclaimed:-nothing to clear})"
+}
+
 reclaim_old_layers() {
   local reclaimed
+  remove_stale_flowly_images
+  # What the removal above untagged, plus everything a local rebuild replaced:
+  # image layers no tag and no container points at any more.
   reclaimed="$(docker image prune --force 2>&1 | tail -n1 || true)"
-  log "Disk: cleared what the new image replaced (${reclaimed:-nothing to clear})"
+  log "Disk: cleared the layers the replacement left behind (${reclaimed:-nothing to clear})"
+  remove_stale_flowly_volumes
   if [ "$prune_cache" -eq 1 ]; then
     reclaimed="$(docker builder prune --force 2>&1 | tail -n1 || true)"
     log "Disk: cleared the build cache too (${reclaimed:-nothing to clear})"
@@ -444,8 +542,10 @@ if ! (cd "$REPO_ROOT" && docker compose up $up_args); then
   exit 1
 fi
 
-# After the container has been recreated: until then the old image is still in
-# use, so its layers could not be freed anyway.
+# After the container has been recreated, never before: until then the previous
+# image is still in use. By this point the replacement is already in place — it
+# was pulled or built above — so nothing is deleted while the only copy on disk
+# is the one the stack still needs.
 if [ "$pulled" -eq 1 ] || [ "$built" -eq 1 ]; then
   reclaim_old_layers
 fi

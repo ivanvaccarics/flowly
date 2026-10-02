@@ -125,9 +125,12 @@ The script:
    what makes Compose substitute those values),
 2. waits for the Docker daemon, then runs `docker compose up -d` from the
    repository root (with `--build` when you asked for a rebuild),
-3. waits for tailscaled, then applies
+3. when that changed the image, removes the older Flowly images and this
+   project's unused volumes, keeping only the version now running
+   ([Disk housekeeping](#disk-housekeeping)),
+4. waits for tailscaled, then applies
    `tailscale serve --bg --https=443 https+insecure://127.0.0.1:<FLOWLY_SITE_PORT>`,
-4. prints `docker compose ps`, the tailnet URL, and the callback URL to register
+5. prints `docker compose ps`, the tailnet URL, and the callback URL to register
    in Enable Banking.
 
 `https+insecure` is correct here: Caddy answers with a certificate from its own
@@ -154,24 +157,46 @@ Flags:
 
 ### Disk housekeeping
 
-Every pull leaves the previous image behind as an untagged pile of layers, and on
-a Raspberry Pi's SD card that is the difference between months and weeks of room.
-Whenever the image changed — pulled from the registry or built here — the script
-runs `docker image prune --force` once the stack is back up, and reports what it
-freed:
+Every update leaves the previous image behind — untagged when the pull replaced
+the tag, still tagged when it was a different one — and on a Raspberry Pi's SD
+card that is the difference between months and weeks of room. Whenever the image
+changed — pulled from the registry or built here — the script keeps **only the
+image the stack now runs**, and reports what it removed:
 
 ```
-[startup.sh] Disk: cleared what the new image replaced (Total reclaimed space: 612MB)
+[startup.sh] Disk: removed the old image ghcr.io/ivanvaccarics/flowly:main
+[startup.sh] Disk: removed the old image ghcr.io/ivanvaccarics/flowly:1.0.0
+[startup.sh] Disk: removed 2 older Flowly image(s)
+[startup.sh] Disk: cleared the layers the replacement left behind (Total reclaimed space: 612MB)
+[startup.sh] Disk: cleared the unused 'flowly' volumes (Total reclaimed space: 0B)
 ```
 
-It runs after `docker compose up -d` on purpose: until the container is recreated
-the old image is still in use and its layers could not be freed anyway.
+It runs after `docker compose up -d`, and never before: by then the new image is
+pulled or built and the container has been recreated with it, so the previous one
+is the only thing that can go without taking Flowly down. An update never leaves
+two versions on disk — that is the point — and it is why the old *tags* are
+removed even though a tag still points at them.
 
-What is removed is only what nothing points at: **dangling images**, meaning no
-tag and no container. Tagged images, running containers and every volume stay
-exactly where they are — and the vault and the certificates live in `data/`, a
-bind mount, so `docker system prune` and volume pruning are never needed here and
-the script does not go near them.
+What the removal is scoped to:
+
+- **This Flowly image's repository** — `ghcr.io/ivanvaccarics/flowly` by default,
+  or whatever `FLOWLY_IMAGE` names — plus the local `flowly-server:local` build
+  tag. Another application's images are never candidates, and there is no
+  `docker image prune --all`.
+- **Volumes labelled with this Compose project** (`flowly`), and only the ones no
+  container uses. The vault and the certificates live in `data/`, a bind mount, so
+  this normally finds nothing: it is there for what an older layout could have
+  left behind. `--all` is what lets a *named* volume be removed at all, and it is
+  always paired with that label filter; a machine-wide `docker volume prune
+  --all`, which would delete other applications' data, is never run.
+
+The image the stack runs is matched by ID: when `latest`, `main` and a version
+tag all point at the same build, they all stay, because the same image under
+another name takes no extra room. Shared layers are freed by the dangling-image
+prune that follows the tag removal.
+
+The choice, and what it costs for offline rollback, is recorded in
+[docs/adr/0042](./adr/0042-startup-keeps-only-the-image-in-use.md).
 
 `--prune` goes one step further and empties the BuildKit build cache, which is
 the big one on a machine that has compiled SQLCipher (gigabytes, not megabytes).
