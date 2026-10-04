@@ -264,6 +264,23 @@ await step("dashboard aggregates the data", async () => {
   return `expenses ${flow.expensesMinor} EUR, tagged ${tagSpending.spentMinor} EUR`;
 });
 
+await step("expense details read one currency for the period", async () => {
+  const today = new Date();
+  const months = today.toISOString().slice(0, 7);
+  const { status, body } = await call(`/api/analytics/expenses?months=${months}`);
+  expect(status === 200, `expense details returned ${status}`);
+  expect(body.currency === "EUR", `expected EUR as the detail currency, got ${body.currency}`);
+  expect(
+    body.totals && body.totals.spentMinor >= 5230,
+    "expected the period's spending in the detail totals",
+  );
+  const category = body.byCategory.find((entry) => entry.tagName === "Acceptance Coffee");
+  expect(category && category.spentMinor >= 5230, "expected the tagged spending by category");
+  const day = body.daily.find((entry) => entry.spentMinor >= 5230);
+  expect(day, "expected the spending to land on one of the period's days");
+  return `${body.currency} ${body.totals.spentMinor}, ${body.byCategory.length} categories`;
+});
+
 await step("concurrent edits are rejected instead of overwritten", async () => {
   const current = await call(`/api/accounts/${created.account}`);
   expect(current.status === 200, `account read returned ${current.status}`);

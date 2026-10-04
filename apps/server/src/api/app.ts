@@ -538,6 +538,50 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     return dashboard;
   });
 
+  /**
+   * The expense detail view. It takes the same `months` scope as the dashboard
+   * — a scattered set of months stays exactly that set — and answers with one
+   * currency's figures plus the currencies it left out by name.
+   */
+  app.get("/api/analytics/expenses", async (request, reply) => {
+    const context = requireContext(request, reply);
+    if (!context) return errorBody(reply);
+    const query = request.query as Record<string, unknown>;
+    const today = new Date().toISOString().slice(0, 10);
+    const months = parseMonthKeys(query["months"]);
+    if (months === undefined) {
+      reply.code(400);
+      return { error: "invalid_date_range", message: "months must be YYYY-MM values" };
+    }
+    const from =
+      months.length > 0
+        ? `${months[0]}-01`
+        : typeof query["from"] === "string"
+          ? query["from"]
+          : `${today.slice(0, 7)}-01`;
+    const to =
+      months.length > 0
+        ? monthEnd(months[months.length - 1]!)
+        : typeof query["to"] === "string"
+          ? query["to"]
+          : today;
+    if (!isIsoDate(from) || !isIsoDate(to) || from > to) {
+      reply.code(400);
+      return { error: "invalid_date_range" };
+    }
+    const details = await new AnalyticsService(context.vault).expenseDetails({
+      from,
+      to,
+      months,
+    });
+    const validation = validateContract("expenseDetails", details);
+    if (!validation.valid) {
+      reply.code(500);
+      return { error: "contract_violation", details: validation.errors };
+    }
+    return details;
+  });
+
   // --- destructive operations, cascades and tagging backfill -----------------
 
   app.post("/api/accounts/:id/archive", async (request, reply) => {

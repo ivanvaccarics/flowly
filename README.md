@@ -34,10 +34,10 @@ database, not in journals, not in caches, not in logs.
 
 ## What it looks like
 
-Six sections, one design language, and every figure read from the vault. No
+Seven sections, one design language, and every figure read from the vault. No
 placeholder data anywhere in the app.
 
-📸 **[The six sections, one picture each →](docs/SCREENSHOTS.md)** — taken from a
+📸 **[The seven sections, one picture each →](docs/SCREENSHOTS.md)** — taken from a
 throwaway vault full of invented data, never from a real one.
 
 ## Features
@@ -70,6 +70,12 @@ throwaway vault full of invented data, never from a real one.
 - **Dashboard** — every figure follows the months you select; cash flow is
   charted month by month and spending is a donut per currency, and both answer
   the pointer and the keyboard.
+- **Details** — the period read closely, one currency at a time: totals and
+  averages, spending by category, by account and by source, the distribution
+  across amount bands, a daily heatmap, a cumulative trajectory with a
+  projection at the pace so far, and a week-by-week trend against the period's
+  own average. No budget and no invented taxonomy: every figure comes from the
+  booked movements the vault holds.
 - **Search** — server-side filters over date range, account, tag, amount,
   currency, status and source, plus free text across payee, description and
   notes.

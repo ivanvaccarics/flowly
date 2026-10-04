@@ -297,18 +297,22 @@ never silently overwrites a newer edit from another browser session.
 
 The web client implements the repository's own design system — *Sovereign
 Ledger*, re-tokened from the redrawn `ui/*` mockups and summarized in
-`docs/DESIGN.md` — with one sidebar shell and six sections: Dashboard, Accounts,
-Transactions, Tags, Rules and Settings. Settings opens with the Enable Banking
+`docs/DESIGN.md` — with one sidebar shell and seven sections: Dashboard,
+Details, Accounts, Transactions, Tags, Rules and Settings. Settings opens with the Enable Banking
 connection and then carries the passphrase change plus export and import. The
 shell's top bar carries the section title, the clock and the session controls,
-and the sidebar is the brand and the six sections; cards are white with a
+and the sidebar is the brand and the seven sections; cards are white with a
 hairline outline over a slate canvas, tinted
 panels carry nested controls, and the dashboard charts cash flow per month and
 spending as a donut per currency. The dashboard is scoped by the period the
 reader picks — a preset, a year strip or any combination of months as removable
 chips — and by nothing else: the figures, the chart and the recent movements
 describe every category of those months, and a legend row opens the ledger on
-its tag. The transactions ledger reads its
+its tag. The Details section (ADR 0043) reads the same period closely in one
+currency at a time: totals and averages, spending by category, account and
+source, the amount distribution, a daily heatmap and a cumulative trajectory
+with a projection at the pace so far, never a budget or an invented taxonomy.
+The transactions ledger reads its
 rows from the server one page at a time — 25 by default, with a page-size
 selector, the visible range and Previous/Next — so a vault with thousands of
 movements is browsable instead of truncated. Only implemented features are
@@ -1961,6 +1965,35 @@ Status: **complete** (2026-09-27), decision in `docs/adr/0041`.
   leg to undecided, clearing it hands the row back to the pairing, and an edit
   that breaks the pair (another amount, account, currency or date) dissolves the
   link on both sides.
+
+#### Task `read-the-period-in-detail`
+
+Status: **complete** (2026-10-04), decision in `docs/adr/0043`.
+
+- A new **Details** section sits directly after Dashboard in the sidebar. It
+  opens with the shared `SectionIntro` and the same period picker, and holds its
+  own four-card figure row and six panels; the dashboard is unchanged.
+- `GET /api/analytics/expenses` answers it under a new `ExpenseDetails` contract
+  (`contracts/schemas/expense-details.schema.json`, its fixture, the generated
+  type and the AJV validator). It takes the dashboard's `months` scope, keeps
+  the scattered-set semantics (`daily[].selected`), and reads booked, non-
+  transfer movements only.
+- Every figure is in one currency: the one the period spends most in, named in
+  `currency`, with the others listed in `otherCurrencies` and never converted.
+  The panels are the totals and averages, spending by tag, by account and by
+  source, the amount-band distribution, the daily series and the seven-day
+  slices.
+- The client draws the category donut, the weekly bars with the period's own
+  average as a reference line, the cumulative trajectory with a projection at
+  the elapsed pace, and a Mon–Sun daily heatmap — all SVG with HTML hit targets
+  and one readable summary, and no new dependency. A projection appears only
+  when the period covers today.
+- No budget threshold, no fixed/variable split and no 50/30/20 model: those
+  describe decisions the vault does not store (ADR 0010, ADR 0015), so the page
+  reads what the movements prove instead.
+- The contract test gained the fixture, the server suite the aggregate and the
+  route, the web suite the view and the navigation, and the screenshot script
+  and `docs/SCREENSHOTS.md` a seventh section.
 
 ### Phase 8 - Desktop application foundation
 

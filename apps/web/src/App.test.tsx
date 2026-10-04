@@ -69,6 +69,70 @@ const dashboard = {
   ],
 };
 
+const expenseDetails = {
+  range: { from: "2026-09-01", to: "2026-09-30" },
+  generatedAt: "2026-09-30T18:00:00.000Z",
+  currency: "EUR",
+  otherCurrencies: [],
+  totals: {
+    spentMinor: 103000,
+    incomeMinor: 250000,
+    netMinor: 147000,
+    transactionCount: 5,
+    calendarDays: 30,
+    activeDays: 4,
+    averageDailyMinor: 3433,
+    averageActiveDayMinor: 25750,
+    averageTicketMinor: 20600,
+    largestMinor: 95000,
+    largestDate: "2026-09-30",
+    largestPayee: "Landlord",
+  },
+  byCategory: [
+    {
+      tagId: "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082",
+      tagName: "Rent",
+      spentMinor: 95000,
+      transactionCount: 1,
+      averageMinor: 95000,
+      largestMinor: 95000,
+    },
+  ],
+  untagged: { spentMinor: 8000, transactionCount: 4 },
+  daily: [
+    { date: "2026-09-01", selected: true, spentMinor: 0, transactionCount: 0 },
+    { date: "2026-09-30", selected: true, spentMinor: 95000, transactionCount: 1 },
+  ],
+  weekly: [
+    {
+      label: "Week 1",
+      from: "2026-09-01",
+      to: "2026-09-07",
+      spentMinor: 8000,
+      transactionCount: 4,
+    },
+  ],
+  byAccount: [
+    {
+      accountId: "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+      accountName: "Everyday",
+      spentMinor: 103000,
+      transactionCount: 5,
+    },
+  ],
+  bySource: [{ source: "manual", spentMinor: 103000, transactionCount: 5 }],
+  amountBands: [
+    {
+      key: "over-500",
+      label: "500 and over",
+      lowerMinor: 50000,
+      upperMinor: null,
+      count: 1,
+      spentMinor: 95000,
+    },
+  ],
+};
+
 interface RouteMap {
   [path: string]: (init?: RequestInit) => Response;
 }
@@ -101,6 +165,7 @@ function unlockedRoutes(): RouteMap {
         "set-cookie": "flowly_sid=abc",
       }),
     "/api/dashboard": () => json(dashboard),
+    "/api/analytics/expenses": () => json(expenseDetails),
     "/api/accounts": () => json({ items: [] }),
     "/api/transactions": () => json({ items: [], total: 0, limit: 100, offset: 0 }),
     "/api/tags": () => json({ items: [] }),
@@ -175,7 +240,15 @@ describe("Flowly web client", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Financial overview" })).toBeTruthy(),
     );
-    for (const section of ["Dashboard", "Accounts", "Transactions", "Tags", "Rules", "Settings"]) {
+    for (const section of [
+      "Dashboard",
+      "Details",
+      "Accounts",
+      "Transactions",
+      "Tags",
+      "Rules",
+      "Settings",
+    ]) {
       expect(screen.getByRole("button", { name: section })).toBeTruthy();
     }
     // The shell states the vault state, not its storage engine or schema.
@@ -192,6 +265,23 @@ describe("Flowly web client", () => {
       expect(screen.queryByText(label)).toBeNull();
     }
     expect(screen.queryByTitle(/Vault identifier/)).toBeNull();
+  });
+
+  it("opens the expense details section from the sidebar", async () => {
+    mockFetch(unlockedRoutes());
+    await unlock();
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Financial overview" })).toBeTruthy(),
+    );
+    screen.getByRole("button", { name: "Details" }).click();
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Expense detail" })).toBeTruthy(),
+    );
+    await waitFor(() => expect(screen.getByText("Distribution by category")).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Show Rent in the ledger" })).toBeTruthy();
+    expect(screen.getByText("Largest expense")).toBeTruthy();
   });
 
   it("draws one donut per currency, never adding unlike ones", async () => {

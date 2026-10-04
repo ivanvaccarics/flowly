@@ -4,6 +4,7 @@ import { Icon, type IconName } from "./icons.js";
 import { Banner } from "./ui.js";
 import { AccountsView } from "../views/AccountsView.js";
 import { DashboardView } from "../views/DashboardView.js";
+import { DetailsView } from "../views/DetailsView.js";
 import { ledgerSeedKey, type LedgerFilterSeed } from "../lib/ledger-filter.js";
 import { RulesView } from "../views/RulesView.js";
 import { SettingsView } from "../views/SettingsView.js";
@@ -23,6 +24,7 @@ const NAVIGATION: Array<{
   icon: IconName;
 }> = [
   { key: "dashboard", label: "Dashboard", title: "Financial overview", icon: "dashboard" },
+  { key: "details", label: "Details", title: "Expense detail", icon: "details" },
   { key: "accounts", label: "Accounts", title: "Accounts & resources", icon: "accounts" },
   { key: "transactions", label: "Transactions", title: "Transactions", icon: "transactions" },
   { key: "tags", label: "Tags", title: "Tags", icon: "tags" },
@@ -192,6 +194,15 @@ export function AppShell({
               }}
               onExportData={openExport}
               onOpenSettings={() => setView("settings")}
+            />
+          ) : null}
+          {view === "details" ? (
+            <DetailsView
+              onSeeAllTransactions={(options) => {
+                setLedgerSeed(options);
+                setView("transactions");
+              }}
+              onExportData={openExport}
             />
           ) : null}
           {view === "accounts" ? <AccountsView csrf={csrf} /> : null}

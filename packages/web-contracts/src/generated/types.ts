@@ -91,6 +91,101 @@ export interface Dashboard {
 }
 
 /**
+ * The expense detail view computed from the vault for one period. Like the dashboard it is scoped by `months=YYYY-MM,…` and never blends currencies: `currency` is the one the period leans on most, every amount below is in its minor units, and the currencies left out are named in `otherCurrencies`. A caller that asks for no month set gets the contiguous `from`/`to` range instead, and `daily[].selected` is then true for every day.
+ */
+export interface ExpenseDetails {
+  range: {
+    from: string;
+    to: string;
+  };
+  generatedAt: string;
+  /**
+   * The currency the period spends most in, or null when the period holds no booked outflow at all.
+   */
+  currency: string | null;
+  /**
+   * Currencies that also carry booked outflows in the period and are therefore left out of every figure below.
+   */
+  otherCurrencies: string[];
+  totals: {
+    spentMinor: number;
+    incomeMinor: number;
+    netMinor: number;
+    transactionCount: number;
+    calendarDays: number;
+    activeDays: number;
+    averageDailyMinor: number;
+    averageActiveDayMinor: number;
+    averageTicketMinor: number;
+    largestMinor: number;
+    largestDate: string | null;
+    largestPayee: string | null;
+  };
+  /**
+   * Booked outflows grouped by tag. A movement that carries several tags counts in full under each of them, exactly as the dashboard's spending breakdown does.
+   */
+  byCategory: {
+    tagId: string;
+    tagName: string;
+    spentMinor: number;
+    transactionCount: number;
+    averageMinor: number;
+    largestMinor: number;
+  }[];
+  /**
+   * Booked outflows of the period that carry no tag at all.
+   */
+  untagged: {
+    spentMinor: number;
+    transactionCount: number;
+  };
+  /**
+   * One entry per calendar day of the range, so the heatmap and the cumulative chart keep a continuous axis. `selected` is false for a day whose month the caller left out of a scattered month set, and such a day never carries a figure.
+   */
+  daily: {
+    date: string;
+    selected: boolean;
+    spentMinor: number;
+    transactionCount: number;
+  }[];
+  /**
+   * Booked outflows per seven-day slice of the range, empty slices included, so the bars keep a continuous axis.
+   */
+  weekly: {
+    label: string;
+    from: string;
+    to: string;
+    spentMinor: number;
+    transactionCount: number;
+  }[];
+  byAccount: {
+    accountId: string;
+    accountName: string;
+    spentMinor: number;
+    transactionCount: number;
+  }[];
+  /**
+   * Booked outflows by where the row came from: typed by hand, imported from a file, or read from the bank.
+   */
+  bySource: {
+    source: "manual" | "csv-import" | "enable-banking";
+    spentMinor: number;
+    transactionCount: number;
+  }[];
+  /**
+   * Booked outflows bucketed by their absolute amount. The thresholds are 10, 50, 150 and 500 major units scaled to the currency's own minor units, so a JPY vault bands on whole yen.
+   */
+  amountBands: {
+    key: "under-10" | "10-50" | "50-150" | "150-500" | "over-500";
+    label: string;
+    lowerMinor: number;
+    upperMinor: number | null;
+    count: number;
+    spentMinor: number;
+  }[];
+}
+
+/**
  * Tags match case-insensitively; `name` preserves the casing the user typed.
  */
 export interface Tag {

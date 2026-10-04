@@ -44,6 +44,17 @@ const SECTIONS = [
     // strip all belong in one picture of the page.
     height: 2300,
   },
+  {
+    file: "details.png",
+    nav: "Details",
+    title: "Expense detail",
+    // The details page stacks its own figures, its charts and the heatmap, so
+    // it is captured tall like the dashboard it follows.
+    ready: ".dash-grid",
+    // Three months give every panel something to say.
+    prepare: "3 months",
+    height: 2200,
+  },
   { file: "accounts.png", nav: "Accounts", title: "Accounts & resources" },
   { file: "transactions.png", nav: "Transactions", title: "Transactions" },
   // The tag directory is a workbench of its own, not a banner and an intro.

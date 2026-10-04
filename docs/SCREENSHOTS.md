@@ -1,6 +1,6 @@
 # Flowly in pictures
 
-Six sections, one design language, and every figure read from the vault. No
+Seven sections, one design language, and every figure read from the vault. No
 placeholder data anywhere in the app — these are the screens the product ships,
 and [README.md](../README.md) is the tour of what they do.
 
@@ -8,6 +8,12 @@ and [README.md](../README.md) is the tour of what they do.
 the months you pick.
 
 ![Dashboard](./images/dashboard.png)
+
+**Details** — the same period read closely in one currency: totals and averages,
+spending by category, account and source, the amount distribution, a daily
+heatmap and a cumulative trajectory with a projection.
+
+![Details](./images/details.png)
 
 **Accounts** — one card per account with its real balance and booked-movement
 count; archived accounts stay visible and can be restored.
@@ -35,5 +41,5 @@ all against the local vault.
 ![Settings](./images/settings.png)
 
 > The screenshots come from a throwaway vault full of invented data: `pnpm
-> demo:seed` fills it and `pnpm demo:screenshots` captures the six sections — see
+> demo:seed` fills it and `pnpm demo:screenshots` captures the seven sections — see
 > [RUNNING.md](./RUNNING.md#regenerating-the-screenshots).

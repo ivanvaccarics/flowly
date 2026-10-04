@@ -1,4 +1,11 @@
-import type { Dashboard, Tag, TaggingRule, Transaction, VaultStatus } from "@flowly/web-contracts";
+import type {
+  Dashboard,
+  ExpenseDetails,
+  Tag,
+  TaggingRule,
+  Transaction,
+  VaultStatus,
+} from "@flowly/web-contracts";
 
 function queryString(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams();
@@ -283,6 +290,12 @@ export const api = {
       reference?: string;
     } = {},
   ) => request<Dashboard>(`/api/dashboard${queryString(params)}`),
+  /**
+   * The expense detail view for a period. It takes the same `months` scope as
+   * the dashboard and answers one currency's figures plus the ones it left out.
+   */
+  expenseDetails: (params: { months?: string; from?: string; to?: string } = {}) =>
+    request<ExpenseDetails>(`/api/analytics/expenses${queryString(params)}`),
   searchTransactions: (params: {
     accountId?: string;
     from?: string;

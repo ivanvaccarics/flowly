@@ -263,6 +263,98 @@ describe("dashboard", () => {
   });
 });
 
+describe("expense details", () => {
+  it("reads the period in the one currency it spends most in", async () => {
+    const { dir, vault, service } = await setup();
+    try {
+      const details = await service.expenseDetails({
+        from: "2026-09-01",
+        to: "2026-09-30",
+        months: ["2026-09"],
+      });
+      expect(details.currency).toBe("EUR");
+      expect(details.otherCurrencies).toEqual(["USD"]);
+      expect(details.totals).toEqual({
+        spentMinor: 103000,
+        incomeMinor: 250000,
+        netMinor: 147000,
+        transactionCount: 4,
+        calendarDays: 30,
+        activeDays: 4,
+        averageDailyMinor: 3433,
+        averageActiveDayMinor: 25750,
+        averageTicketMinor: 25750,
+        largestMinor: 95000,
+        largestDate: "2026-09-30",
+        largestPayee: "Landlord",
+      });
+      // The pending row and the August row are not part of September.
+      expect(
+        details.byCategory.map((entry) => [
+          entry.tagName,
+          entry.spentMinor,
+          entry.transactionCount,
+        ]),
+      ).toEqual([
+        ["Rent", 95000, 1],
+        ["Groceries", 8000, 3],
+      ]);
+      expect(details.untagged).toEqual({ spentMinor: 0, transactionCount: 0 });
+      expect(details.daily).toHaveLength(30);
+      expect(details.daily.find((day) => day.date === "2026-09-05")).toMatchObject({
+        selected: true,
+        spentMinor: 4000,
+        transactionCount: 1,
+      });
+      expect(details.weekly.map((week) => week.spentMinor)).toEqual([5000, 3000, 0, 0, 95000]);
+      expect(details.byAccount).toEqual([
+        {
+          accountId: CHECKING,
+          accountName: "Everyday",
+          spentMinor: 100000,
+          transactionCount: 3,
+        },
+        { accountId: CREDIT, accountName: "Credit", spentMinor: 3000, transactionCount: 1 },
+      ]);
+      expect(details.bySource).toEqual([
+        { source: "manual", spentMinor: 103000, transactionCount: 4 },
+      ]);
+      expect(details.amountBands.map((band) => [band.key, band.count, band.spentMinor])).toEqual([
+        ["under-10", 0, 0],
+        ["10-50", 3, 8000],
+        ["50-150", 0, 0],
+        ["150-500", 0, 0],
+        ["over-500", 1, 95000],
+      ]);
+    } finally {
+      await vault.lock();
+      cleanup(dir);
+    }
+  });
+
+  it("keeps a scattered month set and marks the days it left out", async () => {
+    const { dir, vault, service } = await setup();
+    try {
+      const details = await service.expenseDetails({
+        from: "2026-08-01",
+        to: "2026-09-30",
+        months: ["2026-08", "2026-09"],
+      });
+      expect(details.daily).toHaveLength(61);
+      expect(details.daily.find((day) => day.date === "2026-08-31")).toMatchObject({
+        selected: true,
+        spentMinor: 500,
+      });
+      expect(details.totals.calendarDays).toBe(61);
+      expect(details.totals.activeDays).toBe(5);
+      expect(details.totals.spentMinor).toBe(103500);
+    } finally {
+      await vault.lock();
+      cleanup(dir);
+    }
+  });
+});
+
 describe("transfers between the user's own accounts", () => {
   const SEPTEMBER = { from: "2026-09-01", to: "2026-09-30", months: ["2026-09"] };
 

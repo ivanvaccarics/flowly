@@ -19,6 +19,7 @@ const fixtureFor: Record<string, ContractKey> = {
   "tagging-rule": "taggingRule",
   "vault-status": "vaultStatus",
   dashboard: "dashboard",
+  "expense-details": "expenseDetails",
 };
 
 describe("canonical contracts", () => {

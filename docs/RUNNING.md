@@ -337,7 +337,7 @@ FLOWLY_LOG_LEVEL=warn node apps/server/dist/index.js &
 # 2. Fill the vault: accounts, tags, rules and about three months of movements.
 pnpm demo:seed -- http://127.0.0.1:8787 --create
 
-# 3. Capture the six sections into docs/images (1440 wide, headless Chrome).
+# 3. Capture the seven sections into docs/images (1440 wide, headless Chrome).
 pnpm demo:screenshots -- http://127.0.0.1:8787
 
 # 4. Stop the scratch server and delete the vault.

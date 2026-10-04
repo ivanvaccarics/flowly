@@ -1,0 +1,158 @@
+{
+  "range": {
+    "from": "2026-09-01",
+    "to": "2026-09-15"
+  },
+  "generatedAt": "2026-09-15T18:00:00.000Z",
+  "currency": "EUR",
+  "otherCurrencies": ["USD"],
+  "totals": {
+    "spentMinor": 128500,
+    "incomeMinor": 250000,
+    "netMinor": 121500,
+    "transactionCount": 12,
+    "calendarDays": 15,
+    "activeDays": 8,
+    "averageDailyMinor": 8567,
+    "averageActiveDayMinor": 16063,
+    "averageTicketMinor": 10708,
+    "largestMinor": 95000,
+    "largestDate": "2026-09-12",
+    "largestPayee": "Landlord"
+  },
+  "byCategory": [
+    {
+      "tagId": "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7082",
+      "tagName": "Rent",
+      "spentMinor": 95000,
+      "transactionCount": 1,
+      "averageMinor": 95000,
+      "largestMinor": 95000
+    },
+    {
+      "tagId": "018f2c1e-6d5b-7c3a-9f2e-3c4d5e6f7081",
+      "tagName": "Groceries",
+      "spentMinor": 21200,
+      "transactionCount": 4,
+      "averageMinor": 5300,
+      "largestMinor": 9500
+    },
+    {
+      "tagId": "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7083",
+      "tagName": "Transport",
+      "spentMinor": 3500,
+      "transactionCount": 2,
+      "averageMinor": 1750,
+      "largestMinor": 2100
+    },
+    {
+      "tagId": "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7084",
+      "tagName": "Other",
+      "spentMinor": 8800,
+      "transactionCount": 5,
+      "averageMinor": 1760,
+      "largestMinor": 6200
+    }
+  ],
+  "untagged": { "spentMinor": 0, "transactionCount": 0 },
+  "daily": [
+    { "date": "2026-09-01", "selected": true, "spentMinor": 0, "transactionCount": 0 },
+    { "date": "2026-09-02", "selected": true, "spentMinor": 1200, "transactionCount": 1 },
+    { "date": "2026-09-03", "selected": true, "spentMinor": 3500, "transactionCount": 2 },
+    { "date": "2026-09-04", "selected": true, "spentMinor": 0, "transactionCount": 0 },
+    { "date": "2026-09-05", "selected": true, "spentMinor": 9500, "transactionCount": 1 },
+    { "date": "2026-09-06", "selected": true, "spentMinor": 0, "transactionCount": 0 },
+    { "date": "2026-09-07", "selected": true, "spentMinor": 2100, "transactionCount": 1 },
+    { "date": "2026-09-08", "selected": true, "spentMinor": 0, "transactionCount": 0 },
+    { "date": "2026-09-09", "selected": true, "spentMinor": 6200, "transactionCount": 1 },
+    { "date": "2026-09-10", "selected": true, "spentMinor": 0, "transactionCount": 0 },
+    { "date": "2026-09-11", "selected": true, "spentMinor": 0, "transactionCount": 0 },
+    { "date": "2026-09-12", "selected": true, "spentMinor": 95000, "transactionCount": 1 },
+    { "date": "2026-09-13", "selected": true, "spentMinor": 0, "transactionCount": 0 },
+    { "date": "2026-09-14", "selected": true, "spentMinor": 4800, "transactionCount": 2 },
+    { "date": "2026-09-15", "selected": true, "spentMinor": 6200, "transactionCount": 3 }
+  ],
+  "weekly": [
+    {
+      "label": "Week 1",
+      "from": "2026-09-01",
+      "to": "2026-09-07",
+      "spentMinor": 16300,
+      "transactionCount": 5
+    },
+    {
+      "label": "Week 2",
+      "from": "2026-09-08",
+      "to": "2026-09-14",
+      "spentMinor": 106000,
+      "transactionCount": 4
+    },
+    {
+      "label": "Week 3",
+      "from": "2026-09-15",
+      "to": "2026-09-15",
+      "spentMinor": 6200,
+      "transactionCount": 3
+    }
+  ],
+  "byAccount": [
+    {
+      "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f",
+      "accountName": "Everyday Checking",
+      "spentMinor": 33500,
+      "transactionCount": 11
+    },
+    {
+      "accountId": "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e70",
+      "accountName": "Credit Card",
+      "spentMinor": 95000,
+      "transactionCount": 1
+    }
+  ],
+  "bySource": [
+    { "source": "enable-banking", "spentMinor": 102000, "transactionCount": 9 },
+    { "source": "manual", "spentMinor": 26500, "transactionCount": 3 }
+  ],
+  "amountBands": [
+    {
+      "key": "under-10",
+      "label": "Under 10",
+      "lowerMinor": 0,
+      "upperMinor": 1000,
+      "count": 3,
+      "spentMinor": 2100
+    },
+    {
+      "key": "10-50",
+      "label": "10 – 50",
+      "lowerMinor": 1000,
+      "upperMinor": 5000,
+      "count": 5,
+      "spentMinor": 11500
+    },
+    {
+      "key": "50-150",
+      "label": "50 – 150",
+      "lowerMinor": 5000,
+      "upperMinor": 15000,
+      "count": 2,
+      "spentMinor": 14900
+    },
+    {
+      "key": "150-500",
+      "label": "150 – 500",
+      "lowerMinor": 15000,
+      "upperMinor": 50000,
+      "count": 1,
+      "spentMinor": 30000
+    },
+    {
+      "key": "over-500",
+      "label": "500 and over",
+      "lowerMinor": 50000,
+      "upperMinor": null,
+      "count": 1,
+      "spentMinor": 70000
+    }
+  ]
+}

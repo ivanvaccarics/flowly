@@ -24,6 +24,7 @@ export function DashboardFilters({
   onSelectYear,
   onClear,
   onRemoveMonth,
+  label = "Dashboard period",
 }: {
   months: string[];
   preset: MonthPreset;
@@ -34,6 +35,8 @@ export function DashboardFilters({
   onSelectYear: (year: number) => void;
   onClear: () => void;
   onRemoveMonth: (month: string) => void;
+  /** The `aria-label` of the picker, so the details page can name its own. */
+  label?: string;
 }) {
   const [windowOffset, setWindowOffset] = useState(0);
   const currentYear = new Date().getUTCFullYear();
@@ -42,7 +45,7 @@ export function DashboardFilters({
     months.filter((month) => month.startsWith(`${year}-`)).length;
 
   return (
-    <section className="card dash-filters" aria-label="Dashboard period">
+    <section className="card dash-filters" aria-label={label}>
       <div className="filter-row">
         <div className="segmented" role="group" aria-label="Period preset">
           {PRESETS.map(([key, label]) => (

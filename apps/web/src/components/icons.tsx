@@ -2,6 +2,7 @@ import type { SVGProps } from "react";
 
 export type IconName =
   | "dashboard"
+  | "details"
   | "accounts"
   | "transactions"
   | "tags"
@@ -29,6 +30,7 @@ export type IconName =
 
 const PATHS: Record<IconName, string> = {
   dashboard: "M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z",
+  details: "M4 4v16h16M8 20v-6M12 20v-10M16 20v-4M19 6l-3 3-3-2-4 4",
   accounts: "M3 10 12 4l9 6M5 10v9h14v-9M9 19v-5h6v5",
   transactions: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6",
   tags: "M4 4h7l9 9-7 7-9-9zM8.5 8.5h.01",

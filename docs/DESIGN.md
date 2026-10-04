@@ -117,7 +117,7 @@ same on every machine.
 ## Layout
 
 - Fixed 218 px sidebar in the canvas colour, separated from the content by a
-  hairline: the Flowly lockup, the **Your vault** label and the six sections, then
+  hairline: the Flowly lockup, the **Your vault** label and the seven sections, then
   the session card at the foot — the vault's own name, its state in words, and
   the two session controls as icon buttons (**Lock session**, **Lock all**).
   The active section is a soft-green pill with a brand-green icon and a dot at
@@ -135,6 +135,11 @@ same on every machine.
 - Below 1200 px the dashboard grid folds to two columns, below 1024 px the
   sidebar becomes a horizontal, wrapping nav, the top bar wraps and everything
   stacks.
+- The **Details** page (after Dashboard) uses the same three-column grid and the
+  same period picker: a four-card figure row across the top, then the category
+  donut beside the weekly bars, the cumulative trajectory beside the account
+  breakdown, the full-width daily heatmap, and the amount distribution beside
+  the source breakdown.
 
 ## Components
 
@@ -198,6 +203,14 @@ same on every machine.
   tag of the period is always included — the dashboard's only scope is the
   period — so the legend is a read-out, not a filter: colour, name, amount and
   share per row. A row is a button that opens the ledger on that tag.
+- **Details charts:** the detail page's own read-outs. Weekly spending is bars
+  with the period's average as a dashed reference line; the cumulative
+  trajectory is a line in the expense colour with a dashed projection to the
+  period's end; the daily intensity heatmap lays the range out as Mon–Sun
+  columns and shades each day by what it spent, drawing a day whose month the
+  reader left out as an excluded cell rather than a zero; the account, source
+  and amount breakdowns are rows with a share bar. Every chart is SVG with HTML
+  hit targets and one readable summary, and no cell depends on colour alone.
 - **Period picker:** the dashboard's own bar, always visible under the header —
   the preset segments (month, 3 months, year, custom), a year strip with a count
   of that year's selected months, the twelve months of the year the strip points

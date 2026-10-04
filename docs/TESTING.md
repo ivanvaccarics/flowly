@@ -186,6 +186,18 @@ you should see.
 | Look at the **Recent transactions** card with more than ten movements in the vault | Ten rows of payee, day, account, source, tags and amount, plus `Showing 1–10 of N transactions` and **Previous**/**Next**; the header chip counts every match, and **All transactions** opens the full ledger |
 | Look at the dashboard's cards | The bank sync card, the spending breakdown, the recent movements and the accounts summary sit in the dashboard's own three-column grid; none repeats what the vault owns — the top bar states the vault's state, and the sidebar's session card holds the lock controls |
 
+### Expense details
+
+| Do this | Expect |
+| --- | --- |
+| Open **Details** and change the period | The four figures, the categories, the weekly bars, the cumulative line and the heatmap recompute for the same months the dashboard would use; pending movements stay out |
+| Look at a period that holds more than one currency | The figures are in the one currency the period spends most in, and the others are named as excluded — never converted or blended |
+| Look at the four figure cards | Total spent, the average per day, the top category and the largest expense, each with the booked-movement count behind it |
+| Look at **Distribution by category** and **Amount distribution** | Only booked outflows; a movement carrying several tags counts under each and the untagged remainder is stated underneath, never folded into a tag |
+| Point at a week of **Spending per week** | The week's title names its dates and amount, and the dashed reference line is the period's own average — there is no budget in the product |
+| Look at **Cumulative trajectory** while the period covers today | The actual line runs to today and a dashed projection reaches the period's end at the pace so far; a period already in the past shows no projection |
+| Look at **Daily intensity** | A Mon–Sun calendar of the range, each day shaded by what it spent; a day whose month was left out is drawn as excluded rather than as a zero |
+
 ### Bank connection (Enable Banking)
 
 Use a sandbox application while testing; the bank list shows the sandbox

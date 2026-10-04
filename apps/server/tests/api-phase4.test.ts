@@ -125,6 +125,53 @@ describe("dashboard API", () => {
   });
 });
 
+describe("expense details API", () => {
+  it("answers one currency's figures for the selected months", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    try {
+      await seed(harness);
+      const response = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/analytics/expenses?months=2026-09",
+      });
+      expect(response.statusCode).toBe(200);
+      const details = response.json<{
+        currency: string;
+        totals: { spentMinor: number; calendarDays: number; transactionCount: number };
+        byCategory: Array<{ tagName: string; spentMinor: number }>;
+        daily: unknown[];
+      }>();
+      expect(details.currency).toBe("EUR");
+      expect(details.totals).toMatchObject({
+        spentMinor: 1230,
+        calendarDays: 30,
+        transactionCount: 1,
+      });
+      expect(details.byCategory).toEqual([
+        {
+          tagId: SAMPLE_TAG.id,
+          tagName: "Coffee",
+          spentMinor: 1230,
+          transactionCount: 1,
+          averageMinor: 1230,
+          largestMinor: 1230,
+        },
+      ]);
+      expect(details.daily).toHaveLength(30);
+
+      const malformed = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/analytics/expenses?months=2026-13",
+      });
+      expect(malformed.statusCode).toBe(400);
+      expect(malformed.json<{ error: string }>().error).toBe("invalid_date_range");
+    } finally {
+      await harness.close();
+    }
+  });
+});
+
 describe("transaction search API", () => {
   it("filters through query parameters and reports the total", async () => {
     const { config } = makeConfig();

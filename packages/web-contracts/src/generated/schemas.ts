@@ -318,6 +318,382 @@ export const schemas = {
       }
     }
   },
+  "expenseDetails": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://flowly.local/contracts/schemas/expense-details.schema.json",
+    "title": "ExpenseDetails",
+    "description": "The expense detail view computed from the vault for one period. Like the dashboard it is scoped by `months=YYYY-MM,…` and never blends currencies: `currency` is the one the period leans on most, every amount below is in its minor units, and the currencies left out are named in `otherCurrencies`. A caller that asks for no month set gets the contiguous `from`/`to` range instead, and `daily[].selected` is then true for every day.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "range",
+      "generatedAt",
+      "currency",
+      "otherCurrencies",
+      "totals",
+      "byCategory",
+      "untagged",
+      "daily",
+      "weekly",
+      "byAccount",
+      "bySource",
+      "amountBands"
+    ],
+    "properties": {
+      "range": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "generatedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "currency": {
+        "description": "The currency the period spends most in, or null when the period holds no booked outflow at all.",
+        "type": [
+          "string",
+          "null"
+        ],
+        "pattern": "^[A-Z]{3}$"
+      },
+      "otherCurrencies": {
+        "description": "Currencies that also carry booked outflows in the period and are therefore left out of every figure below.",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      },
+      "totals": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "spentMinor",
+          "incomeMinor",
+          "netMinor",
+          "transactionCount",
+          "calendarDays",
+          "activeDays",
+          "averageDailyMinor",
+          "averageActiveDayMinor",
+          "averageTicketMinor",
+          "largestMinor",
+          "largestDate",
+          "largestPayee"
+        ],
+        "properties": {
+          "spentMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "incomeMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "netMinor": {
+            "type": "integer"
+          },
+          "transactionCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "calendarDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "activeDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "averageDailyMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "averageActiveDayMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "averageTicketMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "largestMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "largestDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "largestPayee": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "byCategory": {
+        "description": "Booked outflows grouped by tag. A movement that carries several tags counts in full under each of them, exactly as the dashboard's spending breakdown does.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tagId",
+            "tagName",
+            "spentMinor",
+            "transactionCount",
+            "averageMinor",
+            "largestMinor"
+          ],
+          "properties": {
+            "tagId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tagName": {
+              "type": "string"
+            },
+            "spentMinor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "transactionCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "averageMinor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "largestMinor": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "untagged": {
+        "description": "Booked outflows of the period that carry no tag at all.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "spentMinor",
+          "transactionCount"
+        ],
+        "properties": {
+          "spentMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "transactionCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "daily": {
+        "description": "One entry per calendar day of the range, so the heatmap and the cumulative chart keep a continuous axis. `selected` is false for a day whose month the caller left out of a scattered month set, and such a day never carries a figure.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "date",
+            "selected",
+            "spentMinor",
+            "transactionCount"
+          ],
+          "properties": {
+            "date": {
+              "type": "string",
+              "format": "date"
+            },
+            "selected": {
+              "type": "boolean"
+            },
+            "spentMinor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "transactionCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "weekly": {
+        "description": "Booked outflows per seven-day slice of the range, empty slices included, so the bars keep a continuous axis.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "label",
+            "from",
+            "to",
+            "spentMinor",
+            "transactionCount"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "from": {
+              "type": "string",
+              "format": "date"
+            },
+            "to": {
+              "type": "string",
+              "format": "date"
+            },
+            "spentMinor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "transactionCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "byAccount": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "accountId",
+            "accountName",
+            "spentMinor",
+            "transactionCount"
+          ],
+          "properties": {
+            "accountId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "accountName": {
+              "type": "string"
+            },
+            "spentMinor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "transactionCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "bySource": {
+        "description": "Booked outflows by where the row came from: typed by hand, imported from a file, or read from the bank.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "spentMinor",
+            "transactionCount"
+          ],
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "csv-import",
+                "enable-banking"
+              ]
+            },
+            "spentMinor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "transactionCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "amountBands": {
+        "description": "Booked outflows bucketed by their absolute amount. The thresholds are 10, 50, 150 and 500 major units scaled to the currency's own minor units, so a JPY vault bands on whole yen.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key",
+            "label",
+            "lowerMinor",
+            "upperMinor",
+            "count",
+            "spentMinor"
+          ],
+          "properties": {
+            "key": {
+              "type": "string",
+              "enum": [
+                "under-10",
+                "10-50",
+                "50-150",
+                "150-500",
+                "over-500"
+              ]
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "lowerMinor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "upperMinor": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "spentMinor": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    }
+  },
   "tag": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowly.local/contracts/schemas/tag.schema.json",
@@ -775,6 +1151,11 @@ export const schemaIndex = [
     "key": "dashboard",
     "title": "Dashboard",
     "id": "https://flowly.local/contracts/schemas/dashboard.schema.json"
+  },
+  {
+    "key": "expenseDetails",
+    "title": "ExpenseDetails",
+    "id": "https://flowly.local/contracts/schemas/expense-details.schema.json"
   },
   {
     "key": "tag",
