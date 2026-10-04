@@ -1995,6 +1995,24 @@ Status: **complete** (2026-10-04), decision in `docs/adr/0043`.
   route, the web suite the view and the navigation, and the screenshot script
   and `docs/SCREENSHOTS.md` a seventh section.
 
+#### Task `answer-the-detail-charts`
+
+Status: **complete** (2026-10-04).
+
+- Every chart on the Details page answers the pointer and the keyboard: the
+  weekly bars, the cumulative trajectory and the daily heatmap each light the
+  point under the pointer (or on the arrow-key stop), draw a guide and read the
+  figure out in a tooltip — the day's own amount, the running total, the
+  movements and the share of the period — while the rest of the chart recedes.
+- The heatmap's cells are named buttons rather than native `title` bubbles, so
+  touch and keyboard reach the same read-out; a day whose month was left out
+  says so instead of showing a zero and offers no drill-down.
+- Clicking a week, a cumulative point or a heatmap day opens the ledger filtered
+  to that slice of the period, the way the dashboard's cash-flow chart and the
+  category donut already do. The donut's non-active slices now dim as designed.
+- The cumulative trajectory and its active point are drawn in the expense
+  colour the legend promises.
+
 ### Phase 8 - Desktop application foundation
 
 #### Task `desktop-architecture-spike`

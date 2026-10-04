@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExpenseDetails, Tag } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { DashboardFilters } from "../components/DashboardFilters.js";
@@ -326,6 +326,7 @@ export function DetailsView({ onSeeAllTransactions, onExportData }: DetailsViewP
                   weeks={details.weekly}
                   currency={currency}
                   averageMinor={weeklyAverageMinor}
+                  onOpen={onSeeAllTransactions}
                 />
               ) : (
                 <Empty>No booked spending in this period.</Empty>
@@ -350,6 +351,7 @@ export function DetailsView({ onSeeAllTransactions, onExportData }: DetailsViewP
                 daily={details.daily}
                 currency={currency}
                 projectedMinor={projecting ? projectedMinor : undefined}
+                onOpen={onSeeAllTransactions}
               />
             </div>
 
@@ -395,7 +397,12 @@ export function DetailsView({ onSeeAllTransactions, onExportData }: DetailsViewP
                   <span className="sub">more</span>
                 </div>
               </header>
-              <Heatmap daily={details.daily} currency={currency} maxMinor={maxDayMinor} />
+              <Heatmap
+                daily={details.daily}
+                currency={currency}
+                maxMinor={maxDayMinor}
+                onOpen={onSeeAllTransactions}
+              />
             </div>
 
             <div className="card dash-span-2">
@@ -504,7 +511,7 @@ function CategoryDonut({
     .join(", ")}`;
 
   return (
-    <div className="donut">
+    <div className={activeTagId === undefined ? "donut" : "donut has-active"}>
       <div className="donut-figure">
         <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
           <circle className="donut-track" cx={centre} cy={centre} r={radius} />
@@ -608,10 +615,12 @@ function WeeklyBars({
   weeks,
   currency,
   averageMinor,
+  onOpen,
 }: {
   weeks: ExpenseDetails["weekly"];
   currency: string;
   averageMinor: number;
+  onOpen?: (seed: LedgerFilterSeed) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const width = 640;
@@ -624,10 +633,22 @@ function WeeklyBars({
   const barWidth = Math.max(8, Math.min(38, slot * 0.5));
   const scale = (value: number) => chartHeight - (value / max) * (chartHeight - 8);
   const averageY = padding.top + scale(averageMinor);
+  const total = weeks.reduce((sum, week) => sum + week.spentMinor, 0);
+  const centreOf = (index: number) => padding.left + slot * index + slot / 2;
   const active = activeIndex === undefined ? undefined : weeks[activeIndex];
 
+  // One tab stop, then ←/→ walk the weeks: the chart answers the keyboard as
+  // well as the pointer without asking anyone to tab through every bar.
+  function walk(from: number, step: number, container: HTMLElement): void {
+    const next = Math.min(weeks.length - 1, Math.max(0, from + step));
+    setActiveIndex(next);
+    container.parentElement?.querySelectorAll("button")[next]?.focus();
+  }
+
   return (
-    <figure className="chart bars-chart">
+    <figure
+      className={activeIndex === undefined ? "chart bars-chart" : "chart bars-chart has-active"}
+    >
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
@@ -646,8 +667,17 @@ function WeeklyBars({
             className="grid-line"
           />
         ))}
+        {activeIndex === undefined ? null : (
+          <line
+            className="bucket-guide"
+            x1={centreOf(activeIndex)}
+            x2={centreOf(activeIndex)}
+            y1={padding.top}
+            y2={padding.top + chartHeight}
+          />
+        )}
         {weeks.map((week, index) => {
-          const centre = padding.left + slot * index + slot / 2;
+          const centre = centreOf(index);
           const top = padding.top + scale(week.spentMinor);
           return (
             <g
@@ -661,12 +691,7 @@ function WeeklyBars({
                 height={Math.max(0, chartHeight - scale(week.spentMinor))}
                 rx={4}
                 className="bar expense"
-              >
-                <title>{`${week.label} (${week.from} → ${week.to}): ${formatMinorToAmount(
-                  week.spentMinor,
-                  currency,
-                )} ${currency}`}</title>
-              </rect>
+              />
               <text x={centre} y={height - 20} textAnchor="middle" className="axis-label">
                 {shortDate(week.from)}
               </text>
@@ -690,7 +715,7 @@ function WeeklyBars({
       <div
         className="chart-hits bars-hits"
         role="group"
-        aria-label={`Weekly spending in ${currency}`}
+        aria-label={`Weekly spending in ${currency}, one stop per week`}
         style={{
           paddingTop: `${(padding.top / width) * 100}%`,
           paddingBottom: `${(padding.bottom / width) * 100}%`,
@@ -712,6 +737,13 @@ function WeeklyBars({
             }
             onFocus={() => setActiveIndex(index)}
             onBlur={() => setActiveIndex((current) => (current === index ? undefined : current))}
+            onClick={() => onOpen?.({ from: week.from, to: week.to })}
+            onKeyDown={(event) => {
+              const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+              if (step === 0) return;
+              event.preventDefault();
+              walk(index, step, event.currentTarget);
+            }}
           />
         ))}
       </div>
@@ -726,7 +758,12 @@ function WeeklyBars({
               tone: "expense",
             },
             { label: "Movements", value: String(active.transactionCount) },
+            {
+              label: "Share of period",
+              value: `${formatDecimal(share(active.spentMinor, total))}%`,
+            },
           ]}
+          hint={onOpen ? "Click to open these rows" : undefined}
         />
       ) : null}
     </figure>
@@ -737,12 +774,14 @@ function CumulativeChart({
   daily,
   currency,
   projectedMinor,
+  onOpen,
 }: {
   daily: ExpenseDetails["daily"];
   currency: string;
   projectedMinor?: number | undefined;
+  onOpen?: (seed: LedgerFilterSeed) => void;
 }) {
-  if (daily.length === 0) return <Empty>No booked spending in this period.</Empty>;
+  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const width = 640;
   const height = 220;
   const padding = { top: 18, right: 14, bottom: 34, left: 14 };
@@ -755,74 +794,185 @@ function CumulativeChart({
   });
   const total = running;
   const max = Math.max(1, total, projectedMinor ?? 0);
-  const x = (index: number) =>
-    padding.left + (daily.length === 1 ? chartWidth : (chartWidth * index) / (daily.length - 1));
+  // One full-height column per day, matching the bar chart's slots: the pointer
+  // can land on any day of a year-long series, and ←/→ walk it from the keyboard.
+  const slot = chartWidth / Math.max(1, daily.length);
+  const x = (index: number) => padding.left + slot * index + slot / 2;
+  const xPercent = (index: number) => (x(index) / width) * 100;
+  const slotPercent = (slot / width) * 100;
   const y = (value: number) => padding.top + chartHeight - (value / max) * (chartHeight - 8);
   const actual = points.map((point) => `${x(point.index)},${y(point.value)}`).join(" ");
   const last = points[points.length - 1]!;
   const labelStep = Math.max(1, Math.ceil(daily.length / 6));
+  const active = activeIndex === undefined ? undefined : points[activeIndex];
+  const activeDay = activeIndex === undefined ? undefined : daily[activeIndex];
+
+  if (daily.length === 0) return <Empty>No booked spending in this period.</Empty>;
+
+  function walk(from: number, step: number, container: HTMLElement): void {
+    const next = Math.min(daily.length - 1, Math.max(0, from + step));
+    setActiveIndex(next);
+    container.parentElement?.querySelectorAll("button")[next]?.focus();
+  }
 
   return (
     <figure className="chart cumulative-chart">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label={`Cumulative spending in ${currency}, ${formatMinorToAmount(
-          total,
-          currency,
-        )} from ${daily[0]?.date} to ${last.date}${
-          projectedMinor === undefined
-            ? ""
-            : `, projected ${formatMinorToAmount(projectedMinor, currency)}`
-        }`}
-      >
-        {[0.25, 0.5, 0.75, 1].map((fraction) => (
-          <line
-            key={fraction}
-            x1={padding.left}
-            x2={width - padding.right}
-            y1={padding.top + chartHeight * (1 - fraction)}
-            y2={padding.top + chartHeight * (1 - fraction)}
-            className="grid-line"
-          />
-        ))}
-        <polyline points={actual} className="net-line expense" />
-        {projectedMinor !== undefined && projectedMinor !== total ? (
-          <>
+      <div className="chart-plot">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={`Cumulative spending in ${currency}, ${formatMinorToAmount(
+            total,
+            currency,
+          )} from ${daily[0]?.date} to ${last.date}${
+            projectedMinor === undefined
+              ? ""
+              : `, projected ${formatMinorToAmount(projectedMinor, currency)}`
+          }`}
+        >
+          {[0.25, 0.5, 0.75, 1].map((fraction) => (
             <line
-              className="forecast-line"
-              x1={x(last.index)}
-              y1={y(total)}
-              x2={x(last.index)}
-              y2={y(projectedMinor)}
+              key={fraction}
+              x1={padding.left}
+              x2={width - padding.right}
+              y1={padding.top + chartHeight * (1 - fraction)}
+              y2={padding.top + chartHeight * (1 - fraction)}
+              className="grid-line"
             />
-            <circle cx={x(last.index)} cy={y(projectedMinor)} r={4} className="forecast-dot" />
-          </>
-        ) : null}
-        {points
-          .filter((point) => point.index % labelStep === 0 || point.index === points.length - 1)
-          .map((point) => (
-            <text
-              key={point.date}
-              x={x(point.index)}
-              y={height - 12}
-              textAnchor="middle"
-              className="axis-label"
-            >
-              {shortDate(point.date)}
-            </text>
           ))}
-      </svg>
+          <polyline points={actual} className="net-line expense" />
+          {projectedMinor !== undefined && projectedMinor !== total ? (
+            <>
+              <line
+                className="forecast-line"
+                x1={x(last.index)}
+                y1={y(total)}
+                x2={x(last.index)}
+                y2={y(projectedMinor)}
+              />
+              <circle cx={x(last.index)} cy={y(projectedMinor)} r={4} className="forecast-dot" />
+            </>
+          ) : null}
+          {active ? (
+            <>
+              <line
+                className="bucket-guide"
+                x1={x(active.index)}
+                x2={x(active.index)}
+                y1={padding.top}
+                y2={padding.top + chartHeight}
+              />
+              <circle
+                cx={x(active.index)}
+                cy={y(active.value)}
+                r={4.5}
+                className="net-dot is-active"
+              />
+            </>
+          ) : null}
+          {points
+            .filter((point) => point.index % labelStep === 0 || point.index === points.length - 1)
+            .map((point) => (
+              <text
+                key={point.date}
+                x={x(point.index)}
+                y={height - 12}
+                textAnchor="middle"
+                className="axis-label"
+              >
+                {shortDate(point.date)}
+              </text>
+            ))}
+        </svg>
+        <div
+          className="chart-hits line-hits"
+          role="group"
+          aria-label={`Daily spending in ${currency}, one stop per day`}
+        >
+          {daily.map((day, index) => {
+            const cumulative = points[index]?.value ?? 0;
+            return (
+              <button
+                key={day.date}
+                type="button"
+                className={
+                  activeIndex === index ? "chart-hit line-hit is-active" : "chart-hit line-hit"
+                }
+                style={{ left: `${xPercent(index) - slotPercent / 2}%`, width: `${slotPercent}%` }}
+                tabIndex={
+                  activeIndex === index || (activeIndex === undefined && index === 0) ? 0 : -1
+                }
+                aria-label={`${dayLabel(day.date)}: ${formatMinorToAmount(
+                  day.spentMinor,
+                  currency,
+                )} ${currency} spent, ${formatMinorToAmount(cumulative, currency)} ${currency} cumulative`}
+                onPointerEnter={() => setActiveIndex(index)}
+                onPointerLeave={() =>
+                  setActiveIndex((current) => (current === index ? undefined : current))
+                }
+                onFocus={() => setActiveIndex(index)}
+                onBlur={() =>
+                  setActiveIndex((current) => (current === index ? undefined : current))
+                }
+                onClick={() => onOpen?.({ from: day.date, to: day.date })}
+                onKeyDown={(event) => {
+                  const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+                  if (step === 0) return;
+                  event.preventDefault();
+                  walk(index, step, event.currentTarget);
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
       <div className="legend">
         <span className="legend-item">
           <span className="dot expense" /> Actual
         </span>
         {projectedMinor !== undefined ? (
           <span className="legend-item">
-            <span className="dot" style={{ background: "var(--accent-blue)" }} /> Projection
+            <span className="dot projection" /> Projection
           </span>
         ) : null}
       </div>
+      {active && activeDay ? (
+        <ChartTooltip
+          xPercent={xPercent(active.index)}
+          title={`${dayLabel(active.date)} · day ${active.index + 1} of ${daily.length}`}
+          rows={
+            activeDay.selected
+              ? [
+                  {
+                    label: "Spent that day",
+                    value: `${formatMinorToAmount(activeDay.spentMinor, currency)} ${currency}`,
+                    tone: "expense",
+                  },
+                  {
+                    label: "Cumulative",
+                    value: `${formatMinorToAmount(active.value, currency)} ${currency}`,
+                    tone: "line",
+                  },
+                  { label: "Movements", value: String(activeDay.transactionCount) },
+                  {
+                    label: "Share of period",
+                    value: `${formatDecimal(share(activeDay.spentMinor, total))}%`,
+                  },
+                  ...(projectedMinor !== undefined && active.index === last.index
+                    ? [
+                        {
+                          label: "At this pace",
+                          value: `${formatMinorToAmount(projectedMinor, currency)} ${currency}`,
+                          tone: "projection",
+                        },
+                      ]
+                    : []),
+                ]
+              : [{ label: "Excluded", value: "not in the selected months", tone: "muted" }]
+          }
+          hint={onOpen ? "Click to open this day" : undefined}
+        />
+      ) : null}
     </figure>
   );
 }
@@ -871,17 +1021,23 @@ function BreakdownRows({
 // The daily heatmap: the range laid out as Mon–Sun columns of weeks, each cell
 // shaded by what that day spent. A day whose month the reader left out is drawn
 // as an excluded cell instead of a zero, so "no spending" and "not counted"
-// never look the same. The picture carries one readable summary and the cells
-// are decorative, so the figures never depend on colour.
+// never look the same. Every cell is a named control: pointing at one or
+// reaching it with the arrow keys reads the day out in a tooltip, so the
+// figures never depend on colour.
 function Heatmap({
   daily,
   currency,
   maxMinor,
+  onOpen,
 }: {
   daily: ExpenseDetails["daily"];
   currency: string;
   maxMinor: number;
+  onOpen?: (seed: LedgerFilterSeed) => void;
 }) {
+  const [activeDate, setActiveDate] = useState<string | undefined>(undefined);
+  const [anchor, setAnchor] = useState<{ xPercent: number; topPx: number } | undefined>(undefined);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   if (daily.length === 0) return <Empty>No days in this period.</Empty>;
   const first = daily[0]!;
   const leading = (new Date(`${first.date}T00:00:00.000Z`).getUTCDay() + 6) % 7;
@@ -894,6 +1050,10 @@ function Heatmap({
   for (let index = 0; index < cells.length; index += 7) {
     weeks.push(cells.slice(index, index + 7));
   }
+  const total = daily.reduce((sum, day) => sum + day.spentMinor, 0);
+  const firstSelected = daily.find((day) => day.selected) ?? first;
+  const active =
+    activeDate === undefined ? undefined : daily.find((day) => day.date === activeDate);
   const busiest = daily.reduce<(typeof daily)[number] | undefined>(
     (current, day) =>
       current === undefined || day.spentMinor > current.spentMinor ? day : current,
@@ -908,44 +1068,152 @@ function Heatmap({
         )} ${currency}`
       : ", no spending at all");
 
+  // The tooltip hangs under the cell the pointer or the keyboard is on, so it
+  // reads as an overlay of the day rather than a caption of the whole range.
+  function place(target: HTMLElement): void {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const frameRect = frame.getBoundingClientRect();
+    const cellRect = target.getBoundingClientRect();
+    setAnchor({
+      xPercent:
+        ((cellRect.left + cellRect.width / 2 - frameRect.left) / Math.max(1, frameRect.width)) *
+        100,
+      topPx: cellRect.bottom - frameRect.top + 4,
+    });
+  }
+
+  function walk(from: number, step: number): void {
+    let next = from + step;
+    while (next >= 0 && next < cells.length && cells[next] === null) next += step;
+    if (next < 0 || next >= cells.length) return;
+    setActiveDate(cells[next]?.date);
+    frameRef.current?.querySelector<HTMLButtonElement>(`[data-cell-index="${next}"]`)?.focus();
+  }
+
   return (
-    <div className="heatmap" role="img" aria-label={summary}>
-      <div className="heat-weekdays" aria-hidden="true">
-        {WEEKDAY_LABELS.map((label) => (
-          <span key={label}>{label}</span>
-        ))}
+    <div className="heatmap-frame" ref={frameRef}>
+      <div className="heatmap" role="group" aria-label={summary}>
+        <div className="heat-weekdays" aria-hidden="true">
+          {WEEKDAY_LABELS.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+        <div className="heat-weeks">
+          {weeks.map((week, weekIndex) => (
+            <div className="heat-week" key={`week-${weekIndex}`}>
+              {week.map((day, dayIndex) => {
+                const cellIndex = weekIndex * 7 + dayIndex;
+                if (!day) {
+                  return (
+                    <span
+                      className="heat-cell is-blank"
+                      key={`blank-${weekIndex}-${dayIndex}`}
+                      aria-hidden="true"
+                    />
+                  );
+                }
+                const level = maxMinor > 0 ? day.spentMinor / maxMinor : 0;
+                const style =
+                  !day.selected || day.spentMinor === 0
+                    ? undefined
+                    : { background: heatColour(Math.max(0.12, level)) };
+                const base = !day.selected
+                  ? "heat-cell is-excluded"
+                  : day.spentMinor === 0
+                    ? "heat-cell is-empty"
+                    : "heat-cell";
+                const movements = `${day.transactionCount} ${
+                  day.transactionCount === 1 ? "movement" : "movements"
+                }`;
+                return (
+                  <button
+                    key={day.date}
+                    type="button"
+                    data-cell-index={cellIndex}
+                    className={activeDate === day.date ? `${base} is-active` : base}
+                    style={style}
+                    tabIndex={
+                      activeDate === day.date ||
+                      (activeDate === undefined && day.date === firstSelected.date)
+                        ? 0
+                        : -1
+                    }
+                    aria-label={
+                      day.selected
+                        ? `${dayLabel(day.date)}: ${formatMinorToAmount(
+                            day.spentMinor,
+                            currency,
+                          )} ${currency} across ${movements}`
+                        : `${dayLabel(day.date)}: not in the selected months`
+                    }
+                    onPointerEnter={(event) => {
+                      setActiveDate(day.date);
+                      place(event.currentTarget);
+                    }}
+                    onPointerLeave={() =>
+                      setActiveDate((current) => (current === day.date ? undefined : current))
+                    }
+                    onFocus={(event) => {
+                      setActiveDate(day.date);
+                      place(event.currentTarget);
+                    }}
+                    onBlur={() =>
+                      setActiveDate((current) => (current === day.date ? undefined : current))
+                    }
+                    onClick={() => {
+                      if (day.selected) onOpen?.({ from: day.date, to: day.date });
+                    }}
+                    onKeyDown={(event) => {
+                      const step =
+                        event.key === "ArrowRight"
+                          ? 1
+                          : event.key === "ArrowLeft"
+                            ? -1
+                            : event.key === "ArrowDown"
+                              ? 7
+                              : event.key === "ArrowUp"
+                                ? -7
+                                : 0;
+                      if (step === 0) return;
+                      event.preventDefault();
+                      walk(cellIndex, step);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="heat-weeks" aria-hidden="true">
-        {weeks.map((week, index) => (
-          <div className="heat-week" key={`week-${index}`}>
-            {week.map((day, dayIndex) => {
-              if (!day) return <span className="heat-cell is-blank" key={`blank-${dayIndex}`} />;
-              const level = maxMinor > 0 ? day.spentMinor / maxMinor : 0;
-              const style =
-                !day.selected || day.spentMinor === 0
-                  ? undefined
-                  : { background: heatColour(Math.max(0.12, level)) };
-              const className = !day.selected
-                ? "heat-cell is-excluded"
-                : day.spentMinor === 0
-                  ? "heat-cell is-empty"
-                  : "heat-cell";
-              return (
-                <span
-                  key={day.date}
-                  className={className}
-                  style={style}
-                  title={`${day.date}: ${
-                    day.selected
-                      ? `${formatMinorToAmount(day.spentMinor, currency)} ${currency}`
-                      : "not in the selected months"
-                  }`}
-                />
-              );
-            })}
-          </div>
-        ))}
-      </div>
+      {active && anchor ? (
+        <ChartTooltip
+          xPercent={anchor.xPercent}
+          topPx={anchor.topPx}
+          below
+          title={dayLabel(active.date)}
+          rows={
+            active.selected
+              ? [
+                  {
+                    label: "Spent",
+                    value: `${formatMinorToAmount(active.spentMinor, currency)} ${currency}`,
+                    tone: "expense",
+                  },
+                  {
+                    label: "Movements",
+                    value: String(active.transactionCount),
+                  },
+                  {
+                    label: "Share of period",
+                    value: `${formatDecimal(share(active.spentMinor, total))}%`,
+                  },
+                ]
+              : [{ label: "Excluded", value: "not in the selected months", tone: "muted" }]
+          }
+          hint={active.selected && onOpen ? "Click to open this day" : undefined}
+        />
+      ) : null}
     </div>
   );
 }
@@ -967,16 +1235,26 @@ function formatCompact(minor: number, currency: string): string {
 // The bubble that follows the point under the pointer or the keyboard.
 function ChartTooltip({
   xPercent,
+  topPx,
+  below,
   title,
   rows,
+  hint,
 }: {
   xPercent: number;
+  topPx?: number;
+  below?: boolean;
   title: string;
   rows: Array<{ label: string; value: string; tone?: string }>;
+  hint?: string | undefined;
 }) {
   const left = Math.min(88, Math.max(12, xPercent));
   return (
-    <div className="chart-tooltip" style={{ left: `${left}%` }} role="presentation">
+    <div
+      className={below ? "chart-tooltip is-below" : "chart-tooltip"}
+      style={{ left: `${left}%`, top: topPx === undefined ? undefined : `${topPx}px` }}
+      role="presentation"
+    >
       <strong>{title}</strong>
       <dl>
         {rows.map((row) => (
@@ -989,6 +1267,7 @@ function ChartTooltip({
           </div>
         ))}
       </dl>
+      {hint ? <span className="hint">{hint}</span> : null}
     </div>
   );
 }

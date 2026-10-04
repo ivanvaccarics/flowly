@@ -1684,6 +1684,10 @@ button.tag-pill:hover {
   margin: 0;
 }
 
+.chart-plot {
+  position: relative;
+}
+
 .chart svg {
   width: 100%;
   height: auto;
@@ -1729,6 +1733,12 @@ button.tag-pill:hover {
   opacity: 0.85;
 }
 
+/* The detail page's trajectory is spending, so its line reads in the expense
+   colour the legend promises, not in the neutral brand green. */
+.net-line.expense {
+  stroke: var(--expense-graphic);
+}
+
 .net-dot {
   fill: var(--surface);
   stroke: var(--primary);
@@ -1738,6 +1748,14 @@ button.tag-pill:hover {
 
 .net-dot.is-active {
   fill: var(--primary);
+}
+
+.cumulative-chart .net-dot {
+  stroke: var(--expense-graphic);
+}
+
+.cumulative-chart .net-dot.is-active {
+  fill: var(--expense-graphic);
 }
 
 .axis-label {
@@ -1836,6 +1854,24 @@ button.tag-pill:hover {
   color: var(--text-faint);
 }
 
+/* The heatmap hangs its bubble under the cell instead of over the plot. */
+.chart-tooltip.is-below {
+  transform: translate(-50%, 4px);
+}
+
+/* A dense line chart covers the whole plot with one column per day, so the
+   pointer can land on any of them; the bubble still anchors to the point. */
+.line-hits {
+  display: block;
+}
+
+.line-hits .chart-hit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 0;
+}
+
 .legend-item {
   display: inline-flex;
   align-items: center;
@@ -1862,6 +1898,10 @@ button.tag-pill:hover {
 
 .dot.line {
   background: var(--primary);
+}
+
+.dot.projection {
+  background: var(--accent-blue);
 }
 
 /* Pie chart for the spending breakdown: a hand-rolled SVG donut, one arc per
@@ -3311,6 +3351,10 @@ button.legend-row {
   padding-bottom: 0.25rem;
 }
 
+.heatmap-frame {
+  position: relative;
+}
+
 .heat-weekdays {
   display: grid;
   grid-template-rows: repeat(7, 14px);
@@ -3337,19 +3381,32 @@ button.legend-row {
 
 .heat-cell {
   display: block;
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
   width: 14px;
   height: 14px;
   border-radius: 3px;
   background: var(--surface-sunken);
+  cursor: pointer;
 }
 
 .heat-cell.is-excluded {
   background: transparent;
   border: 1px dashed var(--border-strong);
+  cursor: default;
 }
 
 .heat-cell.is-blank {
   background: transparent;
+  cursor: default;
+}
+
+.heat-cell.is-active,
+.heat-cell:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
 }
 
 /* ------------------------------------------------------------ responsive */

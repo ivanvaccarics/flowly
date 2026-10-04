@@ -176,6 +176,55 @@ describe("expense details", () => {
     expect(screen.getByText("120,00 EUR")).toBeTruthy();
   });
 
+  it("walks the weeks with the arrow keys", async () => {
+    mockVault();
+    render(<DetailsView onSeeAllTransactions={() => undefined} onExportData={() => undefined} />);
+
+    const firstWeek = await screen.findByRole("button", {
+      name: /^Week 1 \(2020-09-01 to 2020-09-07\)/,
+    });
+    firstWeek.focus();
+    fireEvent.keyDown(firstWeek, { key: "ArrowRight" });
+    expect(screen.getByText("Week 2 · 2020-09-08 → 2020-09-14")).toBeTruthy();
+  });
+
+  it("reads a day out of the cumulative trajectory on hover", async () => {
+    mockVault();
+    render(<DetailsView onSeeAllTransactions={() => undefined} onExportData={() => undefined} />);
+
+    const day = await screen.findByRole("button", {
+      name: "12 Sep 2020: 950,00 EUR spent, 950,00 EUR cumulative",
+    });
+    fireEvent.pointerEnter(day);
+    expect(screen.getByText("12 Sep 2020 · day 2 of 3")).toBeTruthy();
+    expect(screen.getByText("Cumulative")).toBeTruthy();
+    expect(screen.getAllByText("950,00 EUR").length).toBeGreaterThan(1);
+  });
+
+  it("reads a day out of the heatmap on hover", async () => {
+    mockVault();
+    render(<DetailsView onSeeAllTransactions={() => undefined} onExportData={() => undefined} />);
+
+    const cell = await screen.findByRole("button", {
+      name: "12 Sep 2020: 950,00 EUR across 1 movement",
+    });
+    fireEvent.pointerEnter(cell);
+    expect(screen.getByText("12 Sep 2020")).toBeTruthy();
+    expect(screen.getByText("Share of period")).toBeTruthy();
+  });
+
+  it("opens the ledger on the day a heatmap cell stands for", async () => {
+    const onSeeAll = vi.fn();
+    mockVault();
+    render(<DetailsView onSeeAllTransactions={onSeeAll} onExportData={() => undefined} />);
+
+    const cell = await screen.findByRole("button", {
+      name: "20 Sep 2020: 212,00 EUR across 2 movements",
+    });
+    fireEvent.click(cell);
+    expect(onSeeAll).toHaveBeenCalledWith({ from: "2020-09-20", to: "2020-09-20" });
+  });
+
   it("opens the ledger on the tag that was clicked", async () => {
     const onSeeAll = vi.fn();
     mockVault();

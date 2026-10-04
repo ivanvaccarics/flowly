@@ -74,8 +74,10 @@ throwaway vault full of invented data, never from a real one.
   averages, spending by category, by account and by source, the distribution
   across amount bands, a daily heatmap, a cumulative trajectory with a
   projection at the pace so far, and a week-by-week trend against the period's
-  own average. No budget and no invented taxonomy: every figure comes from the
-  booked movements the vault holds.
+  own average. Every chart answers the pointer and the keyboard with a read-out
+  of what it holds, and clicking one opens the ledger on that slice. No budget
+  and no invented taxonomy: every figure comes from the booked movements the
+  vault holds.
 - **Search** — server-side filters over date range, account, tag, amount,
   currency, status and source, plus free text across payee, description and
   notes.

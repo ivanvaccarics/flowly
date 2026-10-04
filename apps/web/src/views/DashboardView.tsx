@@ -569,7 +569,7 @@ function SpendingPie({
     .join(", ")}`;
 
   return (
-    <div className="donut">
+    <div className={activeTagId === undefined ? "donut" : "donut has-active"}>
       <div className="donut-figure">
         <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
           <circle className="donut-track" cx={centre} cy={centre} r={radius} />

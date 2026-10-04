@@ -211,6 +211,12 @@ same on every machine.
   reader left out as an excluded cell rather than a zero; the account, source
   and amount breakdowns are rows with a share bar. Every chart is SVG with HTML
   hit targets and one readable summary, and no cell depends on colour alone.
+  All three charts answer the pointer and the keyboard: the point under the
+  cursor — or on the one tab stop the arrow keys walk — lights up, a guide marks
+  it and a tooltip reads it out (the day's amount, the running total, the
+  movements, the share of the period), while the rest of the chart recedes.
+  Clicking a week, a cumulative point or a heatmap day opens the ledger filtered
+  to that slice.
 - **Period picker:** the dashboard's own bar, always visible under the header —
   the preset segments (month, 3 months, year, custom), a year strip with a count
   of that year's selected months, the twelve months of the year the strip points
