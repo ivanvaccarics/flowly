@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Tag, TaggingRule } from "@flowly/web-contracts";
 import { api, type TaggingRulePreview, type TaggingRuleStats } from "../api/client.js";
 import { Modal } from "../components/Modal.js";
+import { TagPill } from "../components/TagPill.js";
 import {
   RuleFields,
   conditionsOf,
@@ -11,7 +12,7 @@ import {
   type RuleDraft,
 } from "../components/RuleFields.js";
 import { Icon } from "../components/icons.js";
-import { Banner, Chip, Empty, SectionIntro, tagPillStyle } from "../components/ui.js";
+import { Banner, Chip, Empty, SectionIntro } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
@@ -484,13 +485,9 @@ export function RulesView({ csrf }: { csrf: string }) {
                       {rule.tagIds.map((id) => {
                         const tag = tagItems.find((candidate) => candidate.id === id);
                         return (
-                          <span
-                            key={id}
-                            className="tag-pill"
-                            style={tagPillStyle(tag?.color ?? DEFAULT_TAG_COLOR)}
-                          >
-                            #{tag?.name ?? "…"}
-                          </span>
+                          <TagPill key={id} color={tag?.color ?? DEFAULT_TAG_COLOR} prefix="#">
+                            {tag?.name ?? "…"}
+                          </TagPill>
                         );
                       })}
                     </td>

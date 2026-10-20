@@ -1,5 +1,5 @@
 import { Icon } from "./icons.js";
-import { tagPillStyle } from "./ui.js";
+import { TagPill } from "./TagPill.js";
 
 /**
  * Tag colours are interface-only, so the picker is a fixed palette built from
@@ -81,9 +81,7 @@ export function TagColorField({
           <span className="eyebrow" style={{ margin: 0 }}>
             Preview
           </span>
-          <span className="tag-pill" style={tagPillStyle(color)}>
-            {previewLabel}
-          </span>
+          <TagPill color={color}>{previewLabel}</TagPill>
         </span>
       ) : null}
     </div>

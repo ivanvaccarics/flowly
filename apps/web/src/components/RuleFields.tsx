@@ -1,8 +1,8 @@
 import type { Tag, TaggingRule } from "@flowly/web-contracts";
 import { Icon } from "./icons.js";
-import { Chip, tagPillStyle } from "./ui.js";
+import { TagPill } from "./TagPill.js";
+import { Chip } from "./ui.js";
 import { CURRENCIES, minorUnitsFor } from "../lib/money.js";
-import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
 
 /** Local builder shape: the contract narrows operators per field. */
 export interface Condition {
@@ -280,17 +280,15 @@ export function RuleFields({
             {tags.map((tag) => {
               const selected = draft.tagIds.includes(tag.id);
               return (
-                <button
+                <TagPill
                   key={tag.id}
-                  type="button"
-                  className={selected ? "tag-pill active" : "tag-pill"}
-                  style={selected ? undefined : tagPillStyle(tag.color)}
-                  aria-pressed={selected}
+                  color={tag.color}
+                  active={selected}
+                  swatch
                   onClick={() => toggleTag(tag.id)}
                 >
-                  <span className="swatch" style={{ background: tag.color ?? DEFAULT_TAG_COLOR }} />
                   {tag.name}
-                </button>
+                </TagPill>
               );
             })}
           </div>

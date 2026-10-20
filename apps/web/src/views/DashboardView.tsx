@@ -4,7 +4,8 @@ import { api } from "../api/client.js";
 import { DashboardFilters } from "../components/DashboardFilters.js";
 import { Icon } from "../components/icons.js";
 import { SpendingDonut } from "../components/SpendingDonut.js";
-import { Banner, Chip, Empty, Money, SectionIntro, tagPillStyle } from "../components/ui.js";
+import { TagPill } from "../components/TagPill.js";
+import { Banner, Chip, Empty, Money, SectionIntro } from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { useMonthScope } from "../hooks/use-month-scope.js";
 import { describeError } from "../hooks/use-workspace.js";
@@ -404,9 +405,9 @@ export function DashboardView({
                             : transaction.source}
                         </span>
                         {tags.map((tag) => (
-                          <span className="tag-pill" key={tag.id} style={tagPillStyle(tag.color)}>
+                          <TagPill key={tag.id} color={tag.color}>
                             {tag.name}
-                          </span>
+                          </TagPill>
                         ))}
                       </span>
                     </span>

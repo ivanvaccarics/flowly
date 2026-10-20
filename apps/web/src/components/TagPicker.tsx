@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Tag } from "@flowly/web-contracts";
+import { TagPill } from "./TagPill.js";
 import { DEFAULT_TAG_COLOR } from "../lib/tags.js";
 
 export interface TagPickerProps {
@@ -82,10 +83,9 @@ export function TagPicker({ tags, selected, onChange, label, emptyHint }: TagPic
         ) : (
           <>
             {visible.map((tag) => (
-              <span key={tag.id} className="tag-pill">
-                <span className="swatch" style={{ background: tag.color ?? DEFAULT_TAG_COLOR }} />
+              <TagPill key={tag.id} color={tag.color} swatch>
                 {tag.name}
-              </span>
+              </TagPill>
             ))}
             {overflow > 0 ? <span className="sub mono">+{overflow}</span> : null}
           </>

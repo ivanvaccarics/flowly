@@ -3,6 +3,7 @@ import type { Account, Tag, Transaction } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { Icon } from "../components/icons.js";
 import { Modal } from "../components/Modal.js";
+import { TagPill } from "../components/TagPill.js";
 import {
   TransactionFields,
   draftCurrency,
@@ -10,7 +11,7 @@ import {
   emptyTransactionDraft,
   type TransactionDraft,
 } from "../components/TransactionFields.js";
-import { Banner, Chip, Empty, Money, SectionIntro, tagPillStyle } from "../components/ui.js";
+import { Banner, Chip, Empty, Money, SectionIntro } from "../components/ui.js";
 import { useCollection } from "../hooks/use-collection.js";
 import { describeError } from "../hooks/use-workspace.js";
 import { parseAmountToMinor } from "../lib/money.js";
@@ -490,9 +491,8 @@ export function TransactionsView({
           <span className="eyebrow" style={{ margin: 0 }}>
             View
           </span>
-          <button
-            type="button"
-            className={
+          <TagPill
+            active={
               filters.q === "" &&
               filters.accountId === "" &&
               filters.tagId === "" &&
@@ -503,27 +503,23 @@ export function TransactionsView({
               filters.maxAmount === "" &&
               filters.from === "" &&
               filters.to === ""
-                ? "tag-pill active"
-                : "tag-pill"
             }
-            aria-pressed={filters.tagId === ""}
             onClick={() => updateFilters({ ...filters, tagId: "" })}
           >
             All movements
-          </button>
+          </TagPill>
           {tags.items.map((tag) => (
-            <button
+            <TagPill
               key={tag.id}
-              type="button"
-              className={filters.tagId === tag.id ? "tag-pill active" : "tag-pill"}
-              style={filters.tagId === tag.id ? undefined : tagPillStyle(tag.color)}
-              aria-pressed={filters.tagId === tag.id}
+              color={tag.color}
+              active={filters.tagId === tag.id}
+              prefix="#"
               onClick={() =>
                 updateFilters({ ...filters, tagId: filters.tagId === tag.id ? "" : tag.id })
               }
             >
-              #{tag.name}
-            </button>
+              {tag.name}
+            </TagPill>
           ))}
         </div>
 
@@ -583,9 +579,9 @@ export function TransactionsView({
                         transaction.tagIds.map((id) => {
                           const tag = tags.items.find((candidate) => candidate.id === id);
                           return (
-                            <span key={id} className="tag-pill" style={tagPillStyle(tag?.color)}>
+                            <TagPill key={id} color={tag?.color}>
                               {tag?.name ?? "…"}
-                            </span>
+                            </TagPill>
                           );
                         })
                       )}
