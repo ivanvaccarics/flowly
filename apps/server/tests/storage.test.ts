@@ -41,7 +41,7 @@ describe.each(engines)("vault store contract (%s)", (engine) => {
   });
 
   it("applies migrations once and reports the schema version", async () => {
-    expect(await store.appliedMigrations()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(await store.appliedMigrations()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(await store.migrate()).toEqual([]);
   });
 
@@ -108,7 +108,7 @@ describe.each(engines)("vault store contract (%s)", (engine) => {
     await store.checkpoint();
     await store.close();
     store = await openStore(engine, join(dir, "vault.db"), dek);
-    expect(await store.appliedMigrations()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(await store.appliedMigrations()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(await store.count("transactions")).toBe(2);
   });
 });
@@ -141,11 +141,79 @@ describe("migration atomicity", () => {
 
     const store = await openStore("sqlcipher", file, Buffer.from(key));
     try {
-      expect(await store.migrate()).toEqual([3, 4, 5, 6]);
+      expect(await store.migrate()).toEqual([3, 4, 5, 6, 7]);
       expect((await store.migrate()).length, "migrations stay idempotent after the drop").toBe(0);
       expect(await store.count("accounts")).toBe(1);
       const remaining = await store.list<{ name: string }>("accounts");
       expect(remaining[0]?.name).toBe("Keep me");
+    } finally {
+      await store.close();
+      cleanup(dir);
+    }
+  });
+
+  it("repairs a vault that recorded version 6 without transfer_links", async () => {
+    const dir = tempDir("flowly-migration-transfer-links-");
+    const key = randomBytes(32);
+    const file = join(dir, "vault.db");
+    const db = await SqlcipherDatabase.open(file, key);
+    expect(
+      await runMigrations(
+        db,
+        MIGRATIONS.filter((migration) => migration.version <= 5),
+      ),
+    ).toEqual([1, 2, 3, 4, 5]);
+    await db.run("INSERT INTO schema_migrations(version, name, applied_at) VALUES (?, ?, ?)", [
+      6,
+      "transfer-links",
+      "2026-09-27T00:00:00.000Z",
+    ]);
+    expect(
+      await db.all("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", [
+        "transfer_links",
+      ]),
+    ).toHaveLength(0);
+    await db.close();
+
+    const store = await openStore("sqlcipher", file, Buffer.from(key));
+    try {
+      expect(await store.migrate()).toEqual([7]);
+      expect(await store.count("transfer_links")).toBe(0);
+    } finally {
+      await store.close();
+      cleanup(dir);
+    }
+  });
+
+  it("keeps existing transfer links when migration 7 repairs the schema", async () => {
+    const dir = tempDir("flowly-migration-transfer-links-existing-");
+    const key = randomBytes(32);
+    const file = join(dir, "vault.db");
+    const db = await SqlcipherDatabase.open(file, key);
+    expect(
+      await runMigrations(
+        db,
+        MIGRATIONS.filter((migration) => migration.version <= 6),
+      ),
+    ).toEqual([1, 2, 3, 4, 5, 6]);
+    await db.run(
+      "INSERT INTO transfer_links(id, updated_at, revision, ref_a, ref_b, payload) VALUES (?,?,?,?,?,?)",
+      [
+        "TEST_TRANSFER_LINK",
+        "2026-09-27T00:00:00.000Z",
+        1,
+        "TEST_OUTGOING_TRANSACTION",
+        "TEST_INCOMING_TRANSACTION",
+        JSON.stringify({ id: "TEST_TRANSFER_LINK" }),
+      ],
+    );
+    await db.close();
+
+    const store = await openStore("sqlcipher", file, Buffer.from(key));
+    try {
+      expect(await store.migrate()).toEqual([7]);
+      expect(await store.count("transfer_links")).toBe(1);
+      expect(await store.read("transfer_links", "TEST_TRANSFER_LINK")).toBeDefined();
     } finally {
       await store.close();
       cleanup(dir);
@@ -176,9 +244,9 @@ describe("migration atomicity", () => {
     const db = await SqlcipherDatabase.open(join(dir, "custom.db"), randomBytes(32));
     const custom: Migration[] = [
       ...MIGRATIONS,
-      { version: 7, name: "later", statements: ["CREATE TABLE later(id TEXT PRIMARY KEY)"] },
+      { version: 8, name: "later", statements: ["CREATE TABLE later(id TEXT PRIMARY KEY)"] },
     ];
-    expect(await runMigrations(db, custom)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(await runMigrations(db, custom)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(await runMigrations(db, custom)).toEqual([]);
     await db.close();
     cleanup(dir);

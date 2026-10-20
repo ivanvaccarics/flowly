@@ -2021,8 +2021,28 @@ Status: **complete** (2026-10-20), decision in `docs/adr/0045`.
   in focused API modules rather than the Fastify composition root.
 - `pnpm verify` follows static and dynamic imports from both production entry
   points and fails when a server or web source module becomes unreachable.
+- Generated validators unwrap Ajv's CommonJS `ucs2length` helper for the Node
+  ESM runtime, and the contract suite validates production fixtures against the
+  built validator entry point so this import-boundary failure cannot recur.
 - Tag `v1.1` marks `e6711e6` as the baseline before this maintenance series.
-- `pnpm verify` runs 344 tests: 15 contract, 228 server and 101 web tests.
+- `pnpm verify` runs 346 tests: 15 contract, 230 server and 101 web tests.
+
+#### Task `repair-inconsistent-vault-schema`
+
+Status: **complete** (2026-10-20), decision in `docs/adr/0046`.
+
+- A vault recorded migration 6 in `schema_migrations` even though
+  `transfer_links` was absent. Dashboard reads worked, but saving a movement
+  updated its record and then returned `internal_error` while the transfer
+  after-write step queried the missing table.
+- Migration 7 recreates `transfer_links` and both indexes with `IF NOT EXISTS`.
+  It is forward-only and idempotent: an incomplete version-6 schema is repaired,
+  while a healthy schema and its existing links are left in place.
+- Migration 7 runs when the vault is unlocked. The transfer sweep that follows
+  unlock can then rederive links from the encrypted ledger without deleting or
+  rewriting financial records.
+- Regression tests cover both an incomplete version-6 schema and a healthy one
+  with an existing link, including preservation of that link.
 
 #### Task `read-the-period-in-detail`
 

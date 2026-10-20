@@ -99,6 +99,17 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS transfer_links_incoming_idx ON transfer_links(ref_b)`,
     ],
   },
+  {
+    // Repair a pre-existing vault that recorded version 6 without its table.
+    // IF NOT EXISTS keeps this safe for vaults whose migration 6 completed.
+    version: 7,
+    name: "repair-transfer-links",
+    statements: [
+      recordTable("transfer_links"),
+      `CREATE INDEX IF NOT EXISTS transfer_links_outgoing_idx ON transfer_links(ref_a)`,
+      `CREATE INDEX IF NOT EXISTS transfer_links_incoming_idx ON transfer_links(ref_b)`,
+    ],
+  },
 ];
 
 export const SCHEMA_VERSION = Math.max(...MIGRATIONS.map((migration) => migration.version));
