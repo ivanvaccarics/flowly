@@ -9,6 +9,13 @@ import {
 } from "../api/client.js";
 import { useBanking } from "../hooks/use-banking.js";
 import { BankAccountMapping, type DiscoveredAccount } from "./BankAccountMapping.js";
+import {
+  callbackMismatch,
+  currentCallbackUrl,
+  openBankWindow,
+  parseRedirect,
+  type StartedAuthorization,
+} from "./banking-callback.js";
 import { Icon } from "./icons.js";
 import { Banner, Chip, Empty, FileField } from "./ui.js";
 import { describeBankAuthorizationError } from "../lib/banking-errors.js";
@@ -35,40 +42,6 @@ const BALANCE_TYPE_LABEL: Record<string, string> = {
   PRCD: "previous close",
   XPCD: "expected balance",
 };
-
-/**
- * Opens the bank in its own window. The panel keeps polling while the consent
- * is being approved, so the app never has to be the page the bank returns to.
- */
-function openBankWindow(url: string): void {
-  if (typeof window === "undefined") return;
-  window.open(url, "flowly-bank-authorization", "width=600,height=760,popup=yes");
-}
-
-/** The address this browser is using right now, for callback-URL checks. */
-function currentCallbackUrl(): string {
-  return typeof window === "undefined"
-    ? ""
-    : `${window.location.origin}/enablebanking/auth_callback`;
-}
-
-/**
- * The bank sends the browser to the registered callback URL, so a hostname or
- * port that this browser cannot open never comes back. Comparing it with the
- * address in use catches the usual mistake — a port-less URL registered for a
- * stack that publishes 8443 — before the bank does.
- */
-function callbackMismatch(redirectUrl: string): string | undefined {
-  if (typeof window === "undefined" || redirectUrl.trim() === "") return undefined;
-  let origin: string;
-  try {
-    origin = new URL(redirectUrl).origin;
-  } catch {
-    return "This is not a full URL. Register a complete https address in Enable Banking.";
-  }
-  if (origin === window.location.origin) return undefined;
-  return `The bank will send your browser to ${origin}, but you are using ${window.location.origin} right now. That works when ${origin} opens Flowly too, because the server finishes the handshake there; if it does not, register ${window.location.origin} in the Enable Banking control panel instead.`;
-}
 
 export function BankingPanel({ csrf }: { csrf: string }) {
   const banking = useBanking(csrf, true);
@@ -1074,47 +1047,6 @@ function LinkCard({
       ) : null}
     </section>
   );
-}
-
-interface StartedAuthorization {
-  linkId: string;
-  url: string;
-  state: string;
-  expiresAt: string;
-  aspspName: string;
-}
-
-interface ParsedRedirect {
-  code?: string;
-  state?: string;
-  error?: string;
-  description?: string;
-}
-
-/**
- * Reads the query parameters of the URL the browser was redirected to, whether
- * the user pasted a full URL or only the `?code=…&state=…` part.
- */
-function parseRedirect(raw: string): ParsedRedirect {
-  const value = raw.trim();
-  if (value === "") return {};
-  let search = "";
-  try {
-    search = new URL(value).search;
-  } catch {
-    search = value.startsWith("?") ? value : `?${value}`;
-  }
-  const params = new URLSearchParams(search);
-  const code = params.get("code");
-  const state = params.get("state");
-  const error = params.get("error");
-  const description = params.get("error_description");
-  return {
-    ...(code ? { code } : {}),
-    ...(state ? { state } : {}),
-    ...(error ? { error } : {}),
-    ...(description ? { description } : {}),
-  };
 }
 
 /**
