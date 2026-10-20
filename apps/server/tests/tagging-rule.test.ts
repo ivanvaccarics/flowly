@@ -173,6 +173,25 @@ describe("tagging rule invariants", () => {
     expect(upgradeTaggingRule(base)).toBeUndefined();
   });
 
+  it("upgrades a v3 match rule from the retired transfer-rule prototype", () => {
+    const legacy = {
+      ...base,
+      formatVersion: 3,
+      kind: "match",
+      // The prototype schema accepted these pair-only fields on any rule.
+      outgoing: { combinator: "and", conditions: base.conditions },
+      incoming: { combinator: "and", conditions: base.conditions },
+      windowDays: 3,
+    };
+    const upgraded = upgradeTaggingRule(legacy);
+    expect(upgraded).toMatchObject(base);
+    expect(upgraded).not.toHaveProperty("kind");
+    expect(upgraded).not.toHaveProperty("outgoing");
+    expect(upgraded).not.toHaveProperty("incoming");
+    expect(upgraded).not.toHaveProperty("windowDays");
+    expect(() => validateTaggingRule(upgraded as TaggingRule)).not.toThrow();
+  });
+
   it("rejects operators that do not belong to the field", () => {
     expect(() =>
       validateTaggingRule({

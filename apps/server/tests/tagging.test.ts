@@ -79,6 +79,52 @@ describe("tagging rules in the vault", () => {
     }
   });
 
+  it("upgrades v3 match rules on unlock and hides incompatible legacy shapes", async () => {
+    const dir = tempDir("flowly-tagging-v3-");
+    const passphrase = "correct horse battery staple";
+    const vault = await Vault.create(dir, passphrase, { kdf: TEST_KDF });
+    const legacyMatch = {
+      ...coffeeRule(),
+      formatVersion: 3,
+      kind: "match",
+    };
+    const transferPrototype = {
+      ...coffeeRule({
+        id: "018f2c1e-6d5b-7c3a-9f2e-4c4d5e6f7082",
+        name: "Retired transfer rule",
+        tagIds: [],
+      }),
+      formatVersion: 3,
+      kind: "transfer-pair",
+      combinator: undefined,
+      conditions: undefined,
+      outgoing: { combinator: "and", conditions: [] },
+      incoming: { combinator: "and", conditions: [] },
+      windowDays: 3,
+    };
+    try {
+      await vault.replaceAllContent({
+        taggingRules: [legacyMatch, transferPrototype] as unknown as TaggingRule[],
+      });
+    } finally {
+      await vault.lock();
+    }
+
+    const reopened = await Vault.open(dir, passphrase);
+    try {
+      const stored = await reopened.taggingRules.list();
+      const upgraded = stored.find((rule) => rule.name === "Coffee");
+      expect(upgraded?.formatVersion).toBe(2);
+      expect(upgraded).not.toHaveProperty("kind");
+      expect(stored.find((rule) => rule.name === "Retired transfer rule")).toBeDefined();
+      const readable = await new TaggingRuleService(reopened).rules();
+      expect(readable.map((rule) => rule.name)).toEqual(["Coffee"]);
+    } finally {
+      await reopened.lock();
+      cleanup(dir);
+    }
+  });
+
   it("keeps manual tags and never duplicates rule tags", async () => {
     const { vault, dir, service } = await setupVault();
     try {

@@ -260,7 +260,19 @@ export function evaluateTaggingRules(
  */
 export function upgradeTaggingRule(raw: unknown): TaggingRule | undefined {
   if (!isRecord(raw)) return undefined;
-  if (raw["formatVersion"] !== 1) return undefined;
+  const version = raw["formatVersion"];
+  if (version === 3) {
+    // A short-lived transfer-rule prototype wrote v3 match rules before it was
+    // reverted. They are ordinary v2 rules plus the retired `kind`/pair fields.
+    if (raw["kind"] !== "match") return undefined;
+    const upgraded: Record<string, unknown> = { ...raw, formatVersion: 2 };
+    delete upgraded["kind"];
+    delete upgraded["outgoing"];
+    delete upgraded["incoming"];
+    delete upgraded["windowDays"];
+    return upgraded as unknown as TaggingRule;
+  }
+  if (version !== 1) return undefined;
   const rawConditions = raw["conditions"];
   if (!Array.isArray(rawConditions)) return undefined;
   const conditions: RuleCondition[] = [];

@@ -6,8 +6,10 @@ import {
   makeConfig,
   sampleRule,
   sampleTransaction,
+  appState,
   startHarness,
 } from "./helpers/api.js";
+import type { TaggingRule } from "../src/domain/tagging-rule.js";
 
 describe("core finance API", () => {
   it("applies tagging rules when a transaction is created", async () => {
@@ -641,6 +643,39 @@ describe("data portability API", () => {
       const after = await list();
       expect(after.map((rule) => rule.id)).toEqual(before.map((rule) => rule.id));
       expect(after[1]?.enabled).toBe(false);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("does not let an incompatible stored rule break the rules collection", async () => {
+    const { config } = makeConfig();
+    const harness = await startHarness(config);
+    try {
+      const vault = appState(harness.app).vault();
+      expect(vault).not.toBeNull();
+      const retired = {
+        ...sampleRule(),
+        id: "018f2c1e-6d5b-7c3a-9f2e-5c4d5e6f7082",
+        formatVersion: 3,
+        kind: "transfer-pair",
+        tagIds: [],
+      };
+      await vault!.replaceAllContent({
+        taggingRules: [sampleRule(), retired] as unknown as TaggingRule[],
+      });
+
+      const response = await call(harness.app, harness.client, {
+        method: "GET",
+        url: "/api/tagging-rules",
+      });
+      expect(response.statusCode).toBe(200);
+      const body = response.json<{
+        items: Array<{ id: string; formatVersion: number; kind?: string }>;
+      }>();
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0]).toMatchObject({ formatVersion: 2 });
+      expect(body.items[0]).not.toHaveProperty("kind");
     } finally {
       await harness.close();
     }

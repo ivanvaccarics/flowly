@@ -426,7 +426,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     // paused or edited rule jump to the top under the pointer that clicked it.
     // Creation order is stable, so the row someone is aiming at stays put.
     async (context) => ({
-      items: [...(await context.vault.taggingRules.list())].sort(mostRecentFirst),
+      items: [...(await new TaggingRuleService(context.vault).rules())].sort(mostRecentFirst),
     }),
   );
   registerBankingRoutes(app, {

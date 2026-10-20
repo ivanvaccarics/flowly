@@ -4,6 +4,7 @@ import {
   evaluateTaggingRules,
   ruleMatches,
   validateConditionSet,
+  validateTaggingRule,
 } from "../domain/tagging-rule.js";
 import type { Transaction } from "../domain/transaction.js";
 import type { Vault } from "../vault/vault.js";
@@ -50,7 +51,18 @@ export class TaggingRuleService {
   }
 
   async rules(): Promise<TaggingRule[]> {
-    return this.vault.taggingRules.list();
+    const stored = await this.vault.taggingRules.list();
+    // A record written by an incompatible build stays in the encrypted vault,
+    // but it cannot reach the matching engine or make the whole API response
+    // violate its current contract.
+    return stored.filter((rule) => {
+      try {
+        validateTaggingRule(rule);
+        return true;
+      } catch {
+        return false;
+      }
+    });
   }
 
   tagsFor(transaction: Transaction, rules: readonly TaggingRule[]): string[] {

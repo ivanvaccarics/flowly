@@ -2025,7 +2025,7 @@ Status: **complete** (2026-10-20), decision in `docs/adr/0045`.
   ESM runtime, and the contract suite validates production fixtures against the
   built validator entry point so this import-boundary failure cannot recur.
 - Tag `v1.1` marks `e6711e6` as the baseline before this maintenance series.
-- `pnpm verify` runs 346 tests: 15 contract, 230 server and 101 web tests.
+- `pnpm verify` runs 349 tests: 15 contract, 233 server and 101 web tests.
 
 #### Task `repair-inconsistent-vault-schema`
 
@@ -2043,6 +2043,25 @@ Status: **complete** (2026-10-20), decision in `docs/adr/0046`.
   rewriting financial records.
 - Regression tests cover both an incomplete version-6 schema and a healthy one
   with an existing link, including preservation of that link.
+
+#### Task `restore-retired-rule-format`
+
+Status: **complete** (2026-10-20), decision in `docs/adr/0047`.
+
+- A short-lived transfer-rule prototype wrote tagging rules as format version 3
+  before that feature was reverted. Two such rules remained in the encrypted
+  vault, so the Rules view received a valid HTTP response that the current
+  contract correctly rejected for the extra `kind` field and version 3.
+- Unlock now upgrades version-3 `match` rules to the current version-2 shape and
+  removes the retired `kind`, `outgoing`, `incoming` and `windowDays` fields.
+  Their conditions, tags, timestamps and revisions keep their meaning.
+- The matching service exposes only rules that satisfy the current domain
+  contract. A version-3 `transfer-pair` rule, which has no equivalent after the
+  prototype was replaced by automatic transfer pairing, stays encrypted in the
+  vault but is ignored by the current engine and API collection.
+- The Rules collection now reads through the validated service boundary.
+  Regression tests cover upgrade on unlock, preservation of retired records and
+  an API response that remains valid when an incompatible record is stored.
 
 #### Task `read-the-period-in-detail`
 

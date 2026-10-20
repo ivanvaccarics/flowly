@@ -371,6 +371,7 @@ kill %1 && rm -rf /tmp/flowly-demo
 | `401 session_required` | The browser session expired; unlock again. |
 | `409 revision_conflict` | Someone else changed the record. The UI reloads it; reapply your edit. |
 | Saving returns `500 internal_error` and the log says `no such table: transfer_links` | Use an image containing migration 7, unlock the vault and confirm schema version 7. The first failed save may already have updated the record, so reload the editor before retrying. |
+| Rules shows `response did not match its contract` with `formatVersion must be equal to constant` | Use an image containing the version-3 rule upgrade, then hard-reload and unlock. The upgrade converts retired `match` rules in place and keeps incompatible records encrypted but out of the current API. |
 | Port 5173 already in use | `pnpm --filter @flowly/web exec vite --port 5199`, or stop the other dev server. |
 | Vite warns about Node 22.9 | Upgrade to Node 22.12+; the container already uses a newer 22.x. |
 | Forgot the passphrase | There is no recovery. Restore a portable archive whose password you know. |
