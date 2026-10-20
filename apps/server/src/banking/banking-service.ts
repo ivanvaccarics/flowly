@@ -14,7 +14,6 @@ import type {
 } from "@flowly/web-contracts";
 import { createAccount, type Account } from "../domain/account.js";
 import {
-  BANK_CONSENT_TARGET_DAYS,
   BANK_PROVIDER,
   isBankEnvironment,
   isBankPsuType,
@@ -37,20 +36,25 @@ import {
   accountTypeFromCashAccountType,
   maskIban,
   normalizeAccount,
-  normalizeTransaction,
   normalizeTimestamp,
 } from "./normalize.js";
-import { publicKeyFingerprint } from "./jwt.js";
 import { BankSyncService, type SyncReport } from "./sync.js";
-import type { EbAccountResource, EbAspsp, EbTransaction } from "./enable-banking-types.js";
+import type { EbAccountResource, EbTransaction } from "./enable-banking-types.js";
 import type { EbApplication } from "./enable-banking-types.js";
+import {
+  consentDeadline,
+  matchesTransaction,
+  normalizePem,
+  presentAspsp,
+  presentDiscoveredAccount,
+  presentPublicConnection,
+  rawTransactionProviderId,
+} from "./presenters.js";
 
 const STATE_TTL_MS = 15 * 60_000;
 
-type AspspMethodSummary = AspspSummary["methods"][number];
 type BankAccountSummary = BankingAccountSummary;
 type BankingSyncState = BankingStatus["sync"];
-type DiscoveredAccount = BankingAuthorizationResult["accounts"][number];
 type AuthorizeStart = AuthorizeStartResponse;
 type AuthorizationResult = BankingAuthorizationResult;
 
@@ -134,7 +138,7 @@ export class BankingService {
     return {
       provider: BANK_PROVIDER,
       configured: true,
-      connection: publicConnection(connection),
+      connection: presentPublicConnection(connection),
       links,
       sync: this.syncState(),
       autoSync: connection.autoSync,
@@ -206,7 +210,7 @@ export class BankingService {
     const saved = existing
       ? await this.vault.bankConnections.update(stored, existing.revision)
       : await this.vault.bankConnections.create(stored);
-    return publicConnection(saved);
+    return presentPublicConnection(saved);
   }
 
   /** Removes the credentials, links, mappings and stored provider payloads. */
@@ -231,7 +235,7 @@ export class BankingService {
       }),
     );
     return aspsps
-      .map((aspsp) => summarizeAspsp(aspsp))
+      .map((aspsp) => presentAspsp(aspsp))
       .filter((aspsp) => aspsp.psuTypes.length > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
   }
@@ -265,7 +269,7 @@ export class BankingService {
     const now = this.clock.nowIso();
     const state = randomBytes(32).toString("base64url");
     const stateExpiresAt = this.clock.now().getTime() + STATE_TTL_MS;
-    const validUntil = consentValidUntil(
+    const validUntil = consentDeadline(
       this.clock.now().getTime(),
       aspsp.maximum_consent_validity ?? undefined,
     );
@@ -344,9 +348,10 @@ export class BankingService {
       const candidates = Array.isArray(page?.transactions) ? page.transactions : [];
       const providerId = transaction.providerTransactionId;
       const byId = providerId
-        ? candidates.find((candidate) => rawTransactionId(candidate) === providerId)
+        ? candidates.find((candidate) => rawTransactionProviderId(candidate) === providerId)
         : undefined;
-      const raw = byId ?? candidates.find((candidate) => matchesNormalised(candidate, transaction));
+      const raw =
+        byId ?? candidates.find((candidate) => matchesTransaction(candidate, transaction));
       if (!raw) continue;
       const link = await this.vault.bankLinks.get(payload.linkId);
       return {
@@ -453,7 +458,7 @@ export class BankingService {
     return {
       link: summary,
       accounts: (await this.vault.bankAccounts.list({ refA: updated.id })).map((account) =>
-        discoveredAccount(account),
+        presentDiscoveredAccount(account),
       ),
       aspsp: { name: updated.aspspName, country: updated.aspspCountry },
       ...(updated.accessValidUntil ? { accessValidUntil: updated.accessValidUntil } : {}),
@@ -792,90 +797,6 @@ export class BankingService {
   }
 }
 
-/** The provider's own id for a raw transaction, whichever field carries it. */
-function rawTransactionId(raw: EbTransaction): string | undefined {
-  const candidates = [raw.entry_reference, raw.transaction_id];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim() !== "") return candidate.trim();
-  }
-  return undefined;
-}
-
-/** Last resort match: the same normalised date, amount and currency. */
-function matchesNormalised(raw: EbTransaction, transaction: Transaction): boolean {
-  const normalized = normalizeTransaction(raw);
-  if (!normalized.ok) return false;
-  return (
-    normalized.bookingDate === transaction.bookingDate &&
-    normalized.amountMinor === transaction.amountMinor &&
-    normalized.currency === transaction.currency
-  );
-}
-
-function publicConnection(connection: BankConnection): BankingConnectionPublic {
-  return {
-    id: connection.id,
-    provider: connection.provider,
-    appId: connection.appId,
-    redirectUrl: connection.redirectUrl,
-    environment: connection.environment,
-    psuType: connection.psuType,
-    country: connection.country,
-    autoSync: connection.autoSync,
-    keyFingerprint: publicKeyFingerprint(connection.privateKeyPem),
-    createdAt: connection.createdAt,
-    updatedAt: connection.updatedAt,
-    ...(connection.appName ? { appName: connection.appName } : {}),
-  };
-}
-
-function summarizeAspsp(aspsp: EbAspsp): AspspSummary {
-  const methods: AspspMethodSummary[] = (aspsp.auth_methods ?? []).map((method) => ({
-    approach: method.approach,
-    psuType: method.psu_type,
-    ...(method.name ? { name: method.name } : {}),
-    credentials: (method.credentials ?? []).map((credential) => ({
-      name: credential.name,
-      required: credential.required,
-      ...(credential.title ? { title: credential.title } : {}),
-      ...(credential.description ? { description: credential.description } : {}),
-      ...(credential.template ? { template: credential.template } : {}),
-    })),
-  }));
-  const maximum = aspsp.maximum_consent_validity;
-  return {
-    name: aspsp.name,
-    country: aspsp.country.toUpperCase(),
-    beta: aspsp.beta ?? false,
-    psuTypes: aspsp.psu_types ?? [],
-    methods,
-    sandboxUsers: (aspsp.sandbox?.users ?? []).map((user) => ({
-      ...(user.username ? { username: user.username } : {}),
-      ...(user.password ? { password: user.password } : {}),
-      ...(user.otp ? { otp: user.otp } : {}),
-    })),
-    ...(aspsp.logo ? { logo: aspsp.logo } : {}),
-    ...(aspsp.bic ? { bic: aspsp.bic } : {}),
-    ...(typeof maximum === "number" && maximum > 0
-      ? { maximumConsentDays: Math.floor(maximum / 86_400) }
-      : {}),
-  };
-}
-
-function discoveredAccount(account: BankAccountLink): DiscoveredAccount {
-  return {
-    providerAccountUid: account.providerAccountUid,
-    status: account.status,
-    suggestedName: account.providerName ?? "Bank account",
-    suggestedType: accountTypeFromCashAccountType(account.cashAccountType),
-    ...(account.currency ? { suggestedCurrency: account.currency } : {}),
-    ...(account.currency ? { currency: account.currency } : {}),
-    ...(account.iban ? { iban: account.iban, maskedIban: maskIban(account.iban) } : {}),
-    ...(account.providerName ? { providerName: account.providerName } : {}),
-    ...(account.cashAccountType ? { cashAccountType: account.cashAccountType } : {}),
-  };
-}
-
 function validateConnectionInput(connection: BankConnection): void {
   try {
     validateBankConnection(connection);
@@ -895,16 +816,4 @@ function validateConnectionInput(connection: BankConnection): void {
   if (!/^https?:\/\//i.test(connection.redirectUrl)) {
     throw new BankingError("bank_config_invalid", "The callback URL must be an http(s) URL.");
   }
-}
-
-/** Trims stray whitespace and newlines from a pasted or uploaded PEM file. */
-export function normalizePem(value: string): string {
-  const trimmed = value.replace(/\r\n/g, "\n").trim();
-  return `${trimmed}\n`;
-}
-
-function consentValidUntil(now: number, maximumSeconds: number | undefined): number {
-  const target = now + BANK_CONSENT_TARGET_DAYS * 86_400_000;
-  if (!maximumSeconds || maximumSeconds <= 0) return target;
-  return Math.min(target, now + maximumSeconds * 1000);
 }
