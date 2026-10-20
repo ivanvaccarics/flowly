@@ -2,6 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExpenseDetails, Tag } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { DashboardFilters } from "../components/DashboardFilters.js";
+import { ChartTooltip } from "../components/DetailChartTooltip.js";
+import {
+  dayLabel,
+  formatCompact,
+  heatColour,
+  share,
+  shortDate,
+} from "../components/details-chart-utils.js";
 import { Icon } from "../components/icons.js";
 import { SpendingDonut } from "../components/SpendingDonut.js";
 import { Banner, Empty, SectionIntro } from "../components/ui.js";
@@ -9,7 +17,7 @@ import { useMonthScope } from "../hooks/use-month-scope.js";
 import { describeError } from "../hooks/use-workspace.js";
 import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
 import { formatDecimal, formatMinorToAmount } from "../lib/money.js";
-import { MONTH_SHORT, monthsQuery } from "../lib/months.js";
+import { monthsQuery } from "../lib/months.js";
 
 // Slice colours for tags that carry none of their own.
 const SPENDING_COLOURS = [
@@ -431,22 +439,6 @@ export function DetailsView({ onSeeAllTransactions, onExportData }: DetailsViewP
       ) : null}
     </section>
   );
-}
-
-// Share of a total, as a percentage; zero when there is no total.
-function share(value: number, total: number): number {
-  return total > 0 ? (value / total) * 100 : 0;
-}
-
-// `2026-09-12` → `12 Sep 2026`; the day a figure happened, short.
-function dayLabel(date: string): string {
-  const [year, month, day] = date.split("-");
-  return `${Number(day)} ${MONTH_SHORT[Number(month) - 1] ?? month} ${year}`;
-}
-
-// A translucent brand green, darker as the day's spending grows.
-function heatColour(level: number): string {
-  return `rgba(30, 111, 78, ${0.12 + 0.88 * level})`;
 }
 
 function WeeklyBars({
@@ -1052,60 +1044,6 @@ function Heatmap({
           hint={active.selected && onOpen ? "Click to open this day" : undefined}
         />
       ) : null}
-    </div>
-  );
-}
-
-// `2026-09-05` → `5/9`, the compact axis label.
-function shortDate(date: string): string {
-  const [, month, day] = date.split("-");
-  return `${Number(day)}/${Number(month)}`;
-}
-
-// A short, rounded amount for an axis label: `1,2k`, `850`.
-function formatCompact(minor: number, currency: string): string {
-  const amount = Number(formatMinorToAmount(minor, currency).replace(/\./g, "").replace(",", "."));
-  if (!Number.isFinite(amount)) return "";
-  if (Math.abs(amount) >= 1000) return `${formatDecimal(amount / 1000)}k`;
-  return String(Math.round(amount));
-}
-
-// The bubble that follows the point under the pointer or the keyboard.
-function ChartTooltip({
-  xPercent,
-  topPx,
-  below,
-  title,
-  rows,
-  hint,
-}: {
-  xPercent: number;
-  topPx?: number;
-  below?: boolean;
-  title: string;
-  rows: Array<{ label: string; value: string; tone?: string }>;
-  hint?: string | undefined;
-}) {
-  const left = Math.min(88, Math.max(12, xPercent));
-  return (
-    <div
-      className={below ? "chart-tooltip is-below" : "chart-tooltip"}
-      style={{ left: `${left}%`, top: topPx === undefined ? undefined : `${topPx}px` }}
-      role="presentation"
-    >
-      <strong>{title}</strong>
-      <dl>
-        {rows.map((row) => (
-          <div key={row.label}>
-            <dt>
-              <span className={`dot ${row.tone ?? ""}`} />
-              {row.label}
-            </dt>
-            <dd className="mono">{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-      {hint ? <span className="hint">{hint}</span> : null}
     </div>
   );
 }
