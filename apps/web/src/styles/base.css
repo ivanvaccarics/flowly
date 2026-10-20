@@ -1,0 +1,192 @@
+/*
+ * Flowly UI — the flat, green-on-warm-white chrome.
+ *
+ * The palette, shapes and layout come from the desktop mockups in `ui/*` and
+ * from the Flowly brand lockup (deep green → brand green → gold, the
+ * `--brand-*` tokens). `docs/DESIGN.md` reproduces the tokens that matter, so
+ * the codebase stays self-contained and this file never reads from the
+ * untracked `ui/` folder.
+ *
+ * Fonts use local stacks instead of a CDN so the app keeps working on a private
+ * network with no Internet access. The page headline is a local serif; every
+ * other surface is a system sans. Where a token is one step darker than the
+ * mockup it is because the mockup colour would not reach WCAG AA as text; the
+ * chart and icon colours keep the mockup values.
+ */
+
+:root {
+  /* Surfaces */
+  --canvas: #f7f8f5;
+  --surface: #fffefb;
+  --surface-low: #f2f7f3;
+  --surface-sunken: #eef2ee;
+  --surface-high: #e4eae4;
+  --sidebar: #f7f8f5;
+
+  /* Lines */
+  --border: #e1e8e3;
+  --border-strong: #cfdad3;
+
+  /* Text */
+  --text: #203032;
+  --text-secondary: #46585a;
+  --text-muted: #667571;
+  --text-faint: #74827e;
+
+  /* Brand — the lockup in `apps/web/public`: deep green → medium green → gold.
+     `--brand` is also the product's action colour, so the chrome and the lockup
+     are the same green. */
+  --brand-deep: #0b3d2e;
+  --brand: #1e6f4e;
+  --brand-gold: #d4af37;
+  --brand-gradient: linear-gradient(120deg, #0b3d2e 0%, #1e6f4e 55%, #d4af37 100%);
+  --brand-shadow: rgba(11, 61, 46, 0.26);
+  --brand-ring: rgba(30, 111, 78, 0.18);
+
+  /* Accents */
+  --primary: #1e6f4e;
+  --primary-hover: #17593f;
+  --primary-soft: #e3f1e8;
+  --primary-ink: #17593f;
+  --primary-soft-border: rgba(30, 111, 78, 0.24);
+  --accent: #0b3d2e;
+  --income: #1f7a58;
+  --income-graphic: #37997a;
+  --income-soft: #e4f2eb;
+  --income-soft-border: rgba(39, 123, 98, 0.22);
+  --expense: #a8515d;
+  --expense-graphic: #cf7280;
+  --expense-soft: #f8e9eb;
+  --expense-soft-border: rgba(168, 81, 93, 0.22);
+  --info: #6a5fa0;
+  --info-graphic: #8d81c9;
+  --info-soft: #eeebf7;
+  --info-soft-border: rgba(113, 103, 159, 0.24);
+  --warning: #8a5f28;
+  --warning-soft: #f7efe2;
+  --warning-soft-border: rgba(154, 107, 47, 0.26);
+  --accent-blue: #35618f;
+  --accent-blue-graphic: #5b8cc4;
+  --accent-blue-soft: #e8eff6;
+
+  /* Shape and depth */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 9999px;
+  --shadow-1: 0 1px 2px rgba(32, 48, 50, 0.05);
+  --shadow-2: 0 2px 6px rgba(32, 48, 50, 0.06), 0 1px 2px rgba(32, 48, 50, 0.04);
+  --shadow-3: 0 18px 30px -12px rgba(32, 48, 50, 0.16), 0 6px 12px -8px rgba(32, 48, 50, 0.08);
+
+  /* Layout */
+  --sidebar-width: 218px;
+  --header-height: 70px;
+  --gutter: 2.5rem;
+
+  --font-display: Manrope, "SF Pro Display", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-body: Inter, -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-serif:
+    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman",
+    serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.4rem;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  margin: 0;
+  color: var(--text);
+}
+
+h1 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.9rem;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+/* The page's own headline — the greeting on the dashboard, the welcome on the
+   unlock card: the one place the product speaks in a serif. */
+.display-headline {
+  font-family: var(--font-serif);
+  font-size: 2.25rem;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0;
+}
+
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 0.875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 0.25rem;
+}
+
+.eyebrow.primary {
+  color: var(--primary-ink);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.amount.negative {
+  color: var(--expense);
+}
+
+.amount.positive {
+  color: var(--income);
+}

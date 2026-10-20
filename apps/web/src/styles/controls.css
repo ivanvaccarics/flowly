@@ -1,0 +1,471 @@
+/* -------------------------------------------------------------- controls */
+
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-low);
+}
+
+.segment {
+  height: 30px;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.segment:hover {
+  color: var(--text);
+}
+
+.segment.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--shadow-1);
+}
+
+button {
+  font: inherit;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 36px;
+  padding: 0 0.9rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--brand-shadow);
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: #fff;
+}
+
+.btn.danger {
+  background: var(--expense-soft);
+  border-color: transparent;
+  color: var(--expense);
+  font-weight: 600;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: #f3dde0;
+  color: var(--expense);
+}
+
+.btn.ghost {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.btn.ghost:hover:not(:disabled) {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.small {
+  height: 30px;
+  padding: 0 0.65rem;
+  font-size: 0.8125rem;
+}
+
+.btn.block {
+  width: 100%;
+}
+
+label,
+.field {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+input,
+select,
+textarea {
+  height: 36px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-faint);
+}
+
+textarea {
+  height: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+select {
+  appearance: none;
+  padding-right: 2rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 16px,
+    calc(100% - 11px) 16px;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  background-color: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--brand-ring);
+}
+
+.btn:focus-visible,
+.nav button:focus-visible,
+.picker-trigger:focus-visible,
+.tag-pill:focus-visible,
+.switch:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 0 3px var(--brand-ring);
+}
+
+input[type="checkbox"] {
+  height: auto;
+  width: auto;
+  padding: 0;
+  accent-color: var(--primary);
+}
+
+.fieldset {
+  border: 0;
+  border-radius: var(--radius-lg);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: flex-end;
+  margin: 0;
+}
+
+.fieldset.framed {
+  padding: 0.9rem 1rem;
+  background: var(--surface-low);
+  border: 1px solid var(--border);
+}
+
+.fieldset.framed input,
+.fieldset.framed select,
+.fieldset.framed textarea,
+.fieldset.framed .picker-trigger,
+.option-card input,
+.option-card select,
+.option-card textarea,
+.condition input,
+.condition select {
+  background-color: var(--surface);
+}
+
+.fieldset legend {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 0.25rem;
+}
+
+.swatch-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.colour-control {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.swatch-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  text-shadow: 0 0 3px rgba(32, 48, 50, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(32, 48, 50, 0.08);
+  transition:
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.swatch-choice:hover {
+  transform: translateY(-1px) scale(1.04);
+}
+
+/* The free-colour tile: a checkerboard with the eyedropper until it carries a
+   colour of its own, then the colour itself. */
+.swatch-choice.custom {
+  background-color: var(--surface);
+  background-image: linear-gradient(
+    135deg,
+    rgba(148, 163, 184, 0.45) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(148, 163, 184, 0.45) 50%,
+    rgba(148, 163, 184, 0.45) 75%,
+    transparent 75%
+  );
+  background-size: 8px 8px;
+  color: var(--text-secondary);
+}
+
+/* The ring sits outside the swatch, on the white panel, so it stays visible
+   whatever colour is selected. */
+.swatch-choice.selected {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--accent);
+}
+
+.colour-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The colour field takes its own row in the tag forms, so the tray never gets
+   squeezed between the name field and the submit button. */
+.colour-field {
+  flex: 1 1 100%;
+}
+
+/* A file field that does not look like 1996: the native control is invisible,
+   the label is the button, and the chosen file is named beside it. */
+.file-field {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  max-width: 100%;
+  padding: 0.35rem 0.75rem 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.file-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.file-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-low);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.file-button:hover {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.file-button:focus-within {
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 0 3px var(--brand-ring);
+}
+
+.file-name {
+  min-width: 0;
+  max-width: 24ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.file-name.chosen {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.tag-list li.editing {
+  align-items: flex-end;
+}
+
+.tag-list li.editing > label {
+  flex: 1 1 180px;
+  min-width: 180px;
+}
+
+.checkline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-low);
+  color: var(--text-secondary);
+}
+
+.banner.error {
+  background: var(--expense-soft);
+  border-color: var(--expense-soft-border);
+  color: var(--expense);
+}
+
+.banner.ok {
+  background: var(--income-soft);
+  border-color: var(--income-soft-border);
+  color: var(--income);
+}
+
+.banner.warning {
+  background: var(--warning-soft);
+  border-color: var(--warning-soft-border);
+  color: var(--warning);
+}
+
+/* --------------------------------------------------------- disclosures */
+
+/* Advanced or destructive settings stay behind a summary so a card opens on
+   what matters; the content keeps whatever surface it already had. */
+details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-low);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+}
+
+details[open] > summary {
+  margin-bottom: 0.75rem;
+}
+
+details[open] > summary::before {
+  transform: rotate(45deg);
+}

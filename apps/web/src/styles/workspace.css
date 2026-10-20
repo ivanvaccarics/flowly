@@ -1,0 +1,292 @@
+/* --------------------------------------------------------------- layout */
+
+.dash {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(340px, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.dash-main,
+.dash-side {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.account-card {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  transition:
+    box-shadow 140ms ease,
+    border-color 140ms ease;
+}
+
+.account-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-2);
+}
+
+.account-card.archived {
+  opacity: 0.72;
+}
+
+.account-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--surface-sunken);
+  color: var(--primary-ink);
+  flex: 0 0 auto;
+}
+
+.tile.income {
+  background: var(--income-soft);
+  color: var(--income);
+}
+
+.tile.expense {
+  background: var(--expense-soft);
+  color: var(--expense);
+}
+
+.account-balance {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-low);
+}
+
+.account-balance .value {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.option-card {
+  display: grid;
+  gap: 0.6rem;
+  align-content: start;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-low);
+}
+
+.option-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dropzone {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+  padding: 1.5rem 1rem;
+  border-radius: 12px;
+  border: 1px dashed var(--border-strong);
+  background: var(--surface);
+  text-align: center;
+}
+
+.option-card input[type="file"] {
+  height: auto;
+  width: 100%;
+  padding: 0.4rem;
+  background: var(--surface);
+}
+
+.condition {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: flex-end;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin: 0;
+  background: var(--surface-low);
+}
+
+.condition legend {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.bar-track {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  /* The one place the interface chrome carries the full brand gradient: a
+     progress bar reads as "flow", and it is never behind text. */
+  background: var(--brand-gradient);
+  border-radius: var(--radius-pill);
+}
+
+/* ---------------------------------------------------------------- unlock */
+
+.unlock-layout {
+  min-height: 100vh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1.5rem;
+  padding: 2.5rem 2rem;
+  background: var(--canvas);
+}
+
+.unlock-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.unlock-card {
+  width: min(520px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  padding: 2.25rem 2.5rem 2rem;
+  display: grid;
+  gap: 1.15rem;
+}
+
+.unlock-head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.unlock-head .eyebrow {
+  margin: 0;
+  color: var(--primary-ink);
+}
+
+.unlock-greeting {
+  margin: 0.15rem 0 0;
+  color: var(--text-secondary);
+}
+
+.unlock-card .display-headline {
+  font-size: 2.5rem;
+}
+
+.unlock-card .lead {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.unlock-card form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.unlock-card .btn {
+  height: 44px;
+}
+
+.secret-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.secret-field input {
+  width: 100%;
+  padding-right: 2.75rem;
+}
+
+.secret-field .icon-btn {
+  position: absolute;
+  right: 0.4rem;
+}
+
+.unlock-trust {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--border);
+}
+
+.unlock-trust span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.unlock-trust svg {
+  color: var(--primary);
+  flex: 0 0 auto;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-low);
+}
+
+.facts dt {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.facts dd {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
