@@ -35,6 +35,7 @@ import { registerBankingRoutes, psuFrom } from "./banking-routes.js";
 import { registerAnalyticsRoutes } from "./analytics-routes.js";
 import { registerImportExportRoutes } from "./import-export-routes.js";
 import { registerTaggingRoutes } from "./tagging-routes.js";
+import { registerTransferRoutes } from "./transfer-routes.js";
 import { registerStaticApp } from "./static-app.js";
 
 const COOKIE_NAME = "flowly_sid";
@@ -460,27 +461,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     return record;
   });
 
-  // --- transfers between the user's own accounts ------------------------------
-
-  /** Every recognised transfer, with the evidence that joined its two legs. */
-  app.get("/api/transfers", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    return {
-      items: await new TransferPairingService({ vault: context.vault, newId: generateId }).links(),
-    };
-  });
-
-  /**
-   * Sweeps the whole ledger. The pairing runs by itself when movements arrive
-   * and when the vault unlocks; this is the way to ask for it again without
-   * waiting for either.
-   */
-  app.post("/api/transfers/reconcile", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    return new TransferPairingService({ vault: context.vault, newId: generateId }).reconcile();
-  });
+  registerTransferRoutes(app, { guard: requireContext, errorBody, newId: generateId });
 
   registerAnalyticsRoutes(app, { guard: requireContext, errorBody });
 
