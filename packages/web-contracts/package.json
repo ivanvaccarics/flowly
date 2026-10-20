@@ -28,7 +28,8 @@
     "generate": "node scripts/generate.mjs",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run && pnpm check:runtime",
+    "check:runtime": "node scripts/check-runtime-validators.mjs"
   },
   "dependencies": {
     "ajv": "^8.20.0",

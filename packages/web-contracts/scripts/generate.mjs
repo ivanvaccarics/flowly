@@ -117,8 +117,10 @@ function standaloneModule(refs) {
   if (source.includes("require(")) {
     throw new Error("standalone validators still contain CommonJS require calls");
   }
-  return `${BANNER}import ucs2length from "ajv/dist/runtime/ucs2length.js";
+  return `${BANNER}import ucs2lengthModule from "ajv/dist/runtime/ucs2length.js";
 import formats from "ajv-formats/dist/formats.js";
+// Ajv's helper is CommonJS: Node ESM exposes module.exports as default.
+const ucs2length = ucs2lengthModule.default ?? ucs2lengthModule;
 ${source}`;
 }
 
