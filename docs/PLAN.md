@@ -1990,6 +1990,27 @@ Status: **complete** (2026-10-20), decision in `docs/adr/0044`.
 - `package.json` now declares the same Node.js floor as the README and CI:
   `>=22.12`.
 
+#### Task `remove-runtime-duplication-and-split-loading`
+
+Status: **complete** (2026-10-20), decision in `docs/adr/0045`.
+
+- Every JSON response consumed by the browser now has an explicit validator,
+  including entity lists, sessions, mutation envelopes, rule reports, imports
+  and nested report rows.
+- App sections load on demand; the bank callback no longer inflates the initial
+  chunk, and all seven workspace sections have their own bundles. The initial
+  gzip chunk is approximately 77 KB and the generated validator chunk roughly
+  28 KB, loaded with the first response.
+- Dashboard and Details share `useMonthScope`, `SpendingDonut` and `TagPill`.
+  The duplicated period logic, donut renderer and seven tag-pill variants are
+  gone.
+- `RecordEncryptionStore` and `SqlcipherStore` share SQL statement builders and
+  optimistic-revision checks, leaving encryption and synchronous/asynchronous
+  database access as their real differences.
+- Analytics, tagging, transfer, import/export and account/tag action routes live
+  in focused API modules rather than the Fastify composition root.
+- `pnpm verify` runs 340 tests: 15 contract, 228 server and 97 web tests.
+
 #### Task `read-the-period-in-detail`
 
 Status: **complete** (2026-10-04), decision in `docs/adr/0043`.
