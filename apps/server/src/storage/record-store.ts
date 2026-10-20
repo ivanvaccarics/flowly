@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { deriveSubkey, SUBKEY_INFO } from "../crypto/envelope.js";
 import { decryptRecord, encryptRecord } from "../crypto/record-crypto.js";
-import { ConflictError, RecordExistsError, RecordNotFoundError, StorageError } from "./errors.js";
+import { RecordExistsError, RecordNotFoundError, StorageError } from "./errors.js";
 import {
   MIGRATIONS,
   runMigrations,
@@ -9,7 +9,19 @@ import {
   type MigrationHooks,
 } from "./migrations.js";
 import { fileSize, updatedAtOf } from "./sqlcipher-store.js";
-import type { ListOptions, StoredRefs, TableStats, VaultStore } from "./store.js";
+import {
+  assertExpectedRevision,
+  clearStatement,
+  countStatement,
+  deleteStatement,
+  insertStatement,
+  listStatement,
+  readStatement,
+  replaceStatement,
+  revisionStatement,
+  statsStatement,
+} from "./sql.js";
+import type { ListOptions, StoredRefs, TableStats, VaultStore, VaultTable } from "./store.js";
 import { createTransactionRunner } from "./transaction-scope.js";
 
 type NodeSqlite = { DatabaseSync: new (path: string) => DatabaseSync };
@@ -88,13 +100,15 @@ export class RecordEncryptionStore implements VaultStore {
     return rows.map((row) => row.version);
   }
 
-  async insert(table: string, id: string, value: unknown, refs: StoredRefs = {}): Promise<void> {
+  async insert(
+    table: VaultTable,
+    id: string,
+    value: unknown,
+    refs: StoredRefs = {},
+  ): Promise<void> {
     try {
       this.db
-        .prepare(
-          `INSERT INTO ${table}(id, updated_at, revision, ref_a, ref_b, payload)
-           VALUES (?, ?, 1, ?, ?, ?)`,
-        )
+        .prepare(insertStatement(table))
         .run(
           id,
           updatedAtOf(value),
@@ -108,38 +122,21 @@ export class RecordEncryptionStore implements VaultStore {
     }
   }
 
-  async read<T>(table: string, id: string): Promise<T | undefined> {
-    const row = this.db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id) as
-      StoredRow | undefined;
+  async read<T>(table: VaultTable, id: string): Promise<T | undefined> {
+    const row = this.db.prepare(readStatement(table)).get(id) as StoredRow | undefined;
     return row ? decodeRow<T>(this.recordKey, table, row) : undefined;
   }
 
-  async list<T>(table: string, options: ListOptions = {}): Promise<T[]> {
-    const clauses: string[] = [];
-    const params: unknown[] = [];
-    if (options.refA !== undefined) {
-      clauses.push("ref_a = ?");
-      params.push(options.refA);
-    }
-    if (options.refBFrom !== undefined) {
-      clauses.push("ref_b >= ?");
-      params.push(options.refBFrom);
-    }
-    if (options.refBTo !== undefined) {
-      clauses.push("ref_b <= ?");
-      params.push(options.refBTo);
-    }
-    const where = clauses.length > 0 ? ` WHERE ${clauses.join(" AND ")}` : "";
-    const limit = options.limit !== undefined ? " LIMIT ?" : "";
-    if (options.limit !== undefined) params.push(options.limit);
+  async list<T>(table: VaultTable, options: ListOptions = {}): Promise<T[]> {
+    const query = listStatement(table, options);
     const rows = this.db
-      .prepare(`SELECT * FROM ${table}${where} ORDER BY updated_at DESC, id${limit}`)
-      .all(...(params as never[])) as unknown as StoredRow[];
+      .prepare(query.sql)
+      .all(...(query.params as never[])) as unknown as StoredRow[];
     return rows.map((row) => decodeRow<T>(this.recordKey, table, row));
   }
 
   async replace(
-    table: string,
+    table: VaultTable,
     id: string,
     value: unknown,
     expectedRevision: number,
@@ -147,51 +144,42 @@ export class RecordEncryptionStore implements VaultStore {
   ): Promise<number> {
     return this.transaction(async () => {
       const current = this.currentRevision(table, id);
-      if (current !== expectedRevision) {
-        throw new ConflictError(table, id, expectedRevision, current);
-      }
-      this.db
-        .prepare(
-          `UPDATE ${table} SET updated_at = ?, revision = ?, ref_a = ?, ref_b = ?, payload = ?
-           WHERE id = ?`,
-        )
-        .run(
-          updatedAtOf(value),
-          current + 1,
-          refs.refA ?? null,
-          refs.refB ?? null,
-          encryptRecord(this.recordKey, recordAad(table, id), value),
-          id,
-        );
+      assertExpectedRevision(table, id, expectedRevision, current);
+      const query = replaceStatement(
+        table,
+        id,
+        current + 1,
+        refs,
+        encryptRecord(this.recordKey, recordAad(table, id), value),
+        updatedAtOf(value),
+      );
+      this.db.prepare(query.sql).run(...(query.params as never[]));
       return current + 1;
     });
   }
 
-  async remove(table: string, id: string, expectedRevision: number): Promise<void> {
+  async remove(table: VaultTable, id: string, expectedRevision: number): Promise<void> {
     await this.transaction(async () => {
       const current = this.currentRevision(table, id);
-      if (current !== expectedRevision) {
-        throw new ConflictError(table, id, expectedRevision, current);
-      }
-      this.db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
+      assertExpectedRevision(table, id, expectedRevision, current);
+      const query = deleteStatement(table, id);
+      this.db.prepare(query.sql).run(...(query.params as never[]));
     });
   }
 
-  async count(table: string): Promise<number> {
-    const row = this.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as
-      { n: number } | undefined;
+  async count(table: VaultTable): Promise<number> {
+    const row = this.db.prepare(countStatement(table)).get() as { n: number } | undefined;
     return row?.n ?? 0;
   }
 
-  async tableStats(table: string): Promise<TableStats> {
-    const row = this.db
-      .prepare(`SELECT COUNT(*) AS n, MAX(updated_at) AS m FROM ${table}`)
-      .get() as { n: number; m: string | null } | undefined;
+  async tableStats(table: VaultTable): Promise<TableStats> {
+    const row = this.db.prepare(statsStatement(table)).get() as
+      { n: number; m: string | null } | undefined;
     return { count: row?.n ?? 0, updatedAtMax: row?.m ?? null };
   }
 
-  async clear(table: string): Promise<void> {
-    this.db.prepare(`DELETE FROM ${table}`).run();
+  async clear(table: VaultTable): Promise<void> {
+    this.db.prepare(clearStatement(table)).run();
   }
 
   async transaction<T>(work: () => Promise<T>): Promise<T> {
@@ -211,8 +199,8 @@ export class RecordEncryptionStore implements VaultStore {
     this.recordKey.fill(0);
   }
 
-  private currentRevision(table: string, id: string): number {
-    const row = this.db.prepare(`SELECT revision FROM ${table} WHERE id = ?`).get(id) as
+  private currentRevision(table: VaultTable, id: string): number {
+    const row = this.db.prepare(revisionStatement(table)).get(id) as
       { revision: number } | undefined;
     if (!row) throw new RecordNotFoundError(table, id);
     return row.revision;

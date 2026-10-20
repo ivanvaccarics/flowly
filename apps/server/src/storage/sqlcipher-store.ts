@@ -1,8 +1,20 @@
 import { statSync } from "node:fs";
-import { ConflictError, RecordExistsError, RecordNotFoundError } from "./errors.js";
+import { RecordExistsError, RecordNotFoundError } from "./errors.js";
 import { MIGRATIONS, runMigrations, type MigrationHooks } from "./migrations.js";
 import { SqlcipherDatabase } from "./sqlcipher-driver.js";
-import type { ListOptions, StoredRefs, TableStats, VaultStore } from "./store.js";
+import {
+  assertExpectedRevision,
+  clearStatement,
+  countStatement,
+  deleteStatement,
+  insertStatement,
+  listStatement,
+  readStatement,
+  replaceStatement,
+  revisionStatement,
+  statsStatement,
+} from "./sql.js";
+import type { ListOptions, StoredRefs, TableStats, VaultStore, VaultTable } from "./store.js";
 import { createTransactionRunner } from "./transaction-scope.js";
 
 interface StoredRow {
@@ -50,51 +62,39 @@ export class SqlcipherStore implements VaultStore {
     return rows.map((row) => row.version);
   }
 
-  async insert(table: string, id: string, value: unknown, refs: StoredRefs = {}): Promise<void> {
+  async insert(
+    table: VaultTable,
+    id: string,
+    value: unknown,
+    refs: StoredRefs = {},
+  ): Promise<void> {
     try {
-      await this.db.run(
-        `INSERT INTO ${table}(id, updated_at, revision, ref_a, ref_b, payload)
-         VALUES (?, ?, 1, ?, ?, ?)`,
-        [id, updatedAtOf(value), refs.refA ?? null, refs.refB ?? null, JSON.stringify(value)],
-      );
+      await this.db.run(insertStatement(table), [
+        id,
+        updatedAtOf(value),
+        refs.refA ?? null,
+        refs.refB ?? null,
+        JSON.stringify(value),
+      ]);
     } catch (error) {
       if (isConstraintViolation(error)) throw new RecordExistsError(table, id);
       throw error;
     }
   }
 
-  async read<T>(table: string, id: string): Promise<T | undefined> {
-    const row = await this.db.getRow<StoredRow>(`SELECT * FROM ${table} WHERE id = ?`, [id]);
+  async read<T>(table: VaultTable, id: string): Promise<T | undefined> {
+    const row = await this.db.getRow<StoredRow>(readStatement(table), [id]);
     return row ? decodeRow<T>(row) : undefined;
   }
 
-  async list<T>(table: string, options: ListOptions = {}): Promise<T[]> {
-    const clauses: string[] = [];
-    const params: unknown[] = [];
-    if (options.refA !== undefined) {
-      clauses.push("ref_a = ?");
-      params.push(options.refA);
-    }
-    if (options.refBFrom !== undefined) {
-      clauses.push("ref_b >= ?");
-      params.push(options.refBFrom);
-    }
-    if (options.refBTo !== undefined) {
-      clauses.push("ref_b <= ?");
-      params.push(options.refBTo);
-    }
-    const where = clauses.length > 0 ? ` WHERE ${clauses.join(" AND ")}` : "";
-    const limit = options.limit !== undefined ? " LIMIT ?" : "";
-    if (options.limit !== undefined) params.push(options.limit);
-    const rows = await this.db.all<StoredRow>(
-      `SELECT * FROM ${table}${where} ORDER BY updated_at DESC, id${limit}`,
-      params,
-    );
+  async list<T>(table: VaultTable, options: ListOptions = {}): Promise<T[]> {
+    const query = listStatement(table, options);
+    const rows = await this.db.all<StoredRow>(query.sql, query.params);
     return rows.map((row) => decodeRow<T>(row));
   }
 
   async replace(
-    table: string,
+    table: VaultTable,
     id: string,
     value: unknown,
     expectedRevision: number,
@@ -102,49 +102,41 @@ export class SqlcipherStore implements VaultStore {
   ): Promise<number> {
     return this.transaction(async () => {
       const current = await this.currentRevision(table, id);
-      if (current !== expectedRevision) {
-        throw new ConflictError(table, id, expectedRevision, current);
-      }
-      await this.db.run(
-        `UPDATE ${table} SET updated_at = ?, revision = ?, ref_a = ?, ref_b = ?, payload = ?
-         WHERE id = ?`,
-        [
-          updatedAtOf(value),
-          current + 1,
-          refs.refA ?? null,
-          refs.refB ?? null,
-          JSON.stringify(value),
-          id,
-        ],
+      assertExpectedRevision(table, id, expectedRevision, current);
+      const query = replaceStatement(
+        table,
+        id,
+        current + 1,
+        refs,
+        JSON.stringify(value),
+        updatedAtOf(value),
       );
+      await this.db.run(query.sql, query.params);
       return current + 1;
     });
   }
 
-  async remove(table: string, id: string, expectedRevision: number): Promise<void> {
+  async remove(table: VaultTable, id: string, expectedRevision: number): Promise<void> {
     await this.transaction(async () => {
       const current = await this.currentRevision(table, id);
-      if (current !== expectedRevision) {
-        throw new ConflictError(table, id, expectedRevision, current);
-      }
-      await this.db.run(`DELETE FROM ${table} WHERE id = ?`, [id]);
+      assertExpectedRevision(table, id, expectedRevision, current);
+      const query = deleteStatement(table, id);
+      await this.db.run(query.sql, query.params);
     });
   }
 
-  async count(table: string): Promise<number> {
-    const row = await this.db.getRow<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table}`);
+  async count(table: VaultTable): Promise<number> {
+    const row = await this.db.getRow<{ n: number }>(countStatement(table));
     return row?.n ?? 0;
   }
 
-  async tableStats(table: string): Promise<TableStats> {
-    const row = await this.db.getRow<{ n: number; m: string | null }>(
-      `SELECT COUNT(*) AS n, MAX(updated_at) AS m FROM ${table}`,
-    );
+  async tableStats(table: VaultTable): Promise<TableStats> {
+    const row = await this.db.getRow<{ n: number; m: string | null }>(statsStatement(table));
     return { count: row?.n ?? 0, updatedAtMax: row?.m ?? null };
   }
 
-  async clear(table: string): Promise<void> {
-    await this.db.run(`DELETE FROM ${table}`);
+  async clear(table: VaultTable): Promise<void> {
+    await this.db.run(clearStatement(table));
   }
 
   async transaction<T>(work: () => Promise<T>): Promise<T> {
@@ -163,11 +155,8 @@ export class SqlcipherStore implements VaultStore {
     return this.db.close();
   }
 
-  private async currentRevision(table: string, id: string): Promise<number> {
-    const row = await this.db.getRow<{ revision: number }>(
-      `SELECT revision FROM ${table} WHERE id = ?`,
-      [id],
-    );
+  private async currentRevision(table: VaultTable, id: string): Promise<number> {
+    const row = await this.db.getRow<{ revision: number }>(revisionStatement(table), [id]);
     if (!row) throw new RecordNotFoundError(table, id);
     return row.revision;
   }
