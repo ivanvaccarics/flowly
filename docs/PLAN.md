@@ -2007,8 +2007,12 @@ Status: **complete** (2026-10-20), decision in `docs/adr/0045`.
 - `RecordEncryptionStore` and `SqlcipherStore` share SQL statement builders and
   optimistic-revision checks, leaving encryption and synchronous/asynchronous
   database access as their real differences.
+- Banking workflow code delegates public connection, ASPSP, discovered-account
+  and raw-provider presentation to a dedicated presenter module.
 - Analytics, tagging, transfer, import/export and account/tag action routes live
   in focused API modules rather than the Fastify composition root.
+- `pnpm verify` follows static and dynamic imports from both production entry
+  points and fails when a server or web source module becomes unreachable.
 - `pnpm verify` runs 340 tests: 15 contract, 228 server and 97 web tests.
 
 #### Task `read-the-period-in-detail`

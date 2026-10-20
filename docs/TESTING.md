@@ -76,7 +76,7 @@ passphrase, instead of showing a locked vault you cannot open.
 The unit, integration and contract suites are separate:
 
 ```bash
-pnpm verify          # format, lint, frontend env guard, types and test suites
+pnpm verify          # format, lint, secret/dead-code guards, types and tests
 pnpm build           # compile the server, bundle the UI
 pnpm release:check   # license policy for runtime dependencies
 ```
