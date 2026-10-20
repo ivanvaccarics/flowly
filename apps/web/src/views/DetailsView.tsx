@@ -4,16 +4,11 @@ import { api } from "../api/client.js";
 import { DashboardFilters } from "../components/DashboardFilters.js";
 import { Icon } from "../components/icons.js";
 import { Banner, Empty, SectionIntro } from "../components/ui.js";
+import { useMonthScope } from "../hooks/use-month-scope.js";
 import { describeError } from "../hooks/use-workspace.js";
 import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
 import { formatDecimal, formatMinorToAmount } from "../lib/money.js";
-import {
-  MONTH_SHORT,
-  monthsQuery,
-  monthsRange,
-  presetMonths,
-  type MonthPreset,
-} from "../lib/months.js";
+import { MONTH_SHORT, monthsQuery } from "../lib/months.js";
 
 // Slice colours for tags that carry none of their own.
 const SPENDING_COLOURS = [
@@ -47,15 +42,22 @@ export interface DetailsViewProps {
 // week, by account, by source and by amount — in one currency at a time, so the
 // figures stay comparable and nothing is silently converted.
 export function DetailsView({ onSeeAllTransactions, onExportData }: DetailsViewProps) {
-  const [months, setMonths] = useState<string[]>(() => presetMonths("month"));
-  const [preset, setPreset] = useState<MonthPreset>("month");
-  const [anchorYear, setAnchorYear] = useState(() => new Date().getUTCFullYear());
+  const {
+    months,
+    preset,
+    anchorYear,
+    from,
+    to,
+    setAnchorYear,
+    applyPreset,
+    toggleMonth,
+    selectYear,
+    clearMonths,
+  } = useMonthScope();
   const [details, setDetails] = useState<ExpenseDetails | undefined>(undefined);
   const [tags, setTags] = useState<Tag[]>([]);
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
-
-  const { from, to } = useMemo(() => monthsRange(months), [months]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,34 +88,6 @@ export function DetailsView({ onSeeAllTransactions, onExportData }: DetailsViewP
       SPENDING_COLOURS[0]!,
     [tagColour],
   );
-
-  function applyPreset(next: "month" | "quarter" | "year" | "custom") {
-    setPreset(next);
-    if (next === "custom") return;
-    const nextMonths = presetMonths(next);
-    setMonths(nextMonths);
-    const newest = nextMonths[nextMonths.length - 1];
-    if (newest) setAnchorYear(Number(newest.slice(0, 4)));
-  }
-
-  function toggleMonth(month: string) {
-    setPreset("custom");
-    setMonths((current) =>
-      current.includes(month)
-        ? current.filter((candidate) => candidate !== month)
-        : [...current, month].sort(),
-    );
-  }
-
-  function selectYear(year: number) {
-    setPreset("custom");
-    setMonths(MONTH_SHORT.map((_short, index) => `${year}-${String(index + 1).padStart(2, "0")}`));
-  }
-
-  function clearMonths() {
-    setPreset("custom");
-    setMonths([]);
-  }
 
   const byCategory = details?.byCategory ?? [];
   const categoryTotal = byCategory.reduce((total, entry) => total + entry.spentMinor, 0);

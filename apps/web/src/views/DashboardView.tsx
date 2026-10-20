@@ -5,17 +5,11 @@ import { DashboardFilters } from "../components/DashboardFilters.js";
 import { Icon } from "../components/icons.js";
 import { Banner, Chip, Empty, Money, SectionIntro, tagPillStyle } from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
+import { useMonthScope } from "../hooks/use-month-scope.js";
 import { describeError } from "../hooks/use-workspace.js";
 import type { LedgerFilterSeed } from "../lib/ledger-filter.js";
 import { formatDecimal, formatMinorToAmount, formatMoney } from "../lib/money.js";
-import {
-  MONTH_SHORT,
-  monthsQuery,
-  monthsRange,
-  presetMonths,
-  shiftMonths,
-  type MonthPreset,
-} from "../lib/months.js";
+import { monthsQuery, shiftMonths, type MonthPreset } from "../lib/months.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -73,9 +67,19 @@ export function DashboardView({
   onExportData,
   onOpenSettings,
 }: DashboardViewProps) {
-  const [months, setMonths] = useState<string[]>(() => presetMonths("month"));
-  const [preset, setPreset] = useState<MonthPreset>("month");
-  const [anchorYear, setAnchorYear] = useState(() => new Date().getUTCFullYear());
+  const monthScope = useMonthScope();
+  const {
+    months,
+    preset,
+    anchorYear,
+    from,
+    to,
+    setAnchorYear,
+    applyPreset,
+    toggleMonth,
+    selectYear,
+    clearMonths,
+  } = monthScope;
   const [dashboard, setDashboard] = useState<Dashboard | undefined>(undefined);
   const [previous, setPrevious] = useState<Dashboard | undefined>(undefined);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -87,8 +91,6 @@ export function DashboardView({
   const [loading, setLoading] = useState(false);
 
   const periodWord = PERIOD_WORDS[preset];
-
-  const { from, to } = useMemo(() => monthsRange(months), [months]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -186,35 +188,6 @@ export function DashboardView({
       SPENDING_COLOURS[0]!,
     [tagById],
   );
-
-  function applyPreset(next: "month" | "quarter" | "year" | "custom") {
-    setPreset(next);
-    if (next === "custom") return;
-    const nextMonths = presetMonths(next);
-    setMonths(nextMonths);
-    const newest = nextMonths[nextMonths.length - 1];
-    if (newest) setAnchorYear(Number(newest.slice(0, 4)));
-  }
-
-  /** Clicking a month is what "Custom" means, so the preset follows the click. */
-  function toggleMonth(month: string) {
-    setPreset("custom");
-    setMonths((current) =>
-      current.includes(month)
-        ? current.filter((candidate) => candidate !== month)
-        : [...current, month].sort(),
-    );
-  }
-
-  function selectYear(year: number) {
-    setPreset("custom");
-    setMonths(MONTH_SHORT.map((_short, index) => `${year}-${String(index + 1).padStart(2, "0")}`));
-  }
-
-  function clearMonths() {
-    setPreset("custom");
-    setMonths([]);
-  }
 
   return (
     <section
