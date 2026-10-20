@@ -1,6 +1,3 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import Fastify, {
   type FastifyInstance,
   type FastifyReply,
@@ -8,7 +5,6 @@ import Fastify, {
   type FastifyServerOptions,
 } from "fastify";
 import type { VaultStatus } from "@flowly/web-contracts";
-import { ImportExportService } from "../application/import-export-service.js";
 import { AnalyticsService } from "../application/analytics.js";
 import { parseTransactionQuery, TransactionSearchService } from "../application/search.js";
 import { TaggingRuleService } from "../application/tagging-rule-service.js";
@@ -38,6 +34,7 @@ import { AccountInUseError, AccountNotFoundError, TagInUseError } from "../vault
 import { EXPORT_FORMAT_VERSION, SERVER_VERSION, VAULT_FORMAT_VERSION } from "../version.js";
 import { registerBankingRoutes, psuFrom } from "./banking-routes.js";
 import { registerAnalyticsRoutes } from "./analytics-routes.js";
+import { registerImportExportRoutes } from "./import-export-routes.js";
 import { registerStaticApp } from "./static-app.js";
 
 const COOKIE_NAME = "flowly_sid";
@@ -573,96 +570,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     });
   });
 
-  // --- export ---------------------------------------------------------------
-
-  app.get("/api/export/transactions.csv", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const csv = await importExport(context).exportTransactionsCsv();
-    reply.header("content-type", "text/csv; charset=utf-8");
-    reply.header("content-disposition", 'attachment; filename="flowly-transactions.csv"');
-    return csv;
-  });
-
-  app.get("/api/export/tables.zip", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const tables = await importExport(context).exportTablesZip();
-    reply.header("content-type", "application/zip");
-    reply.header("content-disposition", `attachment; filename="${tables.filename}"`);
-    reply.header("x-flowly-export-rows", String(tables.counts["transactions"] ?? 0));
-    return reply.send(tables.content);
-  });
-
-  app.post("/api/export/archive", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const password = (request.body as { password?: unknown } | null)?.["password"];
-    if (typeof password !== "string" || password.length < 8) {
-      reply.code(400);
-      return { error: "archive_password_too_short" };
-    }
-    const dir = mkdtempSync(join(tmpdir(), "flowly-export-"));
-    const destination = join(dir, "vault.flowly");
-    try {
-      const result = await importExport(context).exportArchive(destination, password);
-      const content = readFileSync(destination);
-      reply.header("content-type", "application/octet-stream");
-      reply.header("content-disposition", 'attachment; filename="flowly-vault.flowly"');
-      reply.header("x-flowly-manifest-entries", String(result.manifest.entries.length));
-      return reply.send(content);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  // --- import ---------------------------------------------------------------
-
-  app.post("/api/import/csv/preview", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const content = csvContent(request.body);
-    if (content === undefined) {
-      reply.code(400);
-      return { error: "csv_content_required" };
-    }
-    return importExport(context).previewTransactionCsv(content);
-  });
-
-  app.post("/api/import/csv", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const content = csvContent(request.body);
-    if (content === undefined) {
-      reply.code(400);
-      return { error: "csv_content_required" };
-    }
-    return importExport(context).importTransactionCsv(content);
-  });
-
-  app.post("/api/import/archive", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const body = (request.body ?? {}) as Record<string, unknown>;
-    const password = body["password"];
-    const contentBase64 = body["contentBase64"];
-    if (typeof password !== "string" || password.length === 0) {
-      reply.code(400);
-      return { error: "archive_password_required" };
-    }
-    if (typeof contentBase64 !== "string" || contentBase64.length === 0) {
-      reply.code(400);
-      return { error: "archive_content_required" };
-    }
-    const dir = mkdtempSync(join(tmpdir(), "flowly-import-"));
-    const source = join(dir, "vault.flowly");
-    try {
-      writeFileSync(source, Buffer.from(contentBase64, "base64"), { mode: 0o600 });
-      return await importExport(context).importArchive(source, password);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
+  registerImportExportRoutes(app, { guard: requireContext, errorBody, newId: generateId });
 
   app.setNotFoundHandler(async (request, reply) => {
     if (!request.url.startsWith("/api/") && servingWeb) {
@@ -833,20 +741,6 @@ function revisionFrom(body: unknown): number | undefined {
   return Number.isSafeInteger(candidate) && (candidate as number) > 0
     ? (candidate as number)
     : undefined;
-}
-
-function csvContent(body: unknown): string | undefined {
-  const candidate = (body as Record<string, unknown> | null)?.["content"];
-  return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
-}
-
-function importExport(context: RequestContext): ImportExportService {
-  const taggingRules = new TaggingRuleService(context.vault);
-  return new ImportExportService({
-    vault: context.vault,
-    taggingRules,
-    newId: generateId,
-  });
 }
 
 /**
