@@ -2009,11 +2009,20 @@ Status: **complete** (2026-10-20), decision in `docs/adr/0045`.
   database access as their real differences.
 - Banking workflow code delegates public connection, ASPSP, discovered-account
   and raw-provider presentation to a dedicated presenter module.
+- The bank panel separates callback helpers, the bank picker, connection forms,
+  linked-bank cards and pending authorization. Its main component fell from
+  1,220 to 413 lines without changing the flow.
+- Details separates chart utilities, tooltip, weekly/cumulative charts and
+  breakdown/heatmap components. Its view fell from 1,111 to 435 lines.
+- The stylesheet is composed from ordered base, shell, controls, data-display,
+  chart, workspace, view, Details and responsive files. The generated CSS bundle
+  has the same hash as the pre-split sheet, proving the cascade is unchanged.
 - Analytics, tagging, transfer, import/export and account/tag action routes live
   in focused API modules rather than the Fastify composition root.
 - `pnpm verify` follows static and dynamic imports from both production entry
   points and fails when a server or web source module becomes unreachable.
-- `pnpm verify` runs 340 tests: 15 contract, 228 server and 97 web tests.
+- Tag `v1.1` marks `e6711e6` as the baseline before this maintenance series.
+- `pnpm verify` runs 344 tests: 15 contract, 228 server and 101 web tests.
 
 #### Task `read-the-period-in-detail`
 
