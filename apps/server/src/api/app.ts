@@ -7,7 +7,7 @@ import Fastify, {
   type FastifyRequest,
   type FastifyServerOptions,
 } from "fastify";
-import { validateContract, type VaultStatus } from "@flowly/web-contracts";
+import type { VaultStatus } from "@flowly/web-contracts";
 import { ImportExportService } from "../application/import-export-service.js";
 import { AnalyticsService } from "../application/analytics.js";
 import { parseTransactionQuery, TransactionSearchService } from "../application/search.js";
@@ -37,7 +37,7 @@ import { Vault, VaultExistsError, VaultLockedError, VaultNotFoundError } from ".
 import { AccountInUseError, AccountNotFoundError, TagInUseError } from "../vault/vault.js";
 import { EXPORT_FORMAT_VERSION, SERVER_VERSION, VAULT_FORMAT_VERSION } from "../version.js";
 import { registerBankingRoutes, psuFrom } from "./banking-routes.js";
-import { parseAnalyticsScope } from "./analytics-scope.js";
+import { registerAnalyticsRoutes } from "./analytics-routes.js";
 import { registerStaticApp } from "./static-app.js";
 
 const COOKIE_NAME = "flowly_sid";
@@ -485,50 +485,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     return new TransferPairingService({ vault: context.vault, newId: generateId }).reconcile();
   });
 
-  app.get("/api/dashboard", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const query = request.query as Record<string, unknown>;
-    const parsed = parseAnalyticsScope(query, { includeTags: true });
-    if ("error" in parsed) {
-      reply.code(400);
-      return parsed.error === "months"
-        ? { error: "invalid_date_range", message: "months must be YYYY-MM values" }
-        : { error: "invalid_date_range" };
-    }
-    const dashboard = await new AnalyticsService(context.vault).dashboard(parsed.scope);
-    const validation = validateContract("dashboard", dashboard);
-    if (!validation.valid) {
-      reply.code(500);
-      return { error: "contract_violation", details: validation.errors };
-    }
-    return dashboard;
-  });
-
-  /**
-   * The expense detail view. It takes the same `months` scope as the dashboard
-   * — a scattered set of months stays exactly that set — and answers with one
-   * currency's figures plus the currencies it left out by name.
-   */
-  app.get("/api/analytics/expenses", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const query = request.query as Record<string, unknown>;
-    const parsed = parseAnalyticsScope(query);
-    if ("error" in parsed) {
-      reply.code(400);
-      return parsed.error === "months"
-        ? { error: "invalid_date_range", message: "months must be YYYY-MM values" }
-        : { error: "invalid_date_range" };
-    }
-    const details = await new AnalyticsService(context.vault).expenseDetails(parsed.scope);
-    const validation = validateContract("expenseDetails", details);
-    if (!validation.valid) {
-      reply.code(500);
-      return { error: "contract_violation", details: validation.errors };
-    }
-    return details;
-  });
+  registerAnalyticsRoutes(app, { guard: requireContext, errorBody });
 
   // --- destructive operations, cascades and tagging backfill -----------------
 
