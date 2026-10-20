@@ -13,8 +13,6 @@ export class AggregateCache {
   private readonly vault: Vault;
   private readonly clock: Clock;
   private readonly maxEntries: number;
-  private hitCount = 0;
-  private missCount = 0;
 
   constructor(vault: Vault, clock: Clock = systemClock, maxEntries = 32) {
     this.vault = vault;
@@ -22,26 +20,12 @@ export class AggregateCache {
     this.maxEntries = maxEntries;
   }
 
-  get hits(): number {
-    return this.hitCount;
-  }
-
-  get misses(): number {
-    return this.missCount;
-  }
-
-  get size(): number {
-    return this.entries.size;
-  }
-
   async get<T>(key: string, compute: () => Promise<T>): Promise<T> {
     const fingerprint = await this.fingerprint();
     const cacheKey = `${fingerprint}|${key}`;
     if (this.entries.has(cacheKey)) {
-      this.hitCount += 1;
       return this.entries.get(cacheKey) as T;
     }
-    this.missCount += 1;
     const value = await compute();
     if (this.entries.size >= this.maxEntries) {
       const oldest = this.entries.keys().next().value;
@@ -49,10 +33,6 @@ export class AggregateCache {
     }
     this.entries.set(cacheKey, value);
     return value;
-  }
-
-  clear(): void {
-    this.entries.clear();
   }
 
   private async fingerprint(): Promise<string> {

@@ -4,7 +4,6 @@ import {
   SUPPORTED_CURRENCIES,
   currencyInfo,
   formatMinorToAmount,
-  formatMoney,
   parseAmountToMinor,
 } from "../src/domain/money.js";
 import { readGolden } from "./helpers/golden.js";
@@ -46,7 +45,7 @@ describe("money", () => {
   it("reports currency metadata and formatted money", () => {
     expect(currencyInfo("JPY").minorUnits).toBe(0);
     expect(currencyInfo("KWD").minorUnits).toBe(3);
-    expect(formatMoney(-1230, "EUR")).toBe("-12.30 EUR");
+    expect(`${formatMinorToAmount(-1230, "EUR")} EUR`).toBe("-12.30 EUR");
     expect(SUPPORTED_CURRENCIES.map((currency) => currency.code)).toContain("EUR");
   });
 });

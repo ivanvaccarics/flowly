@@ -136,7 +136,7 @@ is set on purpose.
 ```text
 apps/server             TypeScript service: domain, application, Fastify API
 apps/web                React/Vite browser client
-packages/web-contracts  Generated types and validators from the schemas
+packages/web-contracts  Generated types, validators and shared calendar helpers
 contracts/              JSON Schemas, fixtures and golden expected results
 deployment/self-hosted  Docker Compose for the server vault
 spikes/                 Phase 0 feasibility code, kept as evidence

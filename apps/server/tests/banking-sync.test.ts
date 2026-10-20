@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { appState } from "../src/api/app.js";
 import type { SyncReport } from "../src/banking/sync.js";
-import { fixedClock, type Clock } from "../src/domain/clock.js";
-import { makeConfig, SAMPLE_TAG } from "./helpers/api.js";
+import type { Clock } from "../src/domain/clock.js";
+import { appState, makeConfig, SAMPLE_TAG } from "./helpers/api.js";
+import { fixedClock } from "./helpers/clock.js";
 import {
   FakeBank,
   TEST_NOW,

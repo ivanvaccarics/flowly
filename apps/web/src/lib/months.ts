@@ -4,6 +4,10 @@
  * never drags the months between it into the figures.
  */
 
+import { monthEnd } from "@flowly/web-contracts/dates";
+
+export { monthEnd };
+
 export const MONTH_SHORT = [
   "Jan",
   "Feb",
@@ -43,14 +47,6 @@ export function monthLabel(month: string): string {
 
 export function monthStart(month: string): string {
   return `${month}-01`;
-}
-
-/** The last calendar day of the month, so a bucket covers all of it. */
-export function monthEnd(month: string): string {
-  const year = Number(month.slice(0, 4));
-  const index = Number(month.slice(5, 7));
-  const day = new Date(Date.UTC(year, index, 0)).getUTCDate();
-  return `${month}-${pad(day)}`;
 }
 
 /** The window a month set covers, for the ledger links and the range label. */

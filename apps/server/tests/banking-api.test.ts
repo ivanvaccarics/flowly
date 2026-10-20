@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { appState } from "../src/api/app.js";
 import {
   FakeBank,
   TEST_APP_ID,
@@ -13,7 +12,7 @@ import {
   testPrivateKeyPem,
   type BankingHarness,
 } from "./helpers/banking.js";
-import { makeConfig } from "./helpers/api.js";
+import { appState, makeConfig } from "./helpers/api.js";
 import { isPublicAddress } from "../src/api/banking-routes.js";
 
 const openHarnesses: BankingHarness[] = [];

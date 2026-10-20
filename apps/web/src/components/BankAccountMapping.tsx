@@ -77,7 +77,9 @@ function MappingRow({
 }) {
   const [mode, setMode] = useState<"create" | "pair">("create");
   const [name, setName] = useState(account.suggestedName || `${aspspName} account`);
-  const [type, setType] = useState(account.suggestedType || "checking");
+  const [type, setType] = useState<Account["type"]>(
+    ACCOUNT_TYPES.find((candidate) => candidate === account.suggestedType) ?? "checking",
+  );
   const [currency, setCurrency] = useState(
     account.suggestedCurrency && CURRENCIES.includes(account.suggestedCurrency)
       ? account.suggestedCurrency
@@ -130,7 +132,10 @@ function MappingRow({
               </label>
               <label>
                 Type
-                <select value={type} onChange={(event) => setType(event.target.value)}>
+                <select
+                  value={type}
+                  onChange={(event) => setType(event.target.value as Account["type"])}
+                >
                   {ACCOUNT_TYPES.map((option) => (
                     <option key={option} value={option}>
                       {option}

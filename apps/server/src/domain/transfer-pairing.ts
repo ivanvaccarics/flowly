@@ -1,4 +1,7 @@
 import type { TransferMethod } from "./transfer.js";
+import { daysBetween, shiftIsoDays } from "@flowly/web-contracts";
+
+export { daysBetween, shiftIsoDays };
 
 /**
  * How far apart the two legs of one transfer may book, in whole days. A card
@@ -154,19 +157,6 @@ function namesSomebodyElse(named: string | undefined, own: readonly string[]): b
 
 function byBookingThenId(left: TransferLeg, right: TransferLeg): number {
   return left.bookingDate.localeCompare(right.bookingDate) || left.id.localeCompare(right.id);
-}
-
-/** Whole days between two ISO calendar dates, independent of the time zone. */
-export function daysBetween(from: string, to: string): number {
-  const millis = Date.parse(`${to}T00:00:00.000Z`) - Date.parse(`${from}T00:00:00.000Z`);
-  return Math.round(Math.abs(millis) / 86_400_000);
-}
-
-/** Shifts an ISO calendar date by whole days, independent of the time zone. */
-export function shiftIsoDays(date: string, days: number): string {
-  const value = new Date(`${date}T00:00:00.000Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
 }
 
 /**

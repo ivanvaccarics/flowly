@@ -1,4 +1,3 @@
-import type { Clock } from "../domain/clock.js";
 import type { RuleConditionSet, TaggingRule } from "../domain/tagging-rule.js";
 import {
   conditionSetMatches,
@@ -7,7 +6,6 @@ import {
   validateConditionSet,
 } from "../domain/tagging-rule.js";
 import type { Transaction } from "../domain/transaction.js";
-import { systemClock } from "../domain/clock.js";
 import type { Vault } from "../vault/vault.js";
 
 export interface BackfillScope {
@@ -46,11 +44,9 @@ export const PREVIEW_LIMIT = 100;
  */
 export class TaggingRuleService {
   private readonly vault: Vault;
-  private readonly clock: Clock;
 
-  constructor(vault: Vault, clock: Clock = systemClock) {
+  constructor(vault: Vault) {
     this.vault = vault;
-    this.clock = clock;
   }
 
   async rules(): Promise<TaggingRule[]> {
@@ -104,10 +100,6 @@ export class TaggingRuleService {
       }
     });
     return { evaluated: transactions.length, changed };
-  }
-
-  nowIso(): string {
-    return this.clock.nowIso();
   }
 
   /**

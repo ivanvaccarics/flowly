@@ -1,4 +1,4 @@
-import { hash, hashRaw } from "@node-rs/argon2";
+import { hashRaw } from "@node-rs/argon2";
 import { randomBytes } from "node:crypto";
 import { VaultCorruptError } from "./errors.js";
 
@@ -61,17 +61,6 @@ export async function deriveKek(
     timeCost: params.timeCost,
     parallelism: params.parallelism,
     outputLen: params.outputLen,
-    salt,
-  });
-}
-
-/** Test helper: proves the default algorithm is Argon2id. */
-export async function argon2idPhcString(passphrase: string, salt: Buffer): Promise<string> {
-  return hash(passphrase, {
-    memoryCost: 8192,
-    timeCost: 1,
-    parallelism: 1,
-    outputLen: 32,
     salt,
   });
 }

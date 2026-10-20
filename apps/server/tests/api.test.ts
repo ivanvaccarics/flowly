@@ -1,9 +1,10 @@
 import { chmodSync, existsSync } from "node:fs";
 import type { FastifyInstance, InjectOptions, LightMyRequestResponse } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
-import { appState, buildApp } from "../src/api/app.js";
+import { buildApp } from "../src/api/app.js";
 import { loadConfig, type ServerConfig } from "../src/config.js";
 import { createAccount, type Account } from "../src/domain/account.js";
+import { appState } from "./helpers/api.js";
 import { cleanup, tempDir, TEST_KDF } from "./helpers/test-utils.js";
 
 const PASSPHRASE = "correct horse battery staple";

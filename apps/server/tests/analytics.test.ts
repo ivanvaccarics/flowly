@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { AnalyticsService } from "../src/application/analytics.js";
-import { fixedClock } from "../src/domain/clock.js";
 import { createAccount } from "../src/domain/account.js";
 import { createTag } from "../src/domain/tag.js";
 import { createTransaction } from "../src/domain/transaction.js";
 import { Vault } from "../src/vault/vault.js";
+import { fixedClock } from "./helpers/clock.js";
 import { cleanup, tempDir, TEST_KDF } from "./helpers/test-utils.js";
 
 const NOW = "2026-09-01T08:00:00.000Z";

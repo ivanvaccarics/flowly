@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { isUuidV7 } from "./values.js";
 
 /**
  * UUIDv7: 48-bit Unix time in milliseconds, 12 random bits, then 62 random bits.
@@ -24,8 +23,4 @@ export function generateId(now: number = Date.now()): string {
     hex.slice(16, 20),
     hex.slice(20),
   ].join("-");
-}
-
-export function isGeneratedId(value: unknown): boolean {
-  return isUuidV7(value);
 }

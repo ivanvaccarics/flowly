@@ -57,16 +57,6 @@ export class SessionStore {
     return session;
   }
 
-  peek(id: string): Session | undefined {
-    const session = this.sessions.get(id);
-    if (!session) return undefined;
-    if (this.isExpired(session)) {
-      this.sessions.delete(id);
-      return undefined;
-    }
-    return session;
-  }
-
   delete(id: string): void {
     this.sessions.delete(id);
   }

@@ -1,0 +1,23 @@
+{
+  "provider": "enable-banking",
+  "configured": true,
+  "connection": {
+    "id": "018f2c1e-6d5b-7c3a-9f2e-4d5e6f708192",
+    "provider": "enable-banking",
+    "appId": "TEST_APPLICATION_ID",
+    "redirectUrl": "https://flowly.test/enablebanking/auth_callback",
+    "environment": "SANDBOX",
+    "psuType": "personal",
+    "country": "IT",
+    "autoSync": false,
+    "appName": "Flowly test",
+    "keyFingerprint": "TEST_FINGERPRINT",
+    "createdAt": "2026-09-01T08:00:00.000Z",
+    "updatedAt": "2026-09-01T08:00:00.000Z"
+  },
+  "links": [],
+  "sync": {
+    "running": false,
+    "lastSyncAt": "2026-09-01T08:00:00.000Z"
+  }
+}

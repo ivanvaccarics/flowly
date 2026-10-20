@@ -37,29 +37,6 @@ export function Banner({
   );
 }
 
-export function Metric({
-  label,
-  value,
-  hint,
-  delta,
-  deltaTone,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  delta?: string;
-  deltaTone?: "income" | "expense";
-}) {
-  return (
-    <article className="metric">
-      <span className="eyebrow">{label}</span>
-      <span className="metric-value">{value}</span>
-      {delta ? <Chip tone={deltaTone ?? "neutral"}>{delta}</Chip> : null}
-      {hint ? <span className="muted">{hint}</span> : null}
-    </article>
-  );
-}
-
 export function Empty({ children }: { children: ReactNode }) {
   return <p className="muted">{children}</p>;
 }

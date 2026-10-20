@@ -9,7 +9,7 @@ import Fastify, {
 } from "fastify";
 import { validateContract, type VaultStatus } from "@flowly/web-contracts";
 import { ImportExportService } from "../application/import-export-service.js";
-import { AnalyticsService, monthEnd, parseMonthKeys } from "../application/analytics.js";
+import { AnalyticsService } from "../application/analytics.js";
 import { parseTransactionQuery, TransactionSearchService } from "../application/search.js";
 import { TaggingRuleService } from "../application/tagging-rule-service.js";
 import { TransferPairingService } from "../application/transfer-pairing-service.js";
@@ -23,7 +23,6 @@ import { VaultCorruptError, VaultKeyError } from "../crypto/errors.js";
 import { DomainError } from "../domain/errors.js";
 import { generateId } from "../domain/ids.js";
 import type { RuleCondition } from "../domain/tagging-rule.js";
-import { isIsoDate } from "../domain/values.js";
 import { ArchiveIntegrityError, ArchivePasswordError, ImportError } from "../portability/errors.js";
 import { AttemptLimiter, SessionStore, type Session } from "../session/session-store.js";
 import { SCHEMA_VERSION } from "../storage/migrations.js";
@@ -38,11 +37,12 @@ import { Vault, VaultExistsError, VaultLockedError, VaultNotFoundError } from ".
 import { AccountInUseError, AccountNotFoundError, TagInUseError } from "../vault/vault.js";
 import { EXPORT_FORMAT_VERSION, SERVER_VERSION, VAULT_FORMAT_VERSION } from "../version.js";
 import { registerBankingRoutes, psuFrom } from "./banking-routes.js";
+import { parseAnalyticsScope } from "./analytics-scope.js";
 import { registerStaticApp } from "./static-app.js";
 
 const COOKIE_NAME = "flowly_sid";
 
-export interface AppState {
+interface AppState {
   vault(): Vault | null;
   sessions: SessionStore;
   limiter: AttemptLimiter;
@@ -68,10 +68,6 @@ interface RequestContext {
 }
 
 type ContextGuard = (request: FastifyRequest, reply: FastifyReply) => RequestContext | undefined;
-
-export function appState(app: FastifyInstance): AppState {
-  return (app as unknown as { flowlyState: AppState }).flowlyState;
-}
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
   const { config } = options;
@@ -493,43 +489,14 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     const context = requireContext(request, reply);
     if (!context) return errorBody(reply);
     const query = request.query as Record<string, unknown>;
-    const today = new Date().toISOString().slice(0, 10);
-    const months = parseMonthKeys(query["months"]);
-    if (months === undefined) {
+    const parsed = parseAnalyticsScope(query, { includeTags: true });
+    if ("error" in parsed) {
       reply.code(400);
-      return { error: "invalid_date_range", message: "months must be YYYY-MM values" };
+      return parsed.error === "months"
+        ? { error: "invalid_date_range", message: "months must be YYYY-MM values" }
+        : { error: "invalid_date_range" };
     }
-    // An explicit month set defines the window, so a scattered selection never
-    // pulls in the months between its first and its last.
-    const from =
-      months.length > 0
-        ? `${months[0]}-01`
-        : typeof query["from"] === "string"
-          ? query["from"]
-          : `${today.slice(0, 7)}-01`;
-    const to =
-      months.length > 0
-        ? monthEnd(months[months.length - 1]!)
-        : typeof query["to"] === "string"
-          ? query["to"]
-          : today;
-    const tagIds =
-      typeof query["tags"] === "string"
-        ? query["tags"]
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-        : [];
-    if (!isIsoDate(from) || !isIsoDate(to) || from > to) {
-      reply.code(400);
-      return { error: "invalid_date_range" };
-    }
-    const dashboard = await new AnalyticsService(context.vault).dashboard({
-      from,
-      to,
-      months,
-      tagIds,
-    });
+    const dashboard = await new AnalyticsService(context.vault).dashboard(parsed.scope);
     const validation = validateContract("dashboard", dashboard);
     if (!validation.valid) {
       reply.code(500);
@@ -547,33 +514,14 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     const context = requireContext(request, reply);
     if (!context) return errorBody(reply);
     const query = request.query as Record<string, unknown>;
-    const today = new Date().toISOString().slice(0, 10);
-    const months = parseMonthKeys(query["months"]);
-    if (months === undefined) {
+    const parsed = parseAnalyticsScope(query);
+    if ("error" in parsed) {
       reply.code(400);
-      return { error: "invalid_date_range", message: "months must be YYYY-MM values" };
+      return parsed.error === "months"
+        ? { error: "invalid_date_range", message: "months must be YYYY-MM values" }
+        : { error: "invalid_date_range" };
     }
-    const from =
-      months.length > 0
-        ? `${months[0]}-01`
-        : typeof query["from"] === "string"
-          ? query["from"]
-          : `${today.slice(0, 7)}-01`;
-    const to =
-      months.length > 0
-        ? monthEnd(months[months.length - 1]!)
-        : typeof query["to"] === "string"
-          ? query["to"]
-          : today;
-    if (!isIsoDate(from) || !isIsoDate(to) || from > to) {
-      reply.code(400);
-      return { error: "invalid_date_range" };
-    }
-    const details = await new AnalyticsService(context.vault).expenseDetails({
-      from,
-      to,
-      months,
-    });
+    const details = await new AnalyticsService(context.vault).expenseDetails(parsed.scope);
     const validation = validateContract("expenseDetails", details);
     if (!validation.valid) {
       reply.code(500);

@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   chmodSync,
   copyFileSync,
@@ -21,7 +20,6 @@ import {
 } from "../crypto/envelope.js";
 import { DEFAULT_KDF_PARAMS, type KdfParams } from "../crypto/kdf.js";
 import { VaultCorruptError } from "../crypto/errors.js";
-import { MIGRATIONS, type MigrationHooks } from "../storage/migrations.js";
 import { StoreRepository } from "../storage/repositories.js";
 import {
   openStore,
@@ -310,10 +308,6 @@ export class Vault {
     chmodSync(join(this.path, HEADER_FILE), 0o600);
   }
 
-  async migrate(hooks: MigrationHooks = {}): Promise<number[]> {
-    return this.store().migrate(hooks);
-  }
-
   /**
    * Forward-only record migration: rules stored before format version 2 carry
    * `amountMinor` conditions in minor units. They are rewritten in place on
@@ -495,17 +489,6 @@ export class Vault {
     return { updatedTransactions, updatedRules };
   }
 
-  async appliedMigrations(): Promise<number[]> {
-    return this.store().appliedMigrations();
-  }
-
-  async pendingMigrations(): Promise<number[]> {
-    const applied = new Set(await this.store().appliedMigrations());
-    return MIGRATIONS.filter((migration) => !applied.has(migration.version)).map(
-      (migration) => migration.version,
-    );
-  }
-
   async status(): Promise<VaultStatus> {
     const unlocked = this.isUnlocked;
     let schemaVersion: number | null = null;
@@ -583,14 +566,6 @@ export class Vault {
   /** Cheap aggregates used for cache keys and dashboards. */
   async tableStats(table: VaultTable): Promise<{ count: number; updatedAtMax: string | null }> {
     return this.store().tableStats(table);
-  }
-
-  /** Stable, non-secret digest used to detect header tampering across restarts. */
-  headerDigest(): string {
-    return createHash("sha256")
-      .update(JSON.stringify(this.headerValue.wrappedDek))
-      .digest("hex")
-      .slice(0, 16);
   }
 
   private store(): VaultStore {

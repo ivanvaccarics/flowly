@@ -582,7 +582,18 @@ describe("Enable Banking in Settings", () => {
           autoSync: true,
         }),
       "/api/accounts": () => json({ items: [] }),
-      "/api/banking/enable-banking/config": () => json({ connection: CONNECTION, status: {} }),
+      "/api/banking/enable-banking/config": () =>
+        json({
+          connection: CONNECTION,
+          status: {
+            provider: "enable-banking",
+            configured: true,
+            connection: CONNECTION,
+            links: [LINK],
+            sync: { running: false },
+            autoSync: true,
+          },
+        }),
     });
     render(
       <SettingsView

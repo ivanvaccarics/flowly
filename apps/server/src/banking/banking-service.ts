@@ -1,5 +1,18 @@
 import { randomBytes } from "node:crypto";
-import { createAccount, type Account, type AccountType } from "../domain/account.js";
+import type {
+  AspspSummary,
+  AuthorizationStartInput,
+  AuthorizeStartResponse,
+  BankLinkSummary,
+  BankingAccountSummary,
+  BankingAuthorizationResult,
+  BankingConnectionPublic,
+  BankingStatus,
+  MapAccountInput,
+  RawTransactionRecord,
+  SaveConnectionInput,
+} from "@flowly/web-contracts";
+import { createAccount, type Account } from "../domain/account.js";
 import {
   BANK_CONSENT_TARGET_DAYS,
   BANK_PROVIDER,
@@ -9,8 +22,6 @@ import {
   validateBankConnection,
   type BankAccountLink,
   type BankConnection,
-  type BankConnectionPublic,
-  type BankEnvironment,
   type BankLink,
   type BankLinkStatus,
   type BankPsuType,
@@ -36,146 +47,12 @@ import type { EbApplication } from "./enable-banking-types.js";
 
 const STATE_TTL_MS = 15 * 60_000;
 
-export interface AspspCredentialSummary {
-  name: string;
-  title?: string;
-  required: boolean;
-  description?: string;
-  template?: string;
-}
-
-export interface AspspMethodSummary {
-  name?: string;
-  approach: string;
-  psuType: BankPsuType;
-  credentials: AspspCredentialSummary[];
-}
-
-export interface AspspSummary {
-  name: string;
-  country: string;
-  logo?: string;
-  bic?: string;
-  beta: boolean;
-  psuTypes: BankPsuType[];
-  methods: AspspMethodSummary[];
-  maximumConsentDays?: number;
-  sandboxUsers: Array<{ username?: string; password?: string; otp?: string }>;
-}
-
-export interface BankAccountSummary {
-  id: string;
-  providerAccountUid: string;
-  status: BankAccountLink["status"];
-  accountId?: string;
-  accountName?: string;
-  iban?: string;
-  maskedIban?: string;
-  providerName?: string;
-  currency?: string;
-  cashAccountType?: string;
-  lastSyncedAt?: string;
-  lastBalanceMinor?: number;
-  lastBalanceCurrency?: string;
-  lastBalanceType?: string;
-  lastBalanceAt?: string;
-  transactionCount: number;
-}
-
-export interface BankLinkSummary {
-  id: string;
-  aspspName: string;
-  aspspCountry: string;
-  aspspLogo?: string;
-  psuType: BankPsuType;
-  status: BankLinkStatus;
-  accessValidUntil?: string;
-  lastSyncedAt?: string;
-  lastSyncError?: string;
-  /** While this instant is in the future the bank's daily cap blocks the link. */
-  syncBlockedUntil?: string;
-  /** Present while the link waits for the bank, so the flow survives a reload. */
-  authorizationUrl?: string;
-  createdAt: string;
-  accounts: BankAccountSummary[];
-}
-
-export interface BankingSyncState {
-  running: boolean;
-  lastSyncAt?: string;
-  lastReport?: SyncReport;
-}
-
-export interface BankingStatus {
-  provider: typeof BANK_PROVIDER;
-  configured: boolean;
-  connection?: BankConnectionPublic;
-  links: BankLinkSummary[];
-  sync: BankingSyncState;
-  autoSync?: boolean;
-}
-
-export interface SaveConnectionInput {
-  appId: string;
-  /** Omitted when only settings change and the stored key should be reused. */
-  privateKeyPem?: string;
-  redirectUrl: string;
-  environment?: BankEnvironment;
-  psuType?: BankPsuType;
-  country?: string;
-  autoSync?: boolean;
-}
-
-export interface DiscoveredAccount {
-  providerAccountUid: string;
-  status: BankAccountLink["status"];
-  suggestedName: string;
-  suggestedType: AccountType;
-  suggestedCurrency?: string;
-  currency?: string;
-  iban?: string;
-  maskedIban?: string;
-  providerName?: string;
-  cashAccountType?: string;
-}
-
-export interface AuthorizeStart {
-  linkId: string;
-  url: string;
-  state: string;
-  expiresAt: string;
-}
-
-/** The provider record behind one imported transaction, exactly as received. */
-export interface RawTransactionRecord {
-  provider: typeof BANK_PROVIDER;
-  linkId: string;
-  aspspName: string;
-  providerAccountUid: string;
-  fetchedAt: string;
-  requestFrom?: string;
-  requestTo?: string;
-  /** How the record was matched: its provider id, or the normalised fields. */
-  matchedBy: "provider-transaction-id" | "booking-date-amount-currency";
-  raw: unknown;
-}
-
-export interface AuthorizationResult {
-  link: BankLinkSummary;
-  accounts: DiscoveredAccount[];
-  aspsp: { name: string; country: string };
-  accessValidUntil?: string;
-}
-
-export interface MapAccountInput {
-  linkId: string;
-  providerAccountUid: string;
-  mode: "create" | "pair" | "ignore";
-  accountId?: string;
-  name?: string;
-  type?: AccountType;
-  currency?: string;
-}
+type AspspMethodSummary = AspspSummary["methods"][number];
+type BankAccountSummary = BankingAccountSummary;
+type BankingSyncState = BankingStatus["sync"];
+type DiscoveredAccount = BankingAuthorizationResult["accounts"][number];
+type AuthorizeStart = AuthorizeStartResponse;
+type AuthorizationResult = BankingAuthorizationResult;
 
 export interface BankingServiceDependencies {
   vault: Vault;
@@ -219,7 +96,7 @@ export class BankingService {
         }));
     this.sync = new BankSyncService({
       vault: this.vault,
-      taggingRules: new TaggingRuleService(this.vault, this.clock),
+      taggingRules: new TaggingRuleService(this.vault),
       clientFor: this.clientFor,
       newId: this.newId,
       clock: this.clock,
@@ -265,7 +142,7 @@ export class BankingService {
   }
 
   /** Verifies the credentials against Enable Banking before storing them. */
-  async saveConnection(input: SaveConnectionInput): Promise<BankConnectionPublic> {
+  async saveConnection(input: SaveConnectionInput): Promise<BankingConnectionPublic> {
     const existing = await this.connection();
     const now = this.clock.nowIso();
     const privateKeyPem = input.privateKeyPem
@@ -360,11 +237,7 @@ export class BankingService {
   }
 
   /** Starts the PSU authorization; the caller redirects the browser to `url`. */
-  async startAuthorization(input: {
-    aspspName: string;
-    aspspCountry: string;
-    psuType?: BankPsuType;
-  }): Promise<AuthorizeStart> {
+  async startAuthorization(input: AuthorizationStartInput): Promise<AuthorizeStart> {
     const { connection, client } = await this.requireClient();
     await this.expireStaleLinks(connection);
     const aspsps = await this.withProviderErrors(() =>
@@ -588,7 +461,7 @@ export class BankingService {
   }
 
   /** Creates a Flowly account, pairs an existing one, or ignores the account. */
-  async mapAccount(input: MapAccountInput): Promise<BankLinkSummary> {
+  async mapAccount(input: MapAccountInput & { linkId: string }): Promise<BankLinkSummary> {
     const { connection } = await this.requireClient();
     const link = await this.vault.bankLinks.get(input.linkId);
     if (!link || link.connectionId !== connection.id) {
@@ -939,7 +812,7 @@ function matchesNormalised(raw: EbTransaction, transaction: Transaction): boolea
   );
 }
 
-function publicConnection(connection: BankConnection): BankConnectionPublic {
+function publicConnection(connection: BankConnection): BankingConnectionPublic {
   return {
     id: connection.id,
     provider: connection.provider,

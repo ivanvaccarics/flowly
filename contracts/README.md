@@ -30,6 +30,9 @@ storage engine, a framework or a language runtime.
 - Generated code never replaces runtime validation, and golden vectors are
   never updated to match an implementation — the implementation must match
   them.
+- `banking.schema.json` uses named `$defs` for every Enable Banking transport
+  shape. Consumers validate the definition returned by each endpoint, not the
+  schema's generator-facing union root.
 
 ## Conventions
 

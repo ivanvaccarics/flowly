@@ -66,21 +66,6 @@ export interface BankConnection {
   updatedAt: string;
 }
 
-export interface BankConnectionPublic {
-  id: string;
-  provider: BankProvider;
-  appId: string;
-  redirectUrl: string;
-  environment: BankEnvironment;
-  psuType: BankPsuType;
-  country: string;
-  autoSync: boolean;
-  appName?: string;
-  keyFingerprint: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export function isBankEnvironment(value: unknown): value is BankEnvironment {
   return typeof value === "string" && BANK_ENVIRONMENTS.includes(value as BankEnvironment);
 }
@@ -425,8 +410,4 @@ export function validateBankPayload(payload: BankPayload): void {
   }
   assertIsoDateTime(payload.createdAt, "bankPayload.createdAt");
   assertIsoDateTime(payload.updatedAt, "bankPayload.updatedAt");
-}
-
-export function isBankAccountUid(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0 && value.length <= 200;
 }

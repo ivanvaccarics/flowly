@@ -5,7 +5,8 @@ import {
   EnableBankingError,
   type EnableBankingClient,
 } from "../../src/banking/enable-banking-client.js";
-import { fixedClock, type Clock } from "../../src/domain/clock.js";
+import type { Clock } from "../../src/domain/clock.js";
+import { fixedClock } from "./clock.js";
 import type { ServerConfig } from "../../src/config.js";
 import { cleanup } from "./test-utils.js";
 import type {

@@ -1,7 +1,19 @@
 import type { FastifyInstance, InjectOptions, LightMyRequestResponse } from "fastify";
 import { buildApp } from "../../src/api/app.js";
 import { loadConfig, type ServerConfig } from "../../src/config.js";
+import type { AttemptLimiter, SessionStore } from "../../src/session/session-store.js";
+import type { Vault } from "../../src/vault/vault.js";
 import { cleanup, tempDir } from "./test-utils.js";
+
+interface AppState {
+  vault(): Vault | null;
+  sessions: SessionStore;
+  limiter: AttemptLimiter;
+}
+
+export function appState(app: FastifyInstance): AppState {
+  return (app as unknown as { flowlyState: AppState }).flowlyState;
+}
 
 export interface ApiClient {
   cookie: string;

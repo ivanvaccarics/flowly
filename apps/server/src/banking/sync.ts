@@ -1,4 +1,5 @@
 import { systemClock, type Clock } from "../domain/clock.js";
+import { shiftIsoDays, type BankingSyncReport } from "@flowly/web-contracts";
 import { TransferPairingService } from "../application/transfer-pairing-service.js";
 import {
   BANK_INITIAL_SYNC_DAYS,
@@ -20,31 +21,7 @@ import {
 } from "./enable-banking-client.js";
 import { normalizeTransaction, pickBalance } from "./normalize.js";
 
-export interface SyncErrorEntry {
-  linkId: string;
-  accountId?: string;
-  providerAccountUid?: string;
-  message: string;
-}
-
-export interface SyncReport {
-  startedAt: string;
-  finishedAt: string;
-  links: number;
-  accounts: number;
-  fetched: number;
-  created: number;
-  updated: number;
-  unchanged: number;
-  skipped: number;
-  failed: number;
-  /** Links skipped because the bank's daily access cap is still in force. */
-  blocked: number;
-  /** Set when the bank refused a read for its daily cap during this run. */
-  rateLimited: boolean;
-  errors: SyncErrorEntry[];
-  reconnectRequired: string[];
-}
+export type SyncReport = BankingSyncReport;
 
 export interface BankSyncOptions {
   linkId?: string;
@@ -256,8 +233,8 @@ export class BankSyncService {
     const accountId = account.accountId;
     if (!accountId) return;
     const today = this.clock.todayIso();
-    const windowFrom = addDays(
-      account.syncFrom ?? addDays(today, -BANK_INITIAL_SYNC_DAYS),
+    const windowFrom = shiftIsoDays(
+      account.syncFrom ?? shiftIsoDays(today, -BANK_INITIAL_SYNC_DAYS),
       -BANK_SYNC_OVERLAP_DAYS,
     );
 
@@ -614,11 +591,4 @@ function describe(error: unknown): string {
     return error.code ? `${error.code}: ${error.message}` : error.message;
   }
   return error instanceof Error ? error.message : "unknown error";
-}
-
-/** Calendar-day arithmetic on ISO dates, independent of the local time zone. */
-export function addDays(date: string, days: number): string {
-  const value = new Date(`${date}T00:00:00.000Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
 }

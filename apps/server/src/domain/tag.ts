@@ -68,8 +68,3 @@ export function createTag(input: NewTag, deps: { id: string; now: string }): Tag
   validateTag(tag);
   return tag;
 }
-
-/** Tag identity is Unicode-normalized and case-insensitive. */
-export function isSameTagName(a: string, b: string): boolean {
-  return normalizeTagName(a) === normalizeTagName(b);
-}

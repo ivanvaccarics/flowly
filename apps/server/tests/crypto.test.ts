@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { hash } from "@node-rs/argon2";
 import { VaultCorruptError, VaultKeyError } from "../src/crypto/errors.js";
 import {
   createVaultHeader,
@@ -8,7 +9,7 @@ import {
   unlockVaultHeader,
   zeroize,
 } from "../src/crypto/envelope.js";
-import { argon2idPhcString, deriveKek, newSalt, type KdfParams } from "../src/crypto/kdf.js";
+import { deriveKek, newSalt, type KdfParams } from "../src/crypto/kdf.js";
 
 const FAST_KDF: KdfParams = {
   algorithm: "argon2id",
@@ -20,7 +21,13 @@ const FAST_KDF: KdfParams = {
 
 describe("key derivation", () => {
   it("uses Argon2id and produces a 32-byte key", async () => {
-    const phc = await argon2idPhcString("passphrase", newSalt());
+    const phc = await hash("passphrase", {
+      memoryCost: 8192,
+      timeCost: 1,
+      parallelism: 1,
+      outputLen: 32,
+      salt: newSalt(),
+    });
     expect(phc.startsWith("$argon2id$")).toBe(true);
     const key = await deriveKek("passphrase", newSalt(), FAST_KDF);
     expect(key.byteLength).toBe(32);

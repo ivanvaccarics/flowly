@@ -1,4 +1,5 @@
 /* eslint-disable */
+// @ts-nocheck
 /**
  * GENERATED FILE — do not edit by hand.
  * Source: contracts/schemas/*.schema.json
@@ -44,6 +45,210 @@ export interface ArchiveManifest {
       sha256: string;
     }[]
   ];
+}
+
+/**
+ * Transport shapes for the Enable Banking connector. The root is a union so generators expose every named definition; clients validate the specific definition returned by each endpoint.
+ */
+export type BankingContract =
+  | BankingStatus
+  | BankLinkSummary
+  | BankingAuthorizationResult
+  | AspspsResponse
+  | AuthorizeStartResponse
+  | RawTransactionRecord
+  | SaveConnectionResponse
+  | DeleteConnectionResponse
+  | UnlinkResponse
+  | SyncResponse
+  | SaveConnectionInput
+  | AuthorizationStartInput
+  | MapAccountInput;
+
+export interface BankingStatus {
+  provider: "enable-banking";
+  configured: boolean;
+  connection?: BankingConnectionPublic;
+  links: BankLinkSummary[];
+  sync: {
+    running: boolean;
+    lastSyncAt?: string;
+    lastReport?: BankingSyncReport;
+  };
+  autoSync?: boolean;
+}
+export interface BankingConnectionPublic {
+  id: string;
+  provider: "enable-banking";
+  appId: string;
+  redirectUrl: string;
+  environment: "SANDBOX" | "PRODUCTION";
+  psuType: "personal" | "business";
+  country: string;
+  autoSync: boolean;
+  appName?: string;
+  keyFingerprint: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface BankLinkSummary {
+  id: string;
+  aspspName: string;
+  aspspCountry: string;
+  aspspLogo?: string;
+  psuType: "personal" | "business";
+  status: "pending" | "authorized" | "expired" | "revoked" | "failed" | "closed";
+  accessValidUntil?: string;
+  lastSyncedAt?: string;
+  lastSyncError?: string;
+  syncBlockedUntil?: string;
+  authorizationUrl?: string;
+  createdAt: string;
+  accounts: BankingAccountSummary[];
+}
+export interface BankingAccountSummary {
+  id: string;
+  providerAccountUid: string;
+  status: "unmapped" | "mapped" | "ignored";
+  accountId?: string;
+  accountName?: string;
+  iban?: string;
+  maskedIban?: string;
+  providerName?: string;
+  currency?: string;
+  cashAccountType?: string;
+  lastSyncedAt?: string;
+  lastBalanceMinor?: number;
+  lastBalanceCurrency?: string;
+  lastBalanceType?: string;
+  lastBalanceAt?: string;
+  transactionCount: number;
+}
+export interface BankingSyncReport {
+  startedAt: string;
+  finishedAt: string;
+  links: number;
+  accounts: number;
+  fetched: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
+  failed: number;
+  blocked: number;
+  rateLimited: boolean;
+  errors: {
+    linkId: string;
+    accountId?: string;
+    providerAccountUid?: string;
+    message: string;
+  }[];
+  reconnectRequired: string[];
+}
+export interface BankingAuthorizationResult {
+  link: BankLinkSummary;
+  accounts: {
+    providerAccountUid: string;
+    status: "unmapped" | "mapped" | "ignored";
+    suggestedName: string;
+    suggestedType: string;
+    suggestedCurrency?: string;
+    currency?: string;
+    iban?: string;
+    maskedIban?: string;
+    providerName?: string;
+    cashAccountType?: string;
+  }[];
+  aspsp: {
+    name: string;
+    country: string;
+  };
+  accessValidUntil?: string;
+}
+export interface AspspsResponse {
+  items: AspspSummary[];
+}
+export interface AspspSummary {
+  name: string;
+  country: string;
+  logo?: string;
+  bic?: string;
+  beta: boolean;
+  psuTypes: ("personal" | "business")[];
+  maximumConsentDays?: number;
+  sandboxUsers: {
+    username?: string;
+    password?: string;
+    otp?: string;
+  }[];
+  methods: {
+    name?: string;
+    approach: string;
+    psuType: "personal" | "business";
+    credentials: {
+      name: string;
+      title?: string;
+      required: boolean;
+      description?: string;
+      template?: string;
+    }[];
+  }[];
+}
+export interface AuthorizeStartResponse {
+  linkId: string;
+  url: string;
+  state: string;
+  expiresAt: string;
+}
+export interface RawTransactionRecord {
+  provider: "enable-banking";
+  linkId: string;
+  aspspName: string;
+  providerAccountUid: string;
+  fetchedAt: string;
+  requestFrom?: string;
+  requestTo?: string;
+  matchedBy: "provider-transaction-id" | "booking-date-amount-currency";
+  raw: unknown;
+}
+export interface SaveConnectionResponse {
+  connection: BankingConnectionPublic;
+  status: BankingStatus;
+}
+export interface DeleteConnectionResponse {
+  deleted: true;
+  deletedLinks: number;
+}
+export interface UnlinkResponse {
+  deleted: true;
+  deletedAccounts: number;
+  deletedPayloads: number;
+}
+export interface SyncResponse {
+  report: BankingSyncReport;
+  status: BankingStatus;
+}
+export interface SaveConnectionInput {
+  appId: string;
+  privateKeyPem?: string;
+  redirectUrl: string;
+  environment?: "SANDBOX" | "PRODUCTION";
+  psuType?: "personal" | "business";
+  country?: string;
+  autoSync?: boolean;
+}
+export interface AuthorizationStartInput {
+  aspspName: string;
+  aspspCountry: string;
+  psuType?: "personal" | "business";
+}
+export interface MapAccountInput {
+  providerAccountUid: string;
+  mode: "create" | "pair" | "ignore";
+  accountId?: string;
+  name?: string;
+  type?: "checking" | "savings" | "credit-card" | "cash" | "wallet" | "investment" | "other";
+  currency?: string;
 }
 
 /**

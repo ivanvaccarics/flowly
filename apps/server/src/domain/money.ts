@@ -80,8 +80,3 @@ export function formatMinorToAmount(minor: number, currency: string): string {
   const fraction = String(absolute % scale).padStart(minorUnits, "0");
   return `${sign}${whole}.${fraction}`;
 }
-
-/** Formats a minor amount for display, without converting currencies. */
-export function formatMoney(minor: number, currency: string): string {
-  return `${formatMinorToAmount(minor, currency)} ${currency}`;
-}

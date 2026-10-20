@@ -2,7 +2,13 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { contractKeys, schemaIndex, validateContract, type ContractKey } from "../src/index.js";
+import {
+  contractKeys,
+  schemaIndex,
+  validateBankingContract,
+  validateContract,
+  type ContractKey,
+} from "../src/index.js";
 
 const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
 const schemasDir = join(repoRoot, "contracts", "schemas");
@@ -20,6 +26,7 @@ const fixtureFor: Record<string, ContractKey> = {
   "vault-status": "vaultStatus",
   dashboard: "dashboard",
   "expense-details": "expenseDetails",
+  "banking-status": "banking",
 };
 
 describe("canonical contracts", () => {
@@ -64,5 +71,16 @@ describe("canonical contracts", () => {
       expect(result.errors.length).toBeGreaterThan(0);
       expect(result.errors.some((error) => error.includes("state"))).toBe(true);
     }
+  });
+
+  it("validates each named banking transport shape", () => {
+    const status = readJson(join(fixturesDir, "banking-status.json"));
+    expect(validateBankingContract("BankingStatus", status).valid).toBe(true);
+    expect(
+      validateBankingContract("BankingStatus", {
+        ...(status as Record<string, unknown>),
+        provider: "unknown",
+      }).valid,
+    ).toBe(false);
   });
 });

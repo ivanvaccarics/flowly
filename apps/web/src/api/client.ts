@@ -1,11 +1,41 @@
 import type {
+  AspspSummary,
+  AuthorizationStartInput,
+  BankLinkSummary,
+  BankingAuthorizationResult,
+  BankingConnectionPublic,
+  BankingStatus,
+  BankingSyncReport,
   Dashboard,
   ExpenseDetails,
+  MapAccountInput,
+  RawTransactionRecord,
+  SaveConnectionInput,
   Tag,
   TaggingRule,
   Transaction,
   VaultStatus,
 } from "@flowly/web-contracts";
+import {
+  validateBankingContract,
+  validateClientContract,
+  type BankingContractName,
+  type ClientContractName,
+} from "@flowly/web-contracts/client-validation";
+
+export type {
+  AspspSummary,
+  BankLinkSummary,
+  BankingAccountSummary,
+  BankingAuthorizationResult,
+  BankingConnectionPublic,
+  BankingStatus,
+  BankingSyncReport,
+  RawTransactionRecord,
+} from "@flowly/web-contracts";
+
+export type BankingConfigInput = SaveConnectionInput;
+export type BankAccountMappingInput = Omit<MapAccountInput, "providerAccountUid">;
 
 function queryString(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams();
@@ -27,10 +57,6 @@ export class ApiError extends Error {
     this.status = status;
     this.code = code;
   }
-}
-
-export interface Session {
-  csrf: string;
 }
 
 /** What the vault says leans on a tag: movements that carry it, rules that apply it. */
@@ -63,164 +89,12 @@ export interface TaggingRulePreview {
   matched: number;
 }
 
-export interface BankingConnectionPublic {
-  id: string;
-  provider: "enable-banking";
-  appId: string;
-  redirectUrl: string;
-  environment: "SANDBOX" | "PRODUCTION";
-  psuType: "personal" | "business";
-  country: string;
-  autoSync: boolean;
-  appName?: string;
-  keyFingerprint: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface BankingAccountSummary {
-  id: string;
-  providerAccountUid: string;
-  status: "unmapped" | "mapped" | "ignored";
-  accountId?: string;
-  accountName?: string;
-  iban?: string;
-  maskedIban?: string;
-  providerName?: string;
-  currency?: string;
-  cashAccountType?: string;
-  lastSyncedAt?: string;
-  lastBalanceMinor?: number;
-  lastBalanceCurrency?: string;
-  lastBalanceType?: string;
-  lastBalanceAt?: string;
-  transactionCount: number;
-}
-
-export interface BankLinkSummary {
-  id: string;
-  aspspName: string;
-  aspspCountry: string;
-  aspspLogo?: string;
-  psuType: "personal" | "business";
-  status: "pending" | "authorized" | "expired" | "revoked" | "failed" | "closed";
-  accessValidUntil?: string;
-  lastSyncedAt?: string;
-  lastSyncError?: string;
-  /** While this instant is in the future the bank's daily access cap blocks the link. */
-  syncBlockedUntil?: string;
-  /** Set while the bank authorization is pending, so it can be resumed. */
-  authorizationUrl?: string;
-  createdAt: string;
-  accounts: BankingAccountSummary[];
-}
-
-export interface BankingSyncReport {
-  startedAt: string;
-  finishedAt: string;
-  links: number;
-  accounts: number;
-  fetched: number;
-  created: number;
-  updated: number;
-  unchanged: number;
-  skipped: number;
-  failed: number;
-  /** Links skipped because the bank's daily access cap is still in force. */
-  blocked: number;
-  /** True when the bank refused a read for its daily cap during this run. */
-  rateLimited: boolean;
-  errors: Array<{ linkId: string; accountId?: string; message: string }>;
-  reconnectRequired: string[];
-}
-
-export interface BankingStatus {
-  provider: "enable-banking";
-  configured: boolean;
-  connection?: BankingConnectionPublic;
-  links: BankLinkSummary[];
-  sync: { running: boolean; lastSyncAt?: string; lastReport?: BankingSyncReport };
-  autoSync?: boolean;
-}
-
-export interface AspspSummary {
-  name: string;
-  country: string;
-  logo?: string;
-  bic?: string;
-  beta: boolean;
-  psuTypes: Array<"personal" | "business">;
-  maximumConsentDays?: number;
-  sandboxUsers: Array<{ username?: string; password?: string; otp?: string }>;
-  methods: Array<{
-    name?: string;
-    approach: string;
-    psuType: "personal" | "business";
-    credentials: Array<{
-      name: string;
-      title?: string;
-      required: boolean;
-      description?: string;
-      template?: string;
-    }>;
-  }>;
-}
-
-export interface BankingAuthorizationResult {
-  link: BankLinkSummary;
-  accounts: Array<{
-    providerAccountUid: string;
-    status: BankingAccountSummary["status"];
-    suggestedName: string;
-    suggestedType: string;
-    suggestedCurrency?: string;
-    currency?: string;
-    iban?: string;
-    maskedIban?: string;
-    providerName?: string;
-    cashAccountType?: string;
-  }>;
-  aspsp: { name: string; country: string };
-  accessValidUntil?: string;
-}
-
-export interface BankingConfigInput {
-  appId: string;
-  /** Omitted when only settings change; the stored key is reused. */
-  privateKeyPem?: string;
-  redirectUrl: string;
-  environment: "SANDBOX" | "PRODUCTION";
-  psuType: "personal" | "business";
-  country: string;
-  autoSync: boolean;
-}
-
-export interface BankAccountMappingInput {
-  mode: "create" | "pair" | "ignore";
-  accountId?: string;
-  name?: string;
-  type?: string;
-  currency?: string;
-}
-
-/** The provider record behind one imported transaction, as the bank sent it. */
-export interface RawTransactionRecord {
-  provider: "enable-banking";
-  linkId: string;
-  aspspName: string;
-  providerAccountUid: string;
-  fetchedAt: string;
-  requestFrom?: string;
-  requestTo?: string;
-  matchedBy: "provider-transaction-id" | "booking-date-amount-currency";
-  raw: unknown;
-}
-
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
   csrf?: string;
   raw?: boolean;
+  contract?: { key: ClientContractName } | { banking: BankingContractName };
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -249,11 +123,28 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
   if (options.raw) return (await response.arrayBuffer()) as T;
   if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  const payload = (await response.json()) as unknown;
+  if (options.contract) {
+    const result =
+      "key" in options.contract
+        ? validateClientContract(options.contract.key, payload)
+        : validateBankingContract(options.contract.banking, payload);
+    if (!result.valid) {
+      throw new ApiError(
+        response.status,
+        "contract_violation",
+        `response did not match its contract: ${result.errors.join("; ")}`,
+      );
+    }
+  }
+  return payload as T;
 }
 
 export const api = {
-  status: () => request<VaultStatus>("/api/vault/status"),
+  status: () =>
+    request<VaultStatus>("/api/vault/status", {
+      contract: { key: "vaultStatus" },
+    }),
   /**
    * Resumes the browser session from its cookie: the server returns a fresh
    * CSRF token and the vault status, so a reload never asks for the passphrase
@@ -289,13 +180,18 @@ export const api = {
       tags?: string;
       reference?: string;
     } = {},
-  ) => request<Dashboard>(`/api/dashboard${queryString(params)}`),
+  ) =>
+    request<Dashboard>(`/api/dashboard${queryString(params)}`, {
+      contract: { key: "dashboard" },
+    }),
   /**
    * The expense detail view for a period. It takes the same `months` scope as
    * the dashboard and answers one currency's figures plus the ones it left out.
    */
   expenseDetails: (params: { months?: string; from?: string; to?: string } = {}) =>
-    request<ExpenseDetails>(`/api/analytics/expenses${queryString(params)}`),
+    request<ExpenseDetails>(`/api/analytics/expenses${queryString(params)}`, {
+      contract: { key: "expenseDetails" },
+    }),
   searchTransactions: (params: {
     accountId?: string;
     from?: string;
@@ -414,32 +310,36 @@ export const api = {
 
   // --- Enable Banking -------------------------------------------------------
 
-  bankingStatus: () => request<BankingStatus>("/api/banking/status"),
+  bankingStatus: () =>
+    request<BankingStatus>("/api/banking/status", {
+      contract: { banking: "BankingStatus" },
+    }),
   saveBankingConfig: (csrf: string, body: BankingConfigInput) =>
     request<{ connection: BankingConnectionPublic; status: BankingStatus }>(
       "/api/banking/enable-banking/config",
-      { method: "PUT", csrf, body },
+      { method: "PUT", csrf, body, contract: { banking: "SaveConnectionResponse" } },
     ),
   deleteBankingConfig: (csrf: string) =>
     request<{ deleted: boolean; deletedLinks: number }>("/api/banking/enable-banking/config", {
       method: "DELETE",
       csrf,
+      contract: { banking: "DeleteConnectionResponse" },
     }),
   listAspsps: (params: { country?: string; psuType?: "personal" | "business" } = {}) =>
-    request<{ items: AspspSummary[] }>(`/api/banking/enable-banking/aspsps${queryString(params)}`),
-  startBankingAuthorization: (
-    csrf: string,
-    body: { aspspName: string; aspspCountry: string; psuType: "personal" | "business" },
-  ) =>
+    request<{ items: AspspSummary[] }>(`/api/banking/enable-banking/aspsps${queryString(params)}`, {
+      contract: { banking: "AspspsResponse" },
+    }),
+  startBankingAuthorization: (csrf: string, body: AuthorizationStartInput) =>
     request<{ linkId: string; url: string; state: string; expiresAt: string }>(
       "/api/banking/enable-banking/authorize",
-      { method: "POST", csrf, body },
+      { method: "POST", csrf, body, contract: { banking: "AuthorizeStartResponse" } },
     ),
   completeBankingAuthorization: (csrf: string, body: { code: string; state: string }) =>
     request<BankingAuthorizationResult>("/api/banking/enable-banking/callback", {
       method: "POST",
       csrf,
       body,
+      contract: { banking: "BankingAuthorizationResult" },
     }),
   mapBankAccount: (
     csrf: string,
@@ -450,20 +350,24 @@ export const api = {
       method: "POST",
       csrf,
       body,
+      contract: { banking: "BankLinkSummary" },
     }),
   unlinkBank: (csrf: string, linkId: string) =>
-    request<{ deleted: boolean; deletedAccounts: number }>(
+    request<{ deleted: boolean; deletedAccounts: number; deletedPayloads: number }>(
       `/api/banking/enable-banking/links/${linkId}`,
-      { method: "DELETE", csrf },
+      { method: "DELETE", csrf, contract: { banking: "UnlinkResponse" } },
     ),
   syncBanking: (csrf: string, linkId?: string) =>
     request<{ report: BankingSyncReport; status: BankingStatus }>("/api/banking/sync", {
       method: "POST",
       csrf,
       body: linkId ? { linkId } : {},
+      contract: { banking: "SyncResponse" },
     }),
 
   /** The raw provider record behind one transaction, for the ledger's Raw view. */
   transactionRaw: (id: string) =>
-    request<RawTransactionRecord>(`/api/transactions/${encodeURIComponent(id)}/raw`),
+    request<RawTransactionRecord>(`/api/transactions/${encodeURIComponent(id)}/raw`, {
+      contract: { banking: "RawTransactionRecord" },
+    }),
 };

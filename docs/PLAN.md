@@ -44,9 +44,10 @@ The repository holds the completed Phase 0 feasibility work and the Phase 1
 foundation:
 
 - `apps/server` is the TypeScript service: domain models and invariants,
-  application interfaces, and a Fastify JSON API. `apps/web` is the React/Vite
-  browser client and `packages/web-contracts` holds generated types plus runtime
-  validators. All three are pnpm workspace members.
+  application services, storage adapters and a Fastify JSON API. `apps/web` is
+  the React/Vite browser client and `packages/web-contracts` holds generated
+  types, runtime validators and the small calendar helpers shared across those
+  boundaries. All three are pnpm workspace members.
 - `contracts/` is the canonical, language-neutral source of truth with JSON
   Schema 2020-12 definitions, valid fixtures and golden expected results.
   Regenerating them is part of the gate, so generated code cannot drift.
@@ -68,7 +69,9 @@ foundation:
   mockups (`docs/adr/0012`).
 - `apps/server/src/banking/` is the Enable Banking connector: signed JWT
   requests, normalization, the sync engine and the bank tables
-  (`docs/adr/0016`).
+  (`docs/adr/0016`). Its transport shapes live once in
+  `contracts/schemas/banking.schema.json`, and the browser validates every
+  banking response it consumes (`docs/adr/0044`).
 - Local `data/`, `secrets/` and `node_modules/` paths are ignored.
 - Local SQLite and JSON files exist under the ignored `data/` directory. Their
   financial contents are not required for architecture planning and should be
@@ -1965,6 +1968,27 @@ Status: **complete** (2026-09-27), decision in `docs/adr/0041`.
   leg to undecided, clearing it hands the row back to the pairing, and an edit
   that breaks the pair (another amount, account, currency or date) dissolves the
   link on both sides.
+
+#### Task `harden-contract-boundaries`
+
+Status: **complete** (2026-10-20), decision in `docs/adr/0044`.
+
+- Banking transport shapes now live once in
+  `contracts/schemas/banking.schema.json`; their generated types are consumed by
+  both the server and web client. The former hand-maintained DTOs in
+  `banking-service.ts` and `api/client.ts` are gone.
+- The web request boundary validates vault status, dashboard, expense details
+  and every JSON banking response the UI consumes before returning it. A
+  malformed payload raises `ApiError` with `contract_violation` instead of
+  leaking an invalid object into view state.
+- The dashboard and expense routes share one analytics-scope parser. Month-end,
+  calendar-day shifting and day counting now come from
+  `packages/web-contracts/src/dates.ts`.
+- Removed the unused application-interface scaffold, the obsolete vault-status
+  client, dead exported DTO helpers and methods with no call sites. Test-only
+  clock and cryptographic helpers moved out of production modules.
+- `package.json` now declares the same Node.js floor as the README and CI:
+  `>=22.12`.
 
 #### Task `read-the-period-in-detail`
 

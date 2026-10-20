@@ -1,5 +1,5 @@
 import { statSync } from "node:fs";
-import { ConflictError, RecordExistsError, RecordNotFoundError, StorageError } from "./errors.js";
+import { ConflictError, RecordExistsError, RecordNotFoundError } from "./errors.js";
 import { MIGRATIONS, runMigrations, type MigrationHooks } from "./migrations.js";
 import { SqlcipherDatabase } from "./sqlcipher-driver.js";
 import type { ListOptions, StoredRefs, TableStats, VaultStore } from "./store.js";
@@ -202,8 +202,4 @@ export function fileSize(file: string): number {
     }
   }
   return total;
-}
-
-export function assertStorage(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new StorageError(message);
 }

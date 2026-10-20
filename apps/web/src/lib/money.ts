@@ -1,3 +1,5 @@
+import type { Account } from "@flowly/web-contracts";
+
 const MINOR_UNITS: Record<string, number> = {
   BHD: 3,
   CHF: 2,
@@ -10,7 +12,7 @@ const MINOR_UNITS: Record<string, number> = {
 };
 
 export const CURRENCIES = Object.keys(MINOR_UNITS);
-export const ACCOUNT_TYPES = [
+export const ACCOUNT_TYPES: readonly Account["type"][] = [
   "checking",
   "savings",
   "credit-card",

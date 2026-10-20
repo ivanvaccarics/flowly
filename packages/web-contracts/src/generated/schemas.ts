@@ -1,4 +1,5 @@
 /* eslint-disable */
+// @ts-nocheck
 /**
  * GENERATED FILE — do not edit by hand.
  * Source: contracts/schemas/*.schema.json
@@ -127,6 +128,899 @@ export const schemas = {
               "type": "string",
               "pattern": "^[0-9a-f]{64}$"
             }
+          }
+        }
+      }
+    }
+  },
+  "banking": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://flowly.local/contracts/schemas/banking.schema.json",
+    "title": "BankingContract",
+    "description": "Transport shapes for the Enable Banking connector. The root is a union so generators expose every named definition; clients validate the specific definition returned by each endpoint.",
+    "oneOf": [
+      {
+        "$ref": "#/$defs/BankingStatus"
+      },
+      {
+        "$ref": "#/$defs/BankLinkSummary"
+      },
+      {
+        "$ref": "#/$defs/BankingAuthorizationResult"
+      },
+      {
+        "$ref": "#/$defs/AspspsResponse"
+      },
+      {
+        "$ref": "#/$defs/AuthorizeStartResponse"
+      },
+      {
+        "$ref": "#/$defs/RawTransactionRecord"
+      },
+      {
+        "$ref": "#/$defs/SaveConnectionResponse"
+      },
+      {
+        "$ref": "#/$defs/DeleteConnectionResponse"
+      },
+      {
+        "$ref": "#/$defs/UnlinkResponse"
+      },
+      {
+        "$ref": "#/$defs/SyncResponse"
+      },
+      {
+        "$ref": "#/$defs/SaveConnectionInput"
+      },
+      {
+        "$ref": "#/$defs/AuthorizationStartInput"
+      },
+      {
+        "$ref": "#/$defs/MapAccountInput"
+      }
+    ],
+    "$defs": {
+      "BankingConnectionPublic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "provider",
+          "appId",
+          "redirectUrl",
+          "environment",
+          "psuType",
+          "country",
+          "autoSync",
+          "keyFingerprint",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "const": "enable-banking"
+          },
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "redirectUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "environment": {
+            "enum": [
+              "SANDBOX",
+              "PRODUCTION"
+            ]
+          },
+          "psuType": {
+            "enum": [
+              "personal",
+              "business"
+            ]
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "autoSync": {
+            "type": "boolean"
+          },
+          "appName": {
+            "type": "string"
+          },
+          "keyFingerprint": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BankingAccountSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "providerAccountUid",
+          "status",
+          "transactionCount"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "providerAccountUid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "status": {
+            "enum": [
+              "unmapped",
+              "mapped",
+              "ignored"
+            ]
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountName": {
+            "type": "string"
+          },
+          "iban": {
+            "type": "string"
+          },
+          "maskedIban": {
+            "type": "string"
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "cashAccountType": {
+            "type": "string"
+          },
+          "lastSyncedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastBalanceMinor": {
+            "type": "integer"
+          },
+          "lastBalanceCurrency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "lastBalanceType": {
+            "type": "string"
+          },
+          "lastBalanceAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "transactionCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "BankLinkSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "aspspName",
+          "aspspCountry",
+          "psuType",
+          "status",
+          "createdAt",
+          "accounts"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "aspspName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "aspspCountry": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "aspspLogo": {
+            "type": "string"
+          },
+          "psuType": {
+            "enum": [
+              "personal",
+              "business"
+            ]
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "authorized",
+              "expired",
+              "revoked",
+              "failed",
+              "closed"
+            ]
+          },
+          "accessValidUntil": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSyncedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSyncError": {
+            "type": "string"
+          },
+          "syncBlockedUntil": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "authorizationUrl": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/BankingAccountSummary"
+            }
+          }
+        }
+      },
+      "BankingSyncReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "startedAt",
+          "finishedAt",
+          "links",
+          "accounts",
+          "fetched",
+          "created",
+          "updated",
+          "unchanged",
+          "skipped",
+          "failed",
+          "blocked",
+          "rateLimited",
+          "errors",
+          "reconnectRequired"
+        ],
+        "properties": {
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "links": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "accounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fetched": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "created": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "updated": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unchanged": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "blocked": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rateLimited": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "linkId",
+                "message"
+              ],
+              "properties": {
+                "linkId": {
+                  "type": "string"
+                },
+                "accountId": {
+                  "type": "string"
+                },
+                "providerAccountUid": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "reconnectRequired": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "BankingStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider",
+          "configured",
+          "links",
+          "sync"
+        ],
+        "properties": {
+          "provider": {
+            "const": "enable-banking"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "connection": {
+            "$ref": "#/$defs/BankingConnectionPublic"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/BankLinkSummary"
+            }
+          },
+          "sync": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "running"
+            ],
+            "properties": {
+              "running": {
+                "type": "boolean"
+              },
+              "lastSyncAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "lastReport": {
+                "$ref": "#/$defs/BankingSyncReport"
+              }
+            }
+          },
+          "autoSync": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AspspSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "country",
+          "beta",
+          "psuTypes",
+          "sandboxUsers",
+          "methods"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "bic": {
+            "type": "string"
+          },
+          "beta": {
+            "type": "boolean"
+          },
+          "psuTypes": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "personal",
+                "business"
+              ]
+            }
+          },
+          "maximumConsentDays": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sandboxUsers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "username": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                },
+                "otp": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "approach",
+                "psuType",
+                "credentials"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "approach": {
+                  "type": "string"
+                },
+                "psuType": {
+                  "enum": [
+                    "personal",
+                    "business"
+                  ]
+                },
+                "credentials": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "name",
+                      "required"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "required": {
+                        "type": "boolean"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "template": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "BankingAuthorizationResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "link",
+          "accounts",
+          "aspsp"
+        ],
+        "properties": {
+          "link": {
+            "$ref": "#/$defs/BankLinkSummary"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "providerAccountUid",
+                "status",
+                "suggestedName",
+                "suggestedType"
+              ],
+              "properties": {
+                "providerAccountUid": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "status": {
+                  "enum": [
+                    "unmapped",
+                    "mapped",
+                    "ignored"
+                  ]
+                },
+                "suggestedName": {
+                  "type": "string"
+                },
+                "suggestedType": {
+                  "type": "string"
+                },
+                "suggestedCurrency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$"
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$"
+                },
+                "iban": {
+                  "type": "string"
+                },
+                "maskedIban": {
+                  "type": "string"
+                },
+                "providerName": {
+                  "type": "string"
+                },
+                "cashAccountType": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "aspsp": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "country"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "country": {
+                "type": "string",
+                "pattern": "^[A-Z]{2}$"
+              }
+            }
+          },
+          "accessValidUntil": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RawTransactionRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider",
+          "linkId",
+          "aspspName",
+          "providerAccountUid",
+          "fetchedAt",
+          "matchedBy",
+          "raw"
+        ],
+        "properties": {
+          "provider": {
+            "const": "enable-banking"
+          },
+          "linkId": {
+            "type": "string"
+          },
+          "aspspName": {
+            "type": "string"
+          },
+          "providerAccountUid": {
+            "type": "string"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "requestTo": {
+            "type": "string",
+            "format": "date"
+          },
+          "matchedBy": {
+            "enum": [
+              "provider-transaction-id",
+              "booking-date-amount-currency"
+            ]
+          },
+          "raw": {}
+        }
+      },
+      "SaveConnectionInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "redirectUrl"
+        ],
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "privateKeyPem": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 20000
+          },
+          "redirectUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "environment": {
+            "enum": [
+              "SANDBOX",
+              "PRODUCTION"
+            ]
+          },
+          "psuType": {
+            "enum": [
+              "personal",
+              "business"
+            ]
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "autoSync": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AuthorizationStartInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "aspspName",
+          "aspspCountry"
+        ],
+        "properties": {
+          "aspspName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "aspspCountry": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "psuType": {
+            "enum": [
+              "personal",
+              "business"
+            ]
+          }
+        }
+      },
+      "MapAccountInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "providerAccountUid",
+          "mode"
+        ],
+        "properties": {
+          "providerAccountUid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "mode": {
+            "enum": [
+              "create",
+              "pair",
+              "ignore"
+            ]
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "type": {
+            "enum": [
+              "checking",
+              "savings",
+              "credit-card",
+              "cash",
+              "wallet",
+              "investment",
+              "other"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          }
+        }
+      },
+      "SaveConnectionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "connection",
+          "status"
+        ],
+        "properties": {
+          "connection": {
+            "$ref": "#/$defs/BankingConnectionPublic"
+          },
+          "status": {
+            "$ref": "#/$defs/BankingStatus"
+          }
+        }
+      },
+      "DeleteConnectionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "deletedLinks"
+        ],
+        "properties": {
+          "deleted": {
+            "const": true
+          },
+          "deletedLinks": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "UnlinkResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "deletedAccounts",
+          "deletedPayloads"
+        ],
+        "properties": {
+          "deleted": {
+            "const": true
+          },
+          "deletedAccounts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "deletedPayloads": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "AspspsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/AspspSummary"
+            }
+          }
+        }
+      },
+      "AuthorizeStartResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "linkId",
+          "url",
+          "state",
+          "expiresAt"
+        ],
+        "properties": {
+          "linkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "state": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SyncResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "report",
+          "status"
+        ],
+        "properties": {
+          "report": {
+            "$ref": "#/$defs/BankingSyncReport"
+          },
+          "status": {
+            "$ref": "#/$defs/BankingStatus"
           }
         }
       }
@@ -1148,6 +2042,11 @@ export const schemaIndex = [
     "id": "https://flowly.local/contracts/schemas/archive-manifest.schema.json"
   },
   {
+    "key": "banking",
+    "title": "BankingContract",
+    "id": "https://flowly.local/contracts/schemas/banking.schema.json"
+  },
+  {
     "key": "dashboard",
     "title": "Dashboard",
     "id": "https://flowly.local/contracts/schemas/dashboard.schema.json"
@@ -1180,3 +2079,14 @@ export const schemaIndex = [
 ] as const;
 
 export type ContractKey = keyof typeof schemas;
+export const contractKeys = [
+  "account",
+  "archiveManifest",
+  "banking",
+  "dashboard",
+  "expenseDetails",
+  "tag",
+  "taggingRule",
+  "transaction",
+  "vaultStatus"
+] as const;

@@ -1,7 +1,6 @@
 import { DomainError } from "./errors.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const UUID_V7_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;
@@ -11,10 +10,6 @@ const IBAN_PATTERN = /^[A-Z]{2}[0-9A-Z]{11,32}$/;
 /** Any RFC 4122 UUID is accepted on import; Flowly only generates v7. */
 export function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_PATTERN.test(value);
-}
-
-export function isUuidV7(value: unknown): value is string {
-  return typeof value === "string" && UUID_V7_PATTERN.test(value);
 }
 
 export function assertUuid(value: unknown, field: string): asserts value is string {

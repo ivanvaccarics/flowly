@@ -16,19 +16,6 @@ export type VaultTable =
   | "bank_payloads"
   | "transfer_links";
 
-export const VAULT_TABLES: readonly VaultTable[] = [
-  "accounts",
-  "transactions",
-  "tags",
-  "tagging_rules",
-  "settings",
-  "bank_connections",
-  "bank_links",
-  "bank_accounts",
-  "bank_payloads",
-  "transfer_links",
-];
-
 export interface StoredRefs {
   refA?: string | null;
   refB?: string | null;

@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { createAccount, validateAccount } from "../src/domain/account.js";
 import { DomainError } from "../src/domain/errors.js";
-import { generateId, isGeneratedId } from "../src/domain/ids.js";
-import { createTag, isSameTagName, validateTag } from "../src/domain/tag.js";
+import { generateId } from "../src/domain/ids.js";
+import { createTag, validateTag } from "../src/domain/tag.js";
 import {
   FINGERPRINT_VERSION,
   createTransaction,
   importFingerprint,
   validateTransaction,
 } from "../src/domain/transaction.js";
+import { isUuid, normalizeTagName } from "../src/domain/values.js";
 
 const NOW = "2026-09-01T08:00:00.000Z";
 const ACCOUNT_ID = "018f2c1e-6d5b-7c3a-9f2e-1a2b3c4d5e6f";
@@ -18,10 +19,12 @@ describe("identifiers", () => {
   it("generates UUIDv7 ids that sort by creation time", () => {
     const early = generateId(1_700_000_000_000);
     const late = generateId(1_800_000_000_000);
-    expect(isGeneratedId(early)).toBe(true);
-    expect(isGeneratedId(late)).toBe(true);
+    expect(isUuid(early)).toBe(true);
+    expect(early.slice(14, 15)).toBe("7");
+    expect(isUuid(late)).toBe(true);
+    expect(late.slice(14, 15)).toBe("7");
     expect(early < late).toBe(true);
-    expect(isGeneratedId("not-a-uuid")).toBe(false);
+    expect(isUuid("not-a-uuid")).toBe(false);
   });
 });
 
@@ -31,7 +34,7 @@ describe("tags", () => {
     expect(tag.name).toBe("Caffè   Nero");
     expect(tag.normalizedName).toBe("caffè nero");
     expect(() => validateTag(tag)).not.toThrow();
-    expect(isSameTagName("Caffè Nero", "CAFFÈ   NERO")).toBe(true);
+    expect(normalizeTagName("Caffè Nero")).toBe(normalizeTagName("CAFFÈ   NERO"));
   });
 
   it("rejects a mismatched normalized name and bad colors", () => {

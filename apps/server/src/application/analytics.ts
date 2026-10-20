@@ -1,4 +1,5 @@
 import { systemClock, type Clock } from "../domain/clock.js";
+import { monthEnd } from "@flowly/web-contracts";
 import { currencyInfo, formatMinorToAmount } from "../domain/money.js";
 import type { Tag } from "../domain/tag.js";
 import type { Transaction, TransactionSource } from "../domain/transaction.js";
@@ -19,17 +20,6 @@ const MONTH_LABELS = [
   "Nov",
   "Dec",
 ] as const;
-
-/** `2026-02` → 28/29, so a monthly bucket covers its whole month. */
-export function monthEnd(month: string): string {
-  return `${month}-${String(daysInMonth(month)).padStart(2, "0")}`;
-}
-
-function daysInMonth(month: string): number {
-  const year = Number(month.slice(0, 4));
-  const index = Number(month.slice(5, 7));
-  return new Date(Date.UTC(year, index, 0)).getUTCDate();
-}
 
 /**
  * Reads a `YYYY-MM,YYYY-MM` query value into a sorted, deduplicated list.
@@ -573,12 +563,6 @@ export class AnalyticsService {
     return [...totals.values()].sort((a, b) => (a.currency < b.currency ? -1 : 1));
   }
 
-  /** Booked outflows grouped by tag and currency. */
-  /** Income and expenses per week, per currency, for the chart. */
-  async cashFlowBuckets(range: DateRange, bucketDays = 7): Promise<CashFlowBucket[]> {
-    return this.weeklyBuckets(await this.inRange(range), range, bucketDays);
-  }
-
   private weeklyBuckets(
     transactions: readonly Transaction[],
     range: DateRange,
@@ -658,7 +642,7 @@ export class AnalyticsService {
           currency,
           label: `${MONTH_LABELS[Number(month.slice(5, 7)) - 1] ?? month} ${month.slice(0, 4)}`,
           from: `${month}-01`,
-          to: `${month}-${String(daysInMonth(month)).padStart(2, "0")}`,
+          to: monthEnd(month),
           incomeMinor: entry.incomeMinor,
           expensesMinor: entry.expensesMinor,
         });
@@ -726,11 +710,6 @@ export class AnalyticsService {
       if (b.spentMinor !== a.spentMinor) return b.spentMinor - a.spentMinor;
       return a.tagName < b.tagName ? -1 : 1;
     });
-  }
-
-  /** Human-readable amounts for logs and UI previews; never locale formatted. */
-  format(minor: number, currency: string): string {
-    return formatMinorToAmount(minor, currency);
   }
 
   private async inRange(range: DateRange): Promise<Transaction[]> {
