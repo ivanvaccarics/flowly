@@ -18,7 +18,6 @@ import type { ServerConfig } from "../config.js";
 import { VaultCorruptError, VaultKeyError } from "../crypto/errors.js";
 import { DomainError } from "../domain/errors.js";
 import { generateId } from "../domain/ids.js";
-import type { RuleCondition } from "../domain/tagging-rule.js";
 import { ArchiveIntegrityError, ArchivePasswordError, ImportError } from "../portability/errors.js";
 import { AttemptLimiter, SessionStore, type Session } from "../session/session-store.js";
 import { SCHEMA_VERSION } from "../storage/migrations.js";
@@ -35,6 +34,7 @@ import { EXPORT_FORMAT_VERSION, SERVER_VERSION, VAULT_FORMAT_VERSION } from "../
 import { registerBankingRoutes, psuFrom } from "./banking-routes.js";
 import { registerAnalyticsRoutes } from "./analytics-routes.js";
 import { registerImportExportRoutes } from "./import-export-routes.js";
+import { registerTaggingRoutes } from "./tagging-routes.js";
 import { registerStaticApp } from "./static-app.js";
 
 const COOKIE_NAME = "flowly_sid";
@@ -536,39 +536,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     return { deleted: true, ...result };
   });
 
-  app.post("/api/tagging-rules/backfill", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const body = (request.body ?? {}) as Record<string, unknown>;
-    const scope: { accountId?: string; fromDate?: string; toDate?: string } = {};
-    if (typeof body["accountId"] === "string") scope.accountId = body["accountId"];
-    if (typeof body["fromDate"] === "string") scope.fromDate = body["fromDate"];
-    if (typeof body["toDate"] === "string") scope.toDate = body["toDate"];
-    return new TaggingRuleService(context.vault).backfill(scope);
-  });
-
-  // What the stored rules cover right now, and what an unsaved draft would
-  // cover: both read the vault, neither writes to it.
-  app.get("/api/tagging-rules/stats", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    return new TaggingRuleService(context.vault).stats();
-  });
-
-  app.post("/api/tagging-rules/preview", async (request, reply) => {
-    const context = requireContext(request, reply);
-    if (!context) return errorBody(reply);
-    const body = (request.body ?? {}) as { combinator?: unknown; conditions?: unknown };
-    const conditions = Array.isArray(body.conditions) ? (body.conditions as RuleCondition[]) : [];
-    if (body.combinator !== "and" && body.combinator !== "or") {
-      reply.code(400);
-      return { error: "combinator_required" };
-    }
-    return new TaggingRuleService(context.vault).preview({
-      combinator: body.combinator,
-      conditions,
-    });
-  });
+  registerTaggingRoutes(app, { guard: requireContext, errorBody });
 
   registerImportExportRoutes(app, { guard: requireContext, errorBody, newId: generateId });
 
