@@ -79,4 +79,22 @@ describe("API contract validation", () => {
       code: "contract_violation",
     } satisfies Partial<ApiError>);
   });
+
+  it("validates nested rule-statistics rows", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          evaluated: 2,
+          matched: 1,
+          byRule: [{ ruleId: 7, matches: 1 }],
+          byTag: [],
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+    );
+    await expect(api.ruleStats()).rejects.toMatchObject({
+      code: "contract_violation",
+      message: expect.stringContaining("/byRule/0"),
+    } satisfies Partial<ApiError>);
+  });
 });

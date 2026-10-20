@@ -65,6 +65,28 @@ function validateCollectionItems(
   return { valid: true };
 }
 
+function validateStringArray(value: unknown, path: string): ValidationResult {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+    return invalid(path, "must be an array of strings");
+  }
+  return { valid: true };
+}
+
+function validateCountRows(
+  value: unknown,
+  path: string,
+  idField: string,
+  countField: string,
+): ValidationResult {
+  if (!Array.isArray(value)) return invalid(path, "must be an array");
+  for (const [index, row] of value.entries()) {
+    if (!isRecord(row) || typeof row[idField] !== "string" || !isCount(row[countField])) {
+      return invalid(`${path}/${index}`, `must contain ${idField} and ${countField}`);
+    }
+  }
+  return { valid: true };
+}
+
 const entityContract = {
   accounts: "account",
   transactions: "transaction",
@@ -161,10 +183,10 @@ export function validateRuleStatsResponse(value: unknown): ValidationResult {
   if (!isRecord(value) || !isCount(value["evaluated"]) || !isCount(value["matched"])) {
     return invalid("/", "evaluated and matched must be non-negative integers");
   }
-  for (const field of ["byRule", "byTag"] as const) {
-    if (!Array.isArray(value[field])) return invalid(`/${field}`, "must be an array");
-  }
-  return { valid: true };
+  return combine(
+    validateCountRows(value["byRule"], "/byRule", "ruleId", "matches"),
+    validateCountRows(value["byTag"], "/byTag", "tagId", "transactions"),
+  );
 }
 
 export function validateRulePreviewResponse(value: unknown): ValidationResult {
@@ -180,11 +202,15 @@ export function validateCsvPreviewResponse(value: unknown): ValidationResult {
     if (!isCount(value[field])) return invalid(`/${field}`, "must be a non-negative integer");
   }
   if (!Array.isArray(value["errors"])) return invalid("/errors", "must be an array");
-  if (!Array.isArray(value["newTags"])) return invalid("/newTags", "must be an array");
-  if (!Array.isArray(value["unknownAccounts"])) {
-    return invalid("/unknownAccounts", "must be an array");
+  for (const [index, error] of value["errors"].entries()) {
+    if (!isRecord(error) || !isCount(error["line"]) || typeof error["message"] !== "string") {
+      return invalid(`/errors/${index}`, "must contain line and message");
+    }
   }
-  return { valid: true };
+  return combine(
+    validateStringArray(value["newTags"], "/newTags"),
+    validateStringArray(value["unknownAccounts"], "/unknownAccounts"),
+  );
 }
 
 export function validateCsvImportResponse(value: unknown): ValidationResult {
@@ -245,4 +271,9 @@ export function validateApiResponse(
     case "archive-import":
       return validateArchiveImportResponse(value);
   }
+}
+
+function combine(...results: ValidationResult[]): ValidationResult {
+  const errors = results.flatMap((result) => (result.valid ? [] : result.errors));
+  return errors.length === 0 ? { valid: true } : { valid: false, errors };
 }
