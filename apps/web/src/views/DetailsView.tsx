@@ -3,6 +3,7 @@ import type { ExpenseDetails, Tag } from "@flowly/web-contracts";
 import { api } from "../api/client.js";
 import { DashboardFilters } from "../components/DashboardFilters.js";
 import { Icon } from "../components/icons.js";
+import { SpendingDonut } from "../components/SpendingDonut.js";
 import { Banner, Empty, SectionIntro } from "../components/ui.js";
 import { useMonthScope } from "../hooks/use-month-scope.js";
 import { describeError } from "../hooks/use-workspace.js";
@@ -265,7 +266,8 @@ export function DetailsView({ onSeeAllTransactions, onExportData }: DetailsViewP
                 </div>
               </header>
               {byCategory.length > 0 ? (
-                <CategoryDonut
+                <SpendingDonut
+                  variant="category"
                   entries={byCategory}
                   currency={currency}
                   total={categoryTotal}
@@ -445,144 +447,6 @@ function dayLabel(date: string): string {
 // A translucent brand green, darker as the day's spending grows.
 function heatColour(level: number): string {
   return `rgba(30, 111, 78, ${0.12 + 0.88 * level})`;
-}
-
-function CategoryDonut({
-  entries,
-  currency,
-  total,
-  colourOf,
-  onOpen,
-}: {
-  entries: ExpenseDetails["byCategory"];
-  currency: string;
-  total: number;
-  colourOf: (tagId: string, index: number) => string;
-  onOpen: (tagId: string) => void;
-}) {
-  const [activeTagId, setActiveTagId] = useState<string | undefined>(undefined);
-  const size = 168;
-  const centre = size / 2;
-  const radius = 66;
-  const circumference = 2 * Math.PI * radius;
-  const gap = entries.length > 1 ? 3 : 0;
-  let consumed = 0;
-  const slices = entries.map((entry, index) => {
-    const fraction = total > 0 ? entry.spentMinor / total : 0;
-    const length = Math.max(0, fraction * circumference - gap);
-    const slice = {
-      key: entry.tagId,
-      colour: colourOf(entry.tagId, index),
-      dash: `${length} ${circumference - length}`,
-      offset: -consumed,
-    };
-    consumed += fraction * circumference;
-    return slice;
-  });
-  const active = entries.find((entry) => entry.tagId === activeTagId);
-  const label = `Spending by category in ${currency}: ${entries
-    .map((entry) => `${entry.tagName} ${Math.round(share(entry.spentMinor, total))}%`)
-    .join(", ")}`;
-
-  return (
-    <div className={activeTagId === undefined ? "donut" : "donut has-active"}>
-      <div className="donut-figure">
-        <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
-          <circle className="donut-track" cx={centre} cy={centre} r={radius} />
-          {slices.map((slice, index) => {
-            const entry = entries[index]!;
-            return (
-              <circle
-                key={slice.key}
-                className={activeTagId === entry.tagId ? "donut-slice is-active" : "donut-slice"}
-                cx={centre}
-                cy={centre}
-                r={radius}
-                stroke={slice.colour}
-                strokeDasharray={slice.dash}
-                strokeDashoffset={slice.offset}
-                transform={`rotate(-90 ${centre} ${centre})`}
-                style={{ cursor: "pointer" }}
-                onPointerEnter={() => setActiveTagId(entry.tagId)}
-                onPointerLeave={() =>
-                  setActiveTagId((current) => (current === entry.tagId ? undefined : current))
-                }
-                onClick={() => onOpen(entry.tagId)}
-              />
-            );
-          })}
-        </svg>
-        <div className="donut-center">
-          {active ? (
-            <>
-              <span className="eyebrow" style={{ margin: 0 }} title={active.tagName}>
-                {active.tagName}
-              </span>
-              <span className="total small">
-                {formatMinorToAmount(active.spentMinor, currency)}
-              </span>
-              <span className="sub">
-                {formatDecimal(share(active.spentMinor, total))}% · {active.transactionCount}{" "}
-                {active.transactionCount === 1 ? "movement" : "movements"}
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="eyebrow" style={{ margin: 0 }}>
-                Tagged {currency}
-              </span>
-              <span className={total > 0 ? "total" : "total small"}>
-                {formatMinorToAmount(total, currency)}
-              </span>
-              <span className="sub">
-                {entries.length} {entries.length === 1 ? "category" : "categories"}
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-
-      <ul className="legend-rows">
-        {entries.map((entry, index) => (
-          <li
-            key={entry.tagId}
-            className="legend-row-item"
-            onPointerEnter={() => setActiveTagId(entry.tagId)}
-            onPointerLeave={() =>
-              setActiveTagId((current) => (current === entry.tagId ? undefined : current))
-            }
-          >
-            <button
-              type="button"
-              className="legend-row"
-              aria-label={`Show ${entry.tagName} in the ledger`}
-              title={`Show ${entry.tagName} in the ledger`}
-              onFocus={() => setActiveTagId(entry.tagId)}
-              onBlur={() =>
-                setActiveTagId((current) => (current === entry.tagId ? undefined : current))
-              }
-              onClick={() => onOpen(entry.tagId)}
-            >
-              <span className="legend-item">
-                <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
-                {entry.tagName}
-              </span>
-              <span className="mono">{formatMinorToAmount(entry.spentMinor, currency)}</span>
-              <span className="muted mono">{formatDecimal(share(entry.spentMinor, total))}%</span>
-              <span className="legend-mark" aria-hidden="true">
-                <Icon name="transactions" size={14} />
-              </span>
-            </button>
-            <span className="sub legend-sub">
-              {entry.transactionCount} {entry.transactionCount === 1 ? "movement" : "movements"} ·
-              average {formatMinorToAmount(entry.averageMinor, currency)} · largest{" "}
-              {formatMinorToAmount(entry.largestMinor, currency)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 }
 
 function WeeklyBars({

@@ -3,6 +3,7 @@ import type { Account, Dashboard, Tag, Transaction } from "@flowly/web-contracts
 import { api } from "../api/client.js";
 import { DashboardFilters } from "../components/DashboardFilters.js";
 import { Icon } from "../components/icons.js";
+import { SpendingDonut } from "../components/SpendingDonut.js";
 import { Banner, Chip, Empty, Money, SectionIntro, tagPillStyle } from "../components/ui.js";
 import { BankingSyncCard } from "../components/BankingSyncCard.js";
 import { useMonthScope } from "../hooks/use-month-scope.js";
@@ -340,10 +341,12 @@ export function DashboardView({
           </header>
           {dashboard && dashboard.spendingByTag.length > 0 ? (
             spendingGroups.map((group) => (
-              <SpendingPie
+              <SpendingDonut
                 key={group.currency}
+                variant="tag"
                 currency={group.currency}
                 entries={group.entries}
+                total={group.totalMinor}
                 colourOf={colourOf}
                 onOpen={(tagId) => onSeeAllTransactions({ tagId, from, to })}
               />
@@ -491,145 +494,6 @@ export function DashboardView({
         </button>
       </div>
     </section>
-  );
-}
-
-/**
- * The dashboard's spending breakdown: one donut per currency, an arc per tag of
- * the period, with the total in the hole. Every category is always part of the
- * picture — the period is the only scope the dashboard offers — so the legend
- * is a plain read-out: colour, name, amount and share per tag, with each row
- * opening the ledger on that tag. Hand-rolled, like the cash-flow chart: Flowly
- * ships no charting dependency.
- */
-function SpendingPie({
-  entries,
-  currency,
-  colourOf,
-  onOpen,
-}: {
-  entries: Array<{ tagId: string; tagName: string; currency: string; spentMinor: number }>;
-  currency: string;
-  colourOf: (tagId: string, index: number) => string;
-  onOpen: (tagId: string) => void;
-}) {
-  const [activeTagId, setActiveTagId] = useState<string | undefined>(undefined);
-  const total = entries.reduce((sum, entry) => sum + entry.spentMinor, 0);
-  const size = 168;
-  const centre = size / 2;
-  const radius = 66;
-  const circumference = 2 * Math.PI * radius;
-  // A hair of space between slices keeps neighbours visually separate.
-  const gap = entries.length > 1 ? 3 : 0;
-  let consumed = 0;
-  const slices = entries.map((entry, index) => {
-    const share = total > 0 ? entry.spentMinor / total : 0;
-    const length = Math.max(0, share * circumference - gap);
-    const slice = {
-      key: `${entry.tagId}-${entry.currency}`,
-      colour: colourOf(entry.tagId, index),
-      dash: `${length} ${circumference - length}`,
-      offset: -consumed,
-    };
-    consumed += share * circumference;
-    return slice;
-  });
-  const totalText = formatMinorToAmount(total, currency);
-  const active = entries.find((entry) => entry.tagId === activeTagId);
-  const shareOf = (minor: number) => (total > 0 ? (minor / total) * 100 : 0);
-  const label = `Spending by tag in ${currency}: ${entries
-    .map((entry) => `${entry.tagName} ${Math.round(shareOf(entry.spentMinor))}%`)
-    .join(", ")}`;
-
-  return (
-    <div className={activeTagId === undefined ? "donut" : "donut has-active"}>
-      <div className="donut-figure">
-        <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
-          <circle className="donut-track" cx={centre} cy={centre} r={radius} />
-          {slices.map((slice, index) => {
-            const entry = entries[index];
-            if (!entry) return null;
-            return (
-              <circle
-                key={slice.key}
-                className={activeTagId === entry.tagId ? "donut-slice is-active" : "donut-slice"}
-                cx={centre}
-                cy={centre}
-                r={radius}
-                stroke={slice.colour}
-                strokeDasharray={slice.dash}
-                strokeDashoffset={slice.offset}
-                transform={`rotate(-90 ${centre} ${centre})`}
-                style={{ cursor: "pointer" }}
-                onPointerEnter={() => setActiveTagId(entry.tagId)}
-                onPointerLeave={() =>
-                  setActiveTagId((current) => (current === entry.tagId ? undefined : current))
-                }
-                onClick={() => onOpen(entry.tagId)}
-              />
-            );
-          })}
-        </svg>
-        <div className="donut-center">
-          {active ? (
-            <>
-              <span className="eyebrow" style={{ margin: 0 }} title={active.tagName}>
-                {active.tagName}
-              </span>
-              <span className="total small">
-                {formatMinorToAmount(active.spentMinor, active.currency)}
-              </span>
-              <span className="sub">
-                {active.currency} · {formatDecimal(shareOf(active.spentMinor))}% of spending
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="eyebrow" style={{ margin: 0 }}>
-                {currency}
-              </span>
-              <span className={totalText.length > 9 ? "total small" : "total"}>{totalText}</span>
-              <span className="sub">spent</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      <ul className="legend-rows">
-        {entries.map((entry, index) => (
-          <li
-            key={`${entry.tagId}-${entry.currency}`}
-            className="legend-row-item"
-            onPointerEnter={() => setActiveTagId(entry.tagId)}
-            onPointerLeave={() =>
-              setActiveTagId((current) => (current === entry.tagId ? undefined : current))
-            }
-          >
-            <button
-              type="button"
-              className="legend-row"
-              aria-label={`Show ${entry.tagName} in the ledger`}
-              title={`Show ${entry.tagName} in the ledger`}
-              onFocus={() => setActiveTagId(entry.tagId)}
-              onBlur={() =>
-                setActiveTagId((current) => (current === entry.tagId ? undefined : current))
-              }
-              onClick={() => onOpen(entry.tagId)}
-            >
-              <span className="legend-item">
-                <span className="dot" style={{ background: colourOf(entry.tagId, index) }} />
-                {entry.tagName}
-              </span>
-              <span className="mono">{formatMinorToAmount(entry.spentMinor, entry.currency)}</span>
-              <span className="muted mono">{formatDecimal(shareOf(entry.spentMinor))}%</span>
-              <span className="legend-mark" aria-hidden="true">
-                <Icon name="transactions" size={14} />
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 
