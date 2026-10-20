@@ -104,7 +104,9 @@ describe("transactions view", () => {
       expect((screen.getByLabelText("From") as HTMLInputElement).value).toBe("2026-09-01"),
     );
     expect((screen.getByLabelText("To") as HTMLInputElement).value).toBe("2026-09-07");
-    expect((screen.getByLabelText("Tag") as HTMLSelectElement).value).toBe(TAG_ID);
+    await waitFor(() =>
+      expect((screen.getByLabelText("Tag") as HTMLSelectElement).value).toBe(TAG_ID),
+    );
   });
 
   it("shows the raw provider record behind a row as tables", async () => {

@@ -119,7 +119,9 @@ describe("Enable Banking in Settings", () => {
     // The panel says what to do next, and splits work into named steps.
     await waitFor(() => expect(screen.getByText(/Next:/)).toBeTruthy());
     expect(screen.getByRole("heading", { name: "Connect to Enable Banking" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Connect a bank" })).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Connect a bank" })).toBeTruthy(),
+    );
     expect(screen.getByRole("heading", { name: "Your banks" })).toBeTruthy();
     expect(screen.getByText("Connection settings")).toBeTruthy();
     expect(screen.getByText("Disconnect or remove the connection")).toBeTruthy();

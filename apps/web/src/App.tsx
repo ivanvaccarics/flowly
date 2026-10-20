@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { AppShell } from "./components/AppShell.js";
 import { UnlockScreen } from "./components/UnlockScreen.js";
 import { useWorkspace } from "./hooks/use-workspace.js";
-import { BankCallbackView } from "./views/BankCallbackView.js";
+
+const BankCallbackView = lazy(() =>
+  import("./views/BankCallbackView.js").then((module) => ({ default: module.BankCallbackView })),
+);
 
 const BANK_CALLBACK_PATH = "/enablebanking/auth_callback";
 
@@ -50,7 +53,15 @@ export function App() {
     return (
       <div className="shell">
         <main className="content">
-          <BankCallbackView csrf={workspace.csrf} onFinished={finishBankAuthorization} />
+          <Suspense
+            fallback={
+              <p className="muted" role="status">
+                Loading bank authorization…
+              </p>
+            }
+          >
+            <BankCallbackView csrf={workspace.csrf} onFinished={finishBankAuthorization} />
+          </Suspense>
         </main>
       </div>
     );

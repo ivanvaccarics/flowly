@@ -1,10 +1,29 @@
 import {
+  validateBankingContract,
   validateClientContract,
+  type BankingContractName,
   type ClientContractName,
   type ValidationResult,
 } from "@flowly/web-contracts/client-validation";
 
 export type ResponseValidator = (value: unknown) => ValidationResult;
+
+export type ApiResponseContract =
+  | { kind: "client"; key: ClientContractName }
+  | { kind: "banking"; name: BankingContractName }
+  | { kind: "session" }
+  | { kind: "lock" }
+  | { kind: "changed" }
+  | { kind: "deleted" }
+  | { kind: "collection"; resource: string }
+  | { kind: "entity"; resource: string }
+  | { kind: "search" }
+  | { kind: "backfill" }
+  | { kind: "rule-stats" }
+  | { kind: "rule-preview" }
+  | { kind: "csv-preview" }
+  | { kind: "csv-import" }
+  | { kind: "archive-import" };
 
 const invalid = (path: string, message: string): ValidationResult => ({
   valid: false,
@@ -188,4 +207,42 @@ export function validateArchiveImportResponse(value: unknown): ValidationResult 
     if (!isCount(value[field])) return invalid(`/${field}`, "must be a non-negative integer");
   }
   return { valid: true };
+}
+
+export function validateApiResponse(
+  contract: ApiResponseContract,
+  value: unknown,
+): ValidationResult {
+  switch (contract.kind) {
+    case "client":
+      return validateClientContract(contract.key, value);
+    case "banking":
+      return validateBankingContract(contract.name, value);
+    case "session":
+      return validateSessionResponse(value);
+    case "lock":
+      return validateLockResponse(value);
+    case "changed":
+      return validateChangedResponse(value);
+    case "deleted":
+      return validateDeletedResponse(value);
+    case "collection":
+      return validateCollectionResponse(contract.resource)(value);
+    case "entity":
+      return validateEntityResponse(contract.resource)(value);
+    case "search":
+      return validateSearchResponse(value);
+    case "backfill":
+      return validateBackfillResponse(value);
+    case "rule-stats":
+      return validateRuleStatsResponse(value);
+    case "rule-preview":
+      return validateRulePreviewResponse(value);
+    case "csv-preview":
+      return validateCsvPreviewResponse(value);
+    case "csv-import":
+      return validateCsvImportResponse(value);
+    case "archive-import":
+      return validateArchiveImportResponse(value);
+  }
 }

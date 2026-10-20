@@ -93,6 +93,7 @@ describe("rules view", () => {
     const calls = mockApi();
     render(<RulesView csrf="csrf-token" />);
     const card = await screen.findByRole("form", { name: "New rule" });
+    await waitFor(() => expect(within(card).getByRole("button", { name: "Coffee" })).toBeTruthy());
     // The composer is already holding a draft of its own.
     fireEvent.change(within(card).getByLabelText("Rule name"), {
       target: { value: "Rent rule" },
@@ -140,6 +141,7 @@ describe("rules view", () => {
     const calls = mockApi();
     render(<RulesView csrf="csrf-token" />);
     const card = await screen.findByRole("form", { name: "New rule" });
+    await waitFor(() => expect(within(card).getByRole("button", { name: "Coffee" })).toBeTruthy());
     fireEvent.change(within(card).getByLabelText("Rule name"), {
       target: { value: "Rent rule" },
     });
@@ -168,6 +170,7 @@ describe("rules view", () => {
     const calls = mockApi();
     render(<RulesView csrf="csrf-token" />);
     const card = await screen.findByRole("form", { name: "New rule" });
+    await waitFor(() => expect(within(card).getByRole("button", { name: "Coffee" })).toBeTruthy());
 
     fireEvent.change(within(card).getByLabelText("Rule name"), { target: { value: "Bars" } });
     fireEvent.click(within(card).getByRole("button", { name: "Coffee" }));
@@ -189,6 +192,7 @@ describe("rules view", () => {
     const calls = mockApi();
     render(<RulesView csrf="csrf-token" />);
     const card = await screen.findByRole("form", { name: "New rule" });
+    await waitFor(() => expect(within(card).getByRole("button", { name: "Coffee" })).toBeTruthy());
 
     fireEvent.change(within(card).getByLabelText("Rule name"), { target: { value: "Rent" } });
     fireEvent.change(within(card).getByLabelText("Field 1"), { target: { value: "amount" } });

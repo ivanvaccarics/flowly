@@ -17,28 +17,7 @@ import type {
   Transaction,
   VaultStatus,
 } from "@flowly/web-contracts";
-import {
-  validateBankingContract,
-  validateClientContract,
-  type BankingContractName,
-  type ClientContractName,
-} from "@flowly/web-contracts/client-validation";
-import {
-  validateArchiveImportResponse,
-  validateBackfillResponse,
-  validateChangedResponse,
-  validateCollectionResponse,
-  validateCsvImportResponse,
-  validateCsvPreviewResponse,
-  validateDeletedResponse,
-  validateEntityResponse,
-  validateLockResponse,
-  validateRulePreviewResponse,
-  validateRuleStatsResponse,
-  validateSearchResponse,
-  validateSessionResponse,
-  type ResponseValidator,
-} from "./response-validation.js";
+import type { ApiResponseContract } from "./response-validation.js";
 
 export type {
   AspspSummary,
@@ -111,8 +90,7 @@ interface RequestOptions {
   body?: unknown;
   csrf?: string;
   raw?: boolean;
-  contract?: { key: ClientContractName } | { banking: BankingContractName };
-  validate?: ResponseValidator;
+  contract?: ApiResponseContract;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -142,13 +120,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (options.raw) return (await response.arrayBuffer()) as T;
   if (response.status === 204) return undefined as T;
   const payload = (await response.json()) as unknown;
-  const result = options.validate
-    ? options.validate(payload)
-    : options.contract
-      ? "key" in options.contract
-        ? validateClientContract(options.contract.key, payload)
-        : validateBankingContract(options.contract.banking, payload)
-      : undefined;
+  const result = options.contract
+    ? (await import("./response-validation.js")).validateApiResponse(options.contract, payload)
+    : undefined;
   if (result && !result.valid) {
     throw new ApiError(
       response.status,
@@ -162,7 +136,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export const api = {
   status: () =>
     request<VaultStatus>("/api/vault/status", {
-      contract: { key: "vaultStatus" },
+      contract: { kind: "client", key: "vaultStatus" },
     }),
   /**
    * Resumes the browser session from its cookie: the server returns a fresh
@@ -171,36 +145,38 @@ export const api = {
    */
   session: () =>
     request<{ csrfToken: string; vault: VaultStatus }>("/api/session", {
-      validate: validateSessionResponse,
+      contract: { kind: "session" },
     }),
   createVault: (passphrase: string) =>
     request<{ csrfToken: string; vault: VaultStatus }>("/api/vault/create", {
       method: "POST",
       body: { passphrase },
-      validate: validateSessionResponse,
+      contract: { kind: "session" },
     }),
   unlock: (passphrase: string) =>
     request<{ csrfToken: string; vault: VaultStatus }>("/api/vault/unlock", {
       method: "POST",
       body: { passphrase },
-      validate: validateSessionResponse,
+      contract: { kind: "session" },
     }),
   lock: (csrf: string, scope: "current" | "all") =>
     request<{ locked: "current" | "all"; sessions: number }>("/api/vault/lock", {
       method: "POST",
       csrf,
       body: { scope },
-      validate: validateLockResponse,
+      contract: { kind: "lock" },
     }),
   changePassphrase: (csrf: string, currentPassphrase: string, nextPassphrase: string) =>
     request<{ changed: boolean }>("/api/vault/passphrase", {
       method: "POST",
       csrf,
       body: { currentPassphrase, nextPassphrase },
-      validate: validateChangedResponse,
+      contract: { kind: "changed" },
     }),
   list: <T>(kind: string) =>
-    request<{ items: T[] }>(`/api/${kind}`, { validate: validateCollectionResponse(kind) }),
+    request<{ items: T[] }>(`/api/${kind}`, {
+      contract: { kind: "collection", resource: kind },
+    }),
   dashboard: (
     params: {
       from?: string;
@@ -213,7 +189,7 @@ export const api = {
     } = {},
   ) =>
     request<Dashboard>(`/api/dashboard${queryString(params)}`, {
-      contract: { key: "dashboard" },
+      contract: { kind: "client", key: "dashboard" },
     }),
   /**
    * The expense detail view for a period. It takes the same `months` scope as
@@ -221,7 +197,7 @@ export const api = {
    */
   expenseDetails: (params: { months?: string; from?: string; to?: string } = {}) =>
     request<ExpenseDetails>(`/api/analytics/expenses${queryString(params)}`, {
-      contract: { key: "expenseDetails" },
+      contract: { kind: "client", key: "expenseDetails" },
     }),
   searchTransactions: (params: {
     accountId?: string;
@@ -247,7 +223,7 @@ export const api = {
         ...rest,
         ...(transfer === undefined ? {} : { transfer: String(transfer) }),
       })}`,
-      { validate: validateSearchResponse },
+      { contract: { kind: "search" } },
     );
   },
   create: <T>(csrf: string, kind: string, entity: unknown) =>
@@ -255,40 +231,40 @@ export const api = {
       method: "POST",
       csrf,
       body: { entity },
-      validate: validateEntityResponse(kind),
+      contract: { kind: "entity", resource: kind },
     }),
   update: <T>(csrf: string, kind: string, id: string, entity: unknown) =>
     request<{ entity: T }>(`/api/${kind}/${id}`, {
       method: "PUT",
       csrf,
       body: { entity },
-      validate: validateEntityResponse(kind),
+      contract: { kind: "entity", resource: kind },
     }),
   remove: (csrf: string, kind: string, id: string, revision: number) =>
     request<{ deleted: boolean }>(`/api/${kind}/${id}?revision=${revision}`, {
       method: "DELETE",
       csrf,
-      validate: validateDeletedResponse,
+      contract: { kind: "deleted" },
     }),
   cascadeRemove: (csrf: string, kind: string, id: string, revision: number) =>
     request<{ deleted: boolean }>(`/api/${kind}/${id}?revision=${revision}&cascade=true`, {
       method: "DELETE",
       csrf,
-      validate: validateDeletedResponse,
+      contract: { kind: "deleted" },
     }),
   archiveAccount: (csrf: string, id: string, revision: number) =>
     request<{ entity: Account }>(`/api/accounts/${id}/archive`, {
       method: "POST",
       csrf,
       body: { revision },
-      validate: validateEntityResponse("accounts"),
+      contract: { kind: "entity", resource: "accounts" },
     }),
   restoreAccount: (csrf: string, id: string, revision: number) =>
     request<{ entity: Account }>(`/api/accounts/${id}/restore`, {
       method: "POST",
       csrf,
       body: { revision },
-      validate: validateEntityResponse("accounts"),
+      contract: { kind: "entity", resource: "accounts" },
     }),
   backfill: (
     csrf: string,
@@ -298,11 +274,11 @@ export const api = {
       method: "POST",
       csrf,
       body: scope,
-      validate: validateBackfillResponse,
+      contract: { kind: "backfill" },
     }),
   ruleStats: () =>
     request<TaggingRuleStats>("/api/tagging-rules/stats", {
-      validate: validateRuleStatsResponse,
+      contract: { kind: "rule-stats" },
     }),
   previewRule: (
     csrf: string,
@@ -312,7 +288,7 @@ export const api = {
       method: "POST",
       csrf,
       body: core,
-      validate: validateRulePreviewResponse,
+      contract: { kind: "rule-preview" },
     }),
   exportCsv: async () => {
     const response = await fetch("/api/export/transactions.csv", { credentials: "same-origin" });
@@ -348,7 +324,7 @@ export const api = {
       method: "POST",
       csrf,
       body: { content },
-      validate: validateCsvPreviewResponse,
+      contract: { kind: "csv-preview" },
     }),
   importCsv: (csrf: string, content: string) =>
     request<{
@@ -361,7 +337,7 @@ export const api = {
       method: "POST",
       csrf,
       body: { content },
-      validate: validateCsvImportResponse,
+      contract: { kind: "csv-import" },
     }),
   importArchive: (csrf: string, password: string, contentBase64: string) =>
     request<{ accounts: number; transactions: number; tags: number; taggingRules: number }>(
@@ -370,7 +346,7 @@ export const api = {
         method: "POST",
         csrf,
         body: { password, contentBase64 },
-        validate: validateArchiveImportResponse,
+        contract: { kind: "archive-import" },
       },
     ),
 
@@ -378,34 +354,44 @@ export const api = {
 
   bankingStatus: () =>
     request<BankingStatus>("/api/banking/status", {
-      contract: { banking: "BankingStatus" },
+      contract: { kind: "banking", name: "BankingStatus" },
     }),
   saveBankingConfig: (csrf: string, body: BankingConfigInput) =>
     request<{ connection: BankingConnectionPublic; status: BankingStatus }>(
       "/api/banking/enable-banking/config",
-      { method: "PUT", csrf, body, contract: { banking: "SaveConnectionResponse" } },
+      {
+        method: "PUT",
+        csrf,
+        body,
+        contract: { kind: "banking", name: "SaveConnectionResponse" },
+      },
     ),
   deleteBankingConfig: (csrf: string) =>
     request<{ deleted: boolean; deletedLinks: number }>("/api/banking/enable-banking/config", {
       method: "DELETE",
       csrf,
-      contract: { banking: "DeleteConnectionResponse" },
+      contract: { kind: "banking", name: "DeleteConnectionResponse" },
     }),
   listAspsps: (params: { country?: string; psuType?: "personal" | "business" } = {}) =>
     request<{ items: AspspSummary[] }>(`/api/banking/enable-banking/aspsps${queryString(params)}`, {
-      contract: { banking: "AspspsResponse" },
+      contract: { kind: "banking", name: "AspspsResponse" },
     }),
   startBankingAuthorization: (csrf: string, body: AuthorizationStartInput) =>
     request<{ linkId: string; url: string; state: string; expiresAt: string }>(
       "/api/banking/enable-banking/authorize",
-      { method: "POST", csrf, body, contract: { banking: "AuthorizeStartResponse" } },
+      {
+        method: "POST",
+        csrf,
+        body,
+        contract: { kind: "banking", name: "AuthorizeStartResponse" },
+      },
     ),
   completeBankingAuthorization: (csrf: string, body: { code: string; state: string }) =>
     request<BankingAuthorizationResult>("/api/banking/enable-banking/callback", {
       method: "POST",
       csrf,
       body,
-      contract: { banking: "BankingAuthorizationResult" },
+      contract: { kind: "banking", name: "BankingAuthorizationResult" },
     }),
   mapBankAccount: (
     csrf: string,
@@ -416,24 +402,24 @@ export const api = {
       method: "POST",
       csrf,
       body,
-      contract: { banking: "BankLinkSummary" },
+      contract: { kind: "banking", name: "BankLinkSummary" },
     }),
   unlinkBank: (csrf: string, linkId: string) =>
     request<{ deleted: boolean; deletedAccounts: number; deletedPayloads: number }>(
       `/api/banking/enable-banking/links/${linkId}`,
-      { method: "DELETE", csrf, contract: { banking: "UnlinkResponse" } },
+      { method: "DELETE", csrf, contract: { kind: "banking", name: "UnlinkResponse" } },
     ),
   syncBanking: (csrf: string, linkId?: string) =>
     request<{ report: BankingSyncReport; status: BankingStatus }>("/api/banking/sync", {
       method: "POST",
       csrf,
       body: linkId ? { linkId } : {},
-      contract: { banking: "SyncResponse" },
+      contract: { kind: "banking", name: "SyncResponse" },
     }),
 
   /** The raw provider record behind one transaction, for the ledger's Raw view. */
   transactionRaw: (id: string) =>
     request<RawTransactionRecord>(`/api/transactions/${encodeURIComponent(id)}/raw`, {
-      contract: { banking: "RawTransactionRecord" },
+      contract: { kind: "banking", name: "RawTransactionRecord" },
     }),
 };

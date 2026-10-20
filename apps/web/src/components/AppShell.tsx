@@ -1,15 +1,30 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import type { VaultStatus } from "@flowly/web-contracts";
 import { Icon, type IconName } from "./icons.js";
 import { Banner } from "./ui.js";
-import { AccountsView } from "../views/AccountsView.js";
-import { DashboardView } from "../views/DashboardView.js";
-import { DetailsView } from "../views/DetailsView.js";
 import { ledgerSeedKey, type LedgerFilterSeed } from "../lib/ledger-filter.js";
-import { RulesView } from "../views/RulesView.js";
-import { SettingsView } from "../views/SettingsView.js";
-import { TagsView } from "../views/TagsView.js";
-import { TransactionsView } from "../views/TransactionsView.js";
+
+const DashboardView = lazy(() =>
+  import("../views/DashboardView.js").then((module) => ({ default: module.DashboardView })),
+);
+const DetailsView = lazy(() =>
+  import("../views/DetailsView.js").then((module) => ({ default: module.DetailsView })),
+);
+const AccountsView = lazy(() =>
+  import("../views/AccountsView.js").then((module) => ({ default: module.AccountsView })),
+);
+const TransactionsView = lazy(() =>
+  import("../views/TransactionsView.js").then((module) => ({ default: module.TransactionsView })),
+);
+const TagsView = lazy(() =>
+  import("../views/TagsView.js").then((module) => ({ default: module.TagsView })),
+);
+const RulesView = lazy(() =>
+  import("../views/RulesView.js").then((module) => ({ default: module.RulesView })),
+);
+const SettingsView = lazy(() =>
+  import("../views/SettingsView.js").then((module) => ({ default: module.SettingsView })),
+);
 
 /**
  * One entry per section: the sidebar label, the `h1` the page is titled with
@@ -73,8 +88,8 @@ export function AppShell({
   useEffect(() => {
     if (!anchor) return;
     const target = document.getElementById(anchor);
-    setAnchor(undefined);
     if (!target) return;
+    setAnchor(undefined);
     target.scrollIntoView?.({ block: "start" });
     target.focus({ preventScroll: true });
   }, [anchor, view]);
@@ -181,48 +196,56 @@ export function AppShell({
       <main className="content">
         <div className="view">
           {error ? <Banner tone="error">{error}</Banner> : null}
-          {view === "dashboard" ? (
-            <DashboardView
-              csrf={csrf}
-              onNewTransaction={() => {
-                setLedgerSeed(undefined);
-                setView("transactions");
-              }}
-              onSeeAllTransactions={(options) => {
-                setLedgerSeed(options);
-                setView("transactions");
-              }}
-              onExportData={openExport}
-              onOpenSettings={() => setView("settings")}
-            />
-          ) : null}
-          {view === "details" ? (
-            <DetailsView
-              onSeeAllTransactions={(options) => {
-                setLedgerSeed(options);
-                setView("transactions");
-              }}
-              onExportData={openExport}
-            />
-          ) : null}
-          {view === "accounts" ? <AccountsView csrf={csrf} /> : null}
-          {view === "transactions" ? (
-            <TransactionsView
-              key={ledgerSeedKey(ledgerSeed)}
-              csrf={csrf}
-              {...(ledgerSeed ? { seed: ledgerSeed } : {})}
-            />
-          ) : null}
-          {view === "tags" ? <TagsView csrf={csrf} /> : null}
-          {view === "rules" ? <RulesView csrf={csrf} /> : null}
-          {view === "settings" ? (
-            <SettingsView
-              csrf={csrf}
-              busy={busy}
-              onChangePassphrase={onChangePassphrase}
-              onClearError={onClearError}
-            />
-          ) : null}
+          <Suspense
+            fallback={
+              <p className="muted" role="status" aria-live="polite">
+                Loading {section.label}…
+              </p>
+            }
+          >
+            {view === "dashboard" ? (
+              <DashboardView
+                csrf={csrf}
+                onNewTransaction={() => {
+                  setLedgerSeed(undefined);
+                  setView("transactions");
+                }}
+                onSeeAllTransactions={(options) => {
+                  setLedgerSeed(options);
+                  setView("transactions");
+                }}
+                onExportData={openExport}
+                onOpenSettings={() => setView("settings")}
+              />
+            ) : null}
+            {view === "details" ? (
+              <DetailsView
+                onSeeAllTransactions={(options) => {
+                  setLedgerSeed(options);
+                  setView("transactions");
+                }}
+                onExportData={openExport}
+              />
+            ) : null}
+            {view === "accounts" ? <AccountsView csrf={csrf} /> : null}
+            {view === "transactions" ? (
+              <TransactionsView
+                key={ledgerSeedKey(ledgerSeed)}
+                csrf={csrf}
+                {...(ledgerSeed ? { seed: ledgerSeed } : {})}
+              />
+            ) : null}
+            {view === "tags" ? <TagsView csrf={csrf} /> : null}
+            {view === "rules" ? <RulesView csrf={csrf} /> : null}
+            {view === "settings" ? (
+              <SettingsView
+                csrf={csrf}
+                busy={busy}
+                onChangePassphrase={onChangePassphrase}
+                onClearError={onClearError}
+              />
+            ) : null}
+          </Suspense>
         </div>
       </main>
     </div>
