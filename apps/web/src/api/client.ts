@@ -1,4 +1,5 @@
 import type {
+  Account,
   AspspSummary,
   AuthorizationStartInput,
   BankLinkSummary,
@@ -22,6 +23,22 @@ import {
   type BankingContractName,
   type ClientContractName,
 } from "@flowly/web-contracts/client-validation";
+import {
+  validateArchiveImportResponse,
+  validateBackfillResponse,
+  validateChangedResponse,
+  validateCollectionResponse,
+  validateCsvImportResponse,
+  validateCsvPreviewResponse,
+  validateDeletedResponse,
+  validateEntityResponse,
+  validateLockResponse,
+  validateRulePreviewResponse,
+  validateRuleStatsResponse,
+  validateSearchResponse,
+  validateSessionResponse,
+  type ResponseValidator,
+} from "./response-validation.js";
 
 export type {
   AspspSummary,
@@ -95,6 +112,7 @@ interface RequestOptions {
   csrf?: string;
   raw?: boolean;
   contract?: { key: ClientContractName } | { banking: BankingContractName };
+  validate?: ResponseValidator;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -124,18 +142,19 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (options.raw) return (await response.arrayBuffer()) as T;
   if (response.status === 204) return undefined as T;
   const payload = (await response.json()) as unknown;
-  if (options.contract) {
-    const result =
-      "key" in options.contract
+  const result = options.validate
+    ? options.validate(payload)
+    : options.contract
+      ? "key" in options.contract
         ? validateClientContract(options.contract.key, payload)
-        : validateBankingContract(options.contract.banking, payload);
-    if (!result.valid) {
-      throw new ApiError(
-        response.status,
-        "contract_violation",
-        `response did not match its contract: ${result.errors.join("; ")}`,
-      );
-    }
+        : validateBankingContract(options.contract.banking, payload)
+      : undefined;
+  if (result && !result.valid) {
+    throw new ApiError(
+      response.status,
+      "contract_violation",
+      `response did not match its contract: ${result.errors.join("; ")}`,
+    );
   }
   return payload as T;
 }
@@ -150,26 +169,38 @@ export const api = {
    * CSRF token and the vault status, so a reload never asks for the passphrase
    * again while the session lives.
    */
-  session: () => request<{ csrfToken: string; vault: VaultStatus }>("/api/session"),
+  session: () =>
+    request<{ csrfToken: string; vault: VaultStatus }>("/api/session", {
+      validate: validateSessionResponse,
+    }),
   createVault: (passphrase: string) =>
     request<{ csrfToken: string; vault: VaultStatus }>("/api/vault/create", {
       method: "POST",
       body: { passphrase },
+      validate: validateSessionResponse,
     }),
   unlock: (passphrase: string) =>
     request<{ csrfToken: string; vault: VaultStatus }>("/api/vault/unlock", {
       method: "POST",
       body: { passphrase },
+      validate: validateSessionResponse,
     }),
   lock: (csrf: string, scope: "current" | "all") =>
-    request<{ locked: string }>("/api/vault/lock", { method: "POST", csrf, body: { scope } }),
+    request<{ locked: "current" | "all"; sessions: number }>("/api/vault/lock", {
+      method: "POST",
+      csrf,
+      body: { scope },
+      validate: validateLockResponse,
+    }),
   changePassphrase: (csrf: string, currentPassphrase: string, nextPassphrase: string) =>
     request<{ changed: boolean }>("/api/vault/passphrase", {
       method: "POST",
       csrf,
       body: { currentPassphrase, nextPassphrase },
+      validate: validateChangedResponse,
     }),
-  list: <T>(kind: string) => request<{ items: T[] }>(`/api/${kind}`),
+  list: <T>(kind: string) =>
+    request<{ items: T[] }>(`/api/${kind}`, { validate: validateCollectionResponse(kind) }),
   dashboard: (
     params: {
       from?: string;
@@ -216,33 +247,48 @@ export const api = {
         ...rest,
         ...(transfer === undefined ? {} : { transfer: String(transfer) }),
       })}`,
+      { validate: validateSearchResponse },
     );
   },
   create: <T>(csrf: string, kind: string, entity: unknown) =>
-    request<{ entity: T }>(`/api/${kind}`, { method: "POST", csrf, body: { entity } }),
+    request<{ entity: T }>(`/api/${kind}`, {
+      method: "POST",
+      csrf,
+      body: { entity },
+      validate: validateEntityResponse(kind),
+    }),
   update: <T>(csrf: string, kind: string, id: string, entity: unknown) =>
-    request<{ entity: T }>(`/api/${kind}/${id}`, { method: "PUT", csrf, body: { entity } }),
+    request<{ entity: T }>(`/api/${kind}/${id}`, {
+      method: "PUT",
+      csrf,
+      body: { entity },
+      validate: validateEntityResponse(kind),
+    }),
   remove: (csrf: string, kind: string, id: string, revision: number) =>
     request<{ deleted: boolean }>(`/api/${kind}/${id}?revision=${revision}`, {
       method: "DELETE",
       csrf,
+      validate: validateDeletedResponse,
     }),
   cascadeRemove: (csrf: string, kind: string, id: string, revision: number) =>
     request<{ deleted: boolean }>(`/api/${kind}/${id}?revision=${revision}&cascade=true`, {
       method: "DELETE",
       csrf,
+      validate: validateDeletedResponse,
     }),
   archiveAccount: (csrf: string, id: string, revision: number) =>
-    request<{ entity: unknown }>(`/api/accounts/${id}/archive`, {
+    request<{ entity: Account }>(`/api/accounts/${id}/archive`, {
       method: "POST",
       csrf,
       body: { revision },
+      validate: validateEntityResponse("accounts"),
     }),
   restoreAccount: (csrf: string, id: string, revision: number) =>
-    request<{ entity: unknown }>(`/api/accounts/${id}/restore`, {
+    request<{ entity: Account }>(`/api/accounts/${id}/restore`, {
       method: "POST",
       csrf,
       body: { revision },
+      validate: validateEntityResponse("accounts"),
     }),
   backfill: (
     csrf: string,
@@ -252,8 +298,12 @@ export const api = {
       method: "POST",
       csrf,
       body: scope,
+      validate: validateBackfillResponse,
     }),
-  ruleStats: () => request<TaggingRuleStats>("/api/tagging-rules/stats"),
+  ruleStats: () =>
+    request<TaggingRuleStats>("/api/tagging-rules/stats", {
+      validate: validateRuleStatsResponse,
+    }),
   previewRule: (
     csrf: string,
     core: { combinator: "and" | "or"; conditions: TaggingRule["conditions"] },
@@ -262,6 +312,7 @@ export const api = {
       method: "POST",
       csrf,
       body: core,
+      validate: validateRulePreviewResponse,
     }),
   exportCsv: async () => {
     const response = await fetch("/api/export/transactions.csv", { credentials: "same-origin" });
@@ -293,7 +344,12 @@ export const api = {
       errors: Array<{ line: number; message: string }>;
       newTags: string[];
       unknownAccounts: string[];
-    }>("/api/import/csv/preview", { method: "POST", csrf, body: { content } }),
+    }>("/api/import/csv/preview", {
+      method: "POST",
+      csrf,
+      body: { content },
+      validate: validateCsvPreviewResponse,
+    }),
   importCsv: (csrf: string, content: string) =>
     request<{
       created: number;
@@ -301,11 +357,21 @@ export const api = {
       invalid: number;
       tagsCreated: number;
       transactionsTaggedByRules: number;
-    }>("/api/import/csv", { method: "POST", csrf, body: { content } }),
+    }>("/api/import/csv", {
+      method: "POST",
+      csrf,
+      body: { content },
+      validate: validateCsvImportResponse,
+    }),
   importArchive: (csrf: string, password: string, contentBase64: string) =>
     request<{ accounts: number; transactions: number; tags: number; taggingRules: number }>(
       "/api/import/archive",
-      { method: "POST", csrf, body: { password, contentBase64 } },
+      {
+        method: "POST",
+        csrf,
+        body: { password, contentBase64 },
+        validate: validateArchiveImportResponse,
+      },
     ),
 
   // --- Enable Banking -------------------------------------------------------

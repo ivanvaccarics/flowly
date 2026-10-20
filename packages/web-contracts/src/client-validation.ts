@@ -1,18 +1,33 @@
 import {
+  account,
   bankingValidators,
   dashboard,
   expenseDetails,
+  tag,
+  taggingRule,
+  transaction,
   vaultStatus,
   type BankingContractName,
 } from "./generated/client-validators.js";
 import { runValidator, type ValidationResult } from "./validation.js";
 
-export type ClientContractName = "vaultStatus" | "dashboard" | "expenseDetails";
+export type ClientContractName =
+  | "vaultStatus"
+  | "dashboard"
+  | "expenseDetails"
+  | "account"
+  | "tag"
+  | "transaction"
+  | "taggingRule";
 
 const clientValidators = {
   vaultStatus,
   dashboard,
   expenseDetails,
+  account,
+  tag,
+  transaction,
+  taggingRule,
 } as const;
 
 /** Runtime validation limited to the JSON contracts the browser consumes. */

@@ -91,10 +91,17 @@ for (const name of bankingDefinitions) {
   bankingValidatorNames[name] = validatorName;
 }
 
+const clientContractKeys = [
+  "vaultStatus",
+  "dashboard",
+  "expenseDetails",
+  "account",
+  "tag",
+  "transaction",
+  "taggingRule",
+];
 const clientValidatorRefs = {
-  vaultStatus: validatorRefs.vaultStatus,
-  dashboard: validatorRefs.dashboard,
-  expenseDetails: validatorRefs.expenseDetails,
+  ...Object.fromEntries(clientContractKeys.map((key) => [key, validatorRefs[key]])),
   ...Object.fromEntries(
     bankingDefinitions.map((name) => [
       bankingValidatorNames[name],

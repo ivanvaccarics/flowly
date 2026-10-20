@@ -362,7 +362,8 @@ describe("Flowly web client", () => {
       description: "Deepseerwea",
       providerTransactionId: "00000000-1111-4222-8333-444444444444",
       tagIds: [],
-      userNote: null,
+      createdAt: "2026-09-16T08:00:00.000Z",
+      updatedAt: "2026-09-16T08:00:00.000Z",
     };
     mockFetch({
       ...unlockedRoutes(),
