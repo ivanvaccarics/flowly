@@ -16,7 +16,7 @@ storage engine, a framework or a language runtime.
 ## Versioning
 
 - Every persisted schema carries an integer `formatVersion`; `1` covers the
-  Server MVP entities, except tagging rules, which are at `2`: version 1 wrote
+  released server entities, except tagging rules, which are at `2`: version 1 wrote
   amount conditions as `amountMinor`, a signed count of minor units, and
   version 2 writes them as `amount`, a decimal string in the condition's own
   currency (ADR 0026). The server upgrades version 1 rules on unlock and on
@@ -25,8 +25,8 @@ storage engine, a framework or a language runtime.
   and in the desktop application. Adding an optional field is not breaking.
 - Export formats are versioned separately: the transaction CSV and the complete
   portable archive both start at version `1`. Tagging rules ship inside archive
-  version 1 because they land in the Server MVP; new record types add a new
-  archive version in Phase 7.
+  version 1; a new record type that changes the archive shape requires a new
+  archive version and migration notes.
 - Generated code never replaces runtime validation, and golden vectors are
   never updated to match an implementation — the implementation must match
   them.

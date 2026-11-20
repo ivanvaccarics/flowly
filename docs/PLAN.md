@@ -13,13 +13,18 @@ self-hosted server and web UI. A later phase adds one installed client, a
 **desktop application** for macOS and Windows. Flowly is desktop-only: there is
 no mobile application and no mobile platform in this plan.
 
+> **Release status (2026-11-20):** the self-hosted Flowly Server through Phase 6
+> is stable for private LAN or VPN use. The desktop application, automatic
+> backups and independent security/accessibility certification remain later
+> work, as recorded in [ADR 0048](./adr/0048-the-self-hosted-server-is-stable.md).
+
 A server deployment owns one vault shared by its browser sessions; browsers are
 clients of that vault and do not persist independent copies. Later installed
 applications are independent sources of truth. There is no automatic
 synchronization between a server deployment and installed applications. Users
 move data between independent vaults through a versioned export/import workflow.
 
-The first release is the **Flowly Server MVP**. It includes:
+The first release is the **self-hosted Flowly Server**, now stable. It includes:
 
 - Financial accounts such as bank accounts, cards, cash, and wallets
 - Manual transaction management
@@ -28,20 +33,22 @@ The first release is the **Flowly Server MVP**. It includes:
   transactions
 - Multi-currency support
 - Search and advanced filters
-- Dashboard and summaries
+- Dashboard, expense details and summaries
+- Enable Banking import with automatic recognition of transfers between owned
+  accounts
 - Full data export and import
 - Server-side passphrase protection and secure browser sessions
 
 The desktop application, its encrypted local storage and optional biometric
-unlock are post-Server-MVP deliverables in Phases 8-10.
+unlock are the next major deliverables in Phases 8-10.
 
 Username/password accounts, Flowly-operated cloud services, and cross-device
 synchronization are explicitly out of scope.
 
 ## 2. Current Repository Assessment
 
-The repository holds the completed Phase 0 feasibility work and the Phase 1
-foundation:
+The repository holds the stable self-hosted server release: Phases 0-6 are
+complete, with the released surface covered by automated and end-to-end tests.
 
 - `apps/server` is the TypeScript service: domain models and invariants,
   application services, storage adapters and a Fastify JSON API. `apps/web` is
@@ -51,8 +58,9 @@ foundation:
 - `contracts/` is the canonical, language-neutral source of truth with JSON
   Schema 2020-12 definitions, valid fixtures and golden expected results.
   Regenerating them is part of the gate, so generated code cannot drift.
-- `docs/adr/` records the binding Phase 0 decisions on storage, key hierarchy,
-  sessions and portability.
+- `docs/adr/` records the binding product and technical decisions, including
+  storage, key hierarchy, sessions, portability, banking and the stable-release
+  scope.
 - `spikes/server-architecture/` holds the completed Phase 0 proof-of-concepts:
   encrypted vault storage, vault lifecycle, migrations, failure behaviour,
   portability and HTTPS sessions, with a measured report and multi-architecture
@@ -65,8 +73,8 @@ foundation:
   (`docs/adr/0038`).
 - The vault is implemented and encrypted at rest, and the browser UI covers the
   unlock flow, accounts, transactions, tags, tagging rules, import/export and
-  the Enable Banking connection. It is aligned with the Sovereign Ledger
-  mockups (`docs/adr/0012`).
+  the Enable Banking connection. It follows the shipped warm, flat, green design
+  system in `docs/DESIGN.md` and the decisions through `docs/adr/0048`.
 - `apps/server/src/banking/` is the Enable Banking connector: signed JWT
   requests, normalization, the sync engine and the bank tables
   (`docs/adr/0016`). Its transport shapes live once in
@@ -76,6 +84,8 @@ foundation:
 - Local SQLite and JSON files exist under the ignored `data/` directory. Their
   financial contents are not required for architecture planning and should be
   treated as sensitive local data.
+- `pnpm verify` currently runs 349 tests (15 contract, 233 server, 101 web);
+  `pnpm build`, `pnpm release:check` and the live 17-check acceptance suite pass.
 
 The prototype kept under the ignored `data_bank/` directory is now superseded by
 `apps/server/src/banking/`; it stays only as a local reference and is not part of
@@ -85,7 +95,7 @@ the build, the tests or the release.
 
 | Decision | Selected direction |
 |---|---|
-| First release | Self-hosted Server MVP at the end of Phase 5 |
+| Released product | Stable self-hosted server; Phases 0-6 complete and Phase 6 covers Enable Banking |
 | Platform scope | Desktop only: the self-hosted server with its browser UI, plus one desktop application. No mobile client |
 | Desktop application targets | macOS and Windows |
 | Browser target | React web UI served by a self-hosted service on a private network |
@@ -104,9 +114,9 @@ the build, the tests or the release.
 | Contract tooling | JSON Schema 2020-12 as the source of truth, generated TypeScript types, and Ajv runtime validation that always accompanies them |
 | Delivery order | Release the server, then Enable Banking for Server, then the desktop application |
 | Bank integration | Enable Banking, implemented inside the server (`docs/adr/0016`): credentials live in the encrypted vault, raw provider JSON is stored per account, and the vault keeps the canonical ledger |
-| Additional MVP scope | Dashboard, advanced search, multi-currency, manual tagging rules |
-| Auto-tagging rules | Server MVP, Phase 3: one AND/OR condition group over note, description, payee, amount, or account, adding one or more tags; tags are only added, provenance is not tracked, and editing a transaction does not re-run rules |
-| Next feature after the MVP | Desktop application foundation in Phase 8; Enable Banking for Server (Phase 6) is delivered |
+| Additional released scope | Dashboard, expense details, advanced search, multi-currency, manual tagging rules and automatic transfer pairing |
+| Auto-tagging rules | One AND/OR condition group over note, description, payee, amount, or account, adding one or more tags; tags are only added, provenance is not tracked, and editing a transaction does not re-run rules |
+| Next major deliverable | Desktop application foundation in Phase 8; automatic encrypted backups follow in Phase 12 |
 
 ## 4. Architecture Options Considered
 
@@ -135,8 +145,8 @@ Use a polyglot monorepo with two application implementations:
 
 Delivery is intentionally sequential: implement and release the TypeScript
 server first, then use its stable contracts and golden fixtures to implement
-the desktop client. Do not scaffold or implement the desktop client during
-Server MVP phases 0-5.
+the desktop client. The server phases 0-6 are complete; desktop work starts at
+Phase 8 and cannot move ahead of its foundation and conformance gates.
 
 This hybrid approach is preferable when a single self-hosted private-network vault,
 encrypted SQLite, desktop platform maturity, biometric integration, and
@@ -180,7 +190,7 @@ flowly/
     web/                         # React/Vite browser UI; no vault storage
       src/
         api/                     # Same-origin API client
-        components/              # Locked-vault shell and future screens
+        components/              # Shared shell, dialogs, charts and controls
     desktop/                     # Flutter desktop app for macOS and Windows
   contracts/
     schemas/                     # Canonical JSON Schema definitions
@@ -222,7 +232,7 @@ monorepo tool such as Melos only if multiple Dart packages make it worthwhile.
 - CSV/archive versions
 - Validation examples
 - Import deduplication fixtures
-- Money, recurrence, and dashboard expected results
+- Money, tagging-rule and dashboard expected results
 - Cryptographic envelope metadata and known-answer vectors
 
 Breaking contract changes require a new schema/export version and migrations in
@@ -248,7 +258,6 @@ The server and desktop implementations own the same behavior:
 - Transaction validation
 - Tags
 - Tagging rule evaluation
-- Recurrence rules and occurrence generation
 - Dashboard calculations
 - Import deduplication policies
 
@@ -298,16 +307,15 @@ never silently overwrites a newer edit from another browser session.
 
 ### 6.5 User interfaces
 
-The web client implements the repository's own design system — *Sovereign
-Ledger*, re-tokened from the redrawn `ui/*` mockups and summarized in
-`docs/DESIGN.md` — with one sidebar shell and seven sections: Dashboard,
-Details, Accounts, Transactions, Tags, Rules and Settings. Settings opens with the Enable Banking
+The web client implements the repository's shipped design system, summarized in
+`docs/DESIGN.md`: a warm off-white canvas, white outlined cards, the Flowly green
+brand and one sidebar shell with seven sections: Dashboard, Details, Accounts,
+Transactions, Tags, Rules and Settings. Settings opens with the Enable Banking
 connection and then carries the passphrase change plus export and import. The
 shell's top bar carries the section title, the clock and the session controls,
-and the sidebar is the brand and the seven sections; cards are white with a
-hairline outline over a slate canvas, tinted
-panels carry nested controls, and the dashboard charts cash flow per month and
-spending as a donut per currency. The dashboard is scoped by the period the
+and the sidebar is the brand and the seven sections. Tinted panels carry nested
+controls, and the dashboard charts cash flow per month and spending as a donut
+per currency. The dashboard is scoped by the period the
 reader picks — a preset, a year strip or any combination of months as removable
 chips — and by nothing else: the figures, the chart and the recent movements
 describe every category of those months, and a legend row opens the ledger on
@@ -395,8 +403,8 @@ Optional interoperability fields:
   (`docs/adr/0041`)
 - `importFingerprint`
 
-`Enable Banking` is reserved for forward-compatible contracts and becomes an
-active source only when the post-MVP connector is implemented.
+`Enable Banking` is an active transaction source through the connector delivered
+in Phase 6.
 
 The provider description and user note are separate so a future refresh never
 overwrites user content.
@@ -411,7 +419,7 @@ preserved.
 
 ### 7.4 Tagging rules
 
-Delivered in the Server MVP with Phase 3. Rules are authored by the user and
+Released with Phase 3. Rules are authored by the user and
 apply automatically to new and imported transactions.
 
 - `id`
@@ -668,7 +676,7 @@ Provide three workflows:
 The complete export is the supported device-to-device transfer format. The
 archive contents remain CSV-oriented while preserving normalized relationships.
 Tagging rules ship inside archive format version 1 because they land in the
-Server MVP; the rule record itself is at format version 2 (ADR 0026), and the
+the stable server; the rule record itself is at format version 2 (ADR 0026), and the
 server upgrades version 1 rules on unlock and on archive import.
 
 ### 10.2 Encoding and representation
@@ -730,7 +738,7 @@ Deduplication order:
 
 An import must never silently discard an invalid or conflicting row.
 
-## 11. Dashboard, Search, Multi-Currency, Recurrence, and Tagging Rules
+## 11. Dashboard, Search, Multi-Currency and Tagging Rules
 
 ### 11.1 Dashboard
 
@@ -768,15 +776,7 @@ The MVP:
 
 Automatic foreign-exchange rate retrieval is out of scope.
 
-### 11.4 Recurrence
-
-Delivered in Phase 7, after Enable Banking for Server and before the desktop
-application.
-
-Rules use calendar-aware arithmetic, not fixed day counts for monthly or yearly
-periods. Time-zone and end-of-month behavior must be covered by tests.
-
-### 11.6 Tagging rules
+### 11.4 Tagging rules
 
 Rules are managed in a dedicated settings area with a list view and an editor
 for name, conditions, and tags.
@@ -1036,10 +1036,9 @@ The connector is written from the provider's documented API, inside the server:
 
 ## 17. Delivery Plan and Tasks
 
-Phases 0-5 are strictly server-first. They deliver the first releasable product,
-the **Flowly Server MVP**. After that release gate, Phase 6 adds Enable Banking
-for Server, and desktop application work begins in Phase 8. Phase 7 (recurring
-transactions) and its tasks were removed from the plan in `docs/adr/0015`; the
+Phases 0-6 are complete. They deliver the stable self-hosted server release,
+including Enable Banking. Desktop application work begins in Phase 8. Phase 7
+(recurring transactions) and its tasks were removed in `docs/adr/0015`; the
 remaining phase numbers are kept as published so earlier records stay accurate.
 
 ### Phase 0 - Server architecture and security feasibility
@@ -1112,8 +1111,8 @@ Delivered:
 
 - Define canonical JSON schemas, CSV/archive schemas, fixture formats, and
   versioning conventions without coupling them to TypeScript storage details.
-- Implement TypeScript money, currency, account, transaction, tag, tagging-rule,
-  and recurrence models and invariants.
+- Implement TypeScript money, currency, account, transaction, tag and
+  tagging-rule models and invariants.
 - Define server repository and platform-service interfaces.
 - Add golden expected results, including tagging-rule evaluation vectors, that
   the later Dart implementation must consume unchanged.
@@ -1325,8 +1324,8 @@ Delivered:
   The user-facing legal documents sit next to them: `docs/TERMS_OF_SERVICE.md`
   and `docs/PRIVACY_POLICY.md`, linked from the README and from the technical
   privacy notice.
-- `tooling/scripts/acceptance.mjs` runs the MVP end to end against a live server
-  (16 checks), and `docs/TESTING.md` turns it into a manual test plan a person
+- `tooling/scripts/acceptance.mjs` runs the released server end to end against a
+  live server (17 checks), and `docs/TESTING.md` turns it into a manual test plan a person
   can follow screen by screen.
 - Structural accessibility tests for the unlock screen and the workspace, plus
   the automated migration, recovery, concurrency and deployment suites.
@@ -1843,6 +1842,12 @@ Status: **complete** (2026-09-23), corrections to `docs/adr/0037`.
 
 ### Phase 6 - Enable Banking for Server
 
+Status: **complete and stable** (2026-11-20). Every task below is complete; the
+focused refactors and schema-recovery fixes in October were validated together
+with 349 automated tests, the production build, the license gate and the live
+17-check acceptance suite. The stable private-network release decision is
+recorded in `docs/adr/0048`.
+
 #### Task `design-banking-connector`
 
 Status: **complete** (2026-09-11), decision in `docs/adr/0016`.
@@ -2112,6 +2117,8 @@ Status: **complete** (2026-10-04).
 
 ### Phase 8 - Desktop application foundation
 
+Status: **planned**. No desktop application is shipped yet.
+
 #### Task `desktop-architecture-spike`
 
 - Prove Flutter + Drift + SQLCipher create/open/migrate/release builds on macOS
@@ -2139,6 +2146,8 @@ closed on tampering, and match the server domain and crypto vectors.
 
 ### Phase 9 - Desktop feature parity
 
+Status: **planned**. It starts only after the Phase 8 foundation is complete.
+
 #### Task `implement-desktop-core-finance`
 
 - Implement accounts, transactions, tags, notes, validation, and adaptive
@@ -2154,13 +2163,15 @@ closed on tampering, and match the server domain and crypto vectors.
 
 #### Task `implement-desktop-analysis`
 
-- Implement dashboard, search, recurrence, and multi-currency rules.
+- Implement dashboard, search and multi-currency rules.
 - Run the shared acceptance fixtures against Dart and TypeScript.
 
 **Exit criteria:** desktop results and portable exports conform to the released
 server contracts on macOS and Windows.
 
 ### Phase 10 - Desktop hardening and release
+
+Status: **planned**. It depends on the complete macOS and Windows feature set.
 
 #### Task `harden-desktop`
 
@@ -2181,6 +2192,8 @@ synchronization.
 
 ### Phase 11 - Enable Banking for the desktop application
 
+Status: **planned**. The server connector and its contracts are already stable.
+
 #### Task `implement-desktop-banking-import`
 
 - Integrate the macOS and Windows clients with the connector contracts released
@@ -2197,6 +2210,9 @@ Banking without receiving provider application secrets, synchronizing with
 another vault, or changing server-side normalization semantics.
 
 ### Phase 12 - Automatic encrypted backups
+
+Status: **planned**. Manual encrypted archive exports are the supported backup
+in the current stable server release.
 
 #### Task `implement-automatic-backups`
 
@@ -2240,14 +2256,13 @@ recovery point.
 | `implement-desktop-banking-import` | `implement-server-banking-import`, `build-desktop-release-pipelines` |
 | `implement-automatic-backups` | `build-server-release-pipeline`, `implement-desktop-banking-import` |
 
-Server phases are sequential release gates. After the Server MVP, Enable Banking
-for Server (Phase 6) is delivered first, before the desktop application
-foundation (Phase 8) may begin. Desktop feature work cannot move ahead of its
-foundation and conformance gates.
+Server phases were sequential release gates. Phases 0-6 are complete, including
+Enable Banking, so the desktop application foundation (Phase 8) may begin.
+Desktop feature work cannot move ahead of its foundation and conformance gates.
 
-## 19. Definition of Done for the Server MVP
+## 19. Definition of Done for the Stable Server
 
-The first MVP is complete at the end of Phase 5 only when:
+The self-hosted server meets its definition of done only when:
 
 - Users can deploy with Docker Compose on every supported host platform.
 - A single owner can create and unlock one encrypted server vault shared by
@@ -2271,6 +2286,9 @@ The first MVP is complete at the end of Phase 5 only when:
 - The product clearly explains that there is no synchronization and no
   passphrase recovery service.
 
+Met for the supported private-network self-hosted scope, with the residual
+qualification items in `docs/security/verification.md` stated explicitly.
+
 ## 20. Explicitly Out of Scope
 
 - Flowly cloud account or username/password authentication
@@ -2286,8 +2304,8 @@ The first MVP is complete at the end of Phase 5 only when:
 - Investment portfolio pricing
 - Receipt/image attachment storage
 - Payment initiation
-- Enable Banking integration in the Server MVP (it ships as Phase 6, after the
-  MVP release gate)
+- Enable Banking integration in the original Server MVP scope (delivered later
+  as Phase 6, before the stable declaration)
 - Bank account linking for the desktop client (Phase 11)
 - Nested boolean condition groups, tag-removal actions, rule-driven edits to
   payee or note, rule re-evaluation when a transaction is edited, and background
@@ -2298,7 +2316,7 @@ The first MVP is complete at the end of Phase 5 only when:
 | Risk | Mitigation |
 |---|---|
 | Encrypted SQLite wrapper incompatibility across Docker platforms | Mandatory Phase 0 proof-of-concept, multi-arch images, and authenticated record-encryption fallback |
-| The self-hosted server is unavailable or its storage fails | Manual encrypted exports in the MVP, migration snapshots, visible health status, and automatic backups in Phase 12 |
+| The self-hosted server is unavailable or its storage fails | Manual encrypted exports in the stable release, migration snapshots, visible health status, and automatic backups in Phase 12 |
 | Local HTTPS setup is difficult | Versioned reverse-proxy configuration, guided local certificate enrollment, and an explicit supported-browser matrix |
 | Docker behavior differs across Linux and Docker Desktop | CI smoke tests on every supported host and conservative persistent-volume documentation |
 | React and Flutter behavior diverges after Phase 8 | Canonical schemas, generated models, shared design tokens, golden vectors, and conformance gates |
@@ -2307,7 +2325,6 @@ The first MVP is complete at the end of Phase 5 only when:
 | Importing between unsynchronized devices creates duplicates | Stable IDs, provider IDs, fingerprints, preview, explicit conflict policy |
 | Biometric APIs vary | Capability detection and passphrase fallback |
 | Multi-currency summaries can mislead | Never aggregate unlike currencies without explicit conversion data |
-| Recurrence calendar edge cases | Calendar-aware library plus property and time-zone tests |
 | Tagging rules label transactions unexpectedly | Live match preview, per-rule pause, rule-applied tags labeled in import previews, and explicit backfill instead of silent retroactive changes |
 | Rule evaluation slows large imports | In-memory evaluation over the imported batch, bounded condition counts per rule, and import performance fixtures |
 | Provider credentials leak from clients | Server-side connector with the key in the encrypted vault, a public-key fingerprint in the API, and a build-time frontend secret scan |

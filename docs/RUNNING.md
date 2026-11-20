@@ -32,7 +32,7 @@ If the app shows **Vault locked** on a deployment where nobody created a vault,
 it already has one — most likely from an acceptance run. See
 [TESTING.md](./TESTING.md) for how to unlock or reset it.
 
-What works today (end of Phase 6):
+The stable self-hosted release (through Phase 6) includes:
 
 - create, unlock, lock-this-session, lock-all and change-passphrase
 - accounts, transactions with notes and tags (paged on the server, 25 rows per
@@ -53,15 +53,15 @@ Useful commands:
 ```bash
 pnpm verify        # formatting, lint, secret scan, types, tests
 pnpm build         # compile the server, bundle the UI
-pnpm acceptance    # end-to-end run against a server that is already running
+pnpm acceptance http://127.0.0.1:8787 --create  # scratch vault, 17 checks
 pnpm --filter @flowly/server test
 pnpm --filter @flowly/web test
 node tooling/scripts/vault-smoke.mjs create   # against a running server
 node tooling/scripts/vault-smoke.mjs verify   # asserts it starts locked
 ```
 
-Ready to try the whole product? [TESTING.md](./TESTING.md) has the acceptance
-command and a screen-by-screen manual test plan.
+Ready to try the stable server release? [TESTING.md](./TESTING.md) has the
+acceptance command and a screen-by-screen manual test plan.
 
 Configuration is environment based, and the repository keeps exactly one file
 for it: [`.env.example`](../.env.example) at the root, which you copy to `.env`.
@@ -273,7 +273,7 @@ To reach it from other devices:
 2. Trust the Caddy local CA on the devices you use.
 3. Never forward the port on your router. Flowly is a private-network service.
 
-Backups are manual in the MVP: **Import & export → Export complete archive**
+Backups are manual in the stable server release: **Import & export → Export complete archive**
 produces a password-encrypted file that is the supported way to move or restore
 a vault. Optional automatic encrypted backups arrive in Phase 12.
 

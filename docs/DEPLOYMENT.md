@@ -217,8 +217,8 @@ it is empty by default.
 
 ## Backup and restore
 
-Manual exports are the supported backup in the MVP (automatic encrypted backups
-are Phase 12):
+Manual exports are the supported backup in the stable server release (automatic
+encrypted backups are Phase 12):
 
 1. Open the app, unlock the vault, go to **Import & export**.
 2. **Export complete archive** and store the file where you keep backups.

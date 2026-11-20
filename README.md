@@ -9,7 +9,7 @@
 No account · No cloud · No tracking.
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
-![Status](https://img.shields.io/badge/status-early%20development-orange)
+![Status](https://img.shields.io/badge/status-stable-brightgreen)
 [![Container image](https://github.com/ivanvaccarics/flowly/actions/workflows/image.yml/badge.svg)](https://github.com/ivanvaccarics/flowly/actions/workflows/image.yml)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
@@ -170,11 +170,18 @@ spikes/                 Phase 0 feasibility code, kept as evidence
 
 ## Status
 
-Flowly is in **early development**. The encrypted vault, the finance flows, the
-dashboard, server-side search, the Enable Banking connector and the deployment
-hardening all work; an independent cryptographic review and a full
-assistive-technology audit are still open. The plan behind them lives in
-[docs/PLAN.md](docs/PLAN.md).
+The self-hosted Flowly Server is **stable for private-network use**. The product
+through Phase 6 is complete, has been used daily for roughly two months, and
+passes its 349 automated tests, production build, license gate and 17-check
+end-to-end acceptance suite. Flowly does not support direct public Internet
+exposure.
+
+The desktop application, automatic backups and an independent cryptographic
+certification remain future work. They are not part of the stable server
+release, and the open qualification items are listed in
+[security/verification.md](docs/security/verification.md). The release decision
+is recorded in [ADR 0048](docs/adr/0048-the-self-hosted-server-is-stable.md);
+the roadmap lives in [docs/PLAN.md](docs/PLAN.md).
 
 ## Contributing
 

@@ -1,4 +1,4 @@
-# Support matrix (Server MVP)
+# Support matrix (stable self-hosted server)
 
 | Area | Supported | Notes |
 | --- | --- | --- |
@@ -13,6 +13,6 @@
 | Import formats | Transaction CSV, complete portable archive (format version 1) | See `contracts/csv/export-format-v1.md` |
 | Node.js | 22.12 or newer | 22.9 works with a Vite warning |
 | Languages | English UI strings | Externalized for later translation |
-| Accessibility | Keyboard-operable forms, labelled fields, live regions, WCAG 2.2 AA target | Automated structure checks plus a documented manual review; a full assistive-technology audit is still pending |
+| Accessibility | Keyboard-operable forms, labelled fields, live regions, WCAG 2.2 AA target | Automated structure checks plus a documented manual review; a full assistive-technology audit is not yet done |
 | Backups | Manual encrypted archive export | Automatic encrypted backups: Phase 12 |
 | Multi-user | Not supported | One owner, one vault |

@@ -1,7 +1,8 @@
-# Server MVP verification
+# Stable self-hosted server verification
 
-What is verified automatically today, what is verified by hand, and what remains
-open before a public release.
+What is verified for the stable private-network release, what is verified by
+hand, and which broader qualification claims remain open. The release boundary
+is recorded in [ADR 0048](../adr/0048-the-self-hosted-server-is-stable.md).
 
 ## Automated
 
@@ -20,11 +21,12 @@ open before a public release.
 | Dashboard and search | `apps/server/tests/analytics.test.ts`, `search.test.ts` |
 | API surface and deployment behaviour | `apps/server/tests/api-phase3.test.ts`, `api-phase4.test.ts`, `api-phase5.test.ts` |
 | UI behaviour and accessibility structure | `apps/web/src/**/*.test.tsx` |
-| End-to-end acceptance run | `tooling/scripts/acceptance.mjs` (16 checks against a running server) |
+| End-to-end acceptance run | `tooling/scripts/acceptance.mjs` (17 checks against a running server) |
 | License policy and SBOM generation | `pnpm release:check`, `pnpm release:report` |
 | Container build on both architectures | `.github/workflows/ci.yml` (pull requests), `.github/workflows/image.yml` (`main`, tags) |
 
-Run everything with `pnpm verify`, then `pnpm build`.
+Run everything with `pnpm verify`, then `pnpm build`. The current suite is 349
+tests: 15 contract, 233 server and 101 web.
 
 `pnpm release:report` writes `sbom.json` and `third-party-licenses.md` without a
 timestamp and without platform-specific optional bindings (`@esbuild/darwin-arm64`,
@@ -59,13 +61,19 @@ docker run --rm -v "$PWD":/src:ro node:22-bookworm bash -lc '
    confirmations; check focus order and visible focus rings.
 5. Read the data-loss warning aloud to a user before they load real data.
 
-## Open items
+## Release qualification not yet claimed
 
 - A full WCAG 2.2 AA audit with assistive technology (screen reader, high
-  contrast) is still pending.
+  contrast) is not part of the stable-release claim.
 - An independent cryptographic and key-management review has not been performed;
-  it is required before a public release.
+  the project does not claim independent certification.
 - Docker Desktop on Windows and a native `amd64` host have not been exercised by
-  hand yet; CI builds both architectures.
+  hand here; CI builds both architectures, while the manual deployment evidence
+  covers the hosts named in the test report.
 - Performance on the weakest supported host (Raspberry Pi class) is not
-  measured; Argon2id parameters may need tuning there.
+  benchmarked; Argon2id parameters may need tuning there.
+
+These items do not block the supported private-network self-hosted release, but
+they do block any claim of independent security certification, complete
+assistive-technology conformance or broad platform benchmarking. Direct public
+Internet exposure remains unsupported.

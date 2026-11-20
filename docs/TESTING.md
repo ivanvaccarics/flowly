@@ -1,7 +1,7 @@
-# Testing the Flowly MVP
+# Testing the stable Flowly server
 
-Everything you need to try the Server MVP yourself, plus what a "pass" looks
-like and where the sharp edges are. Deployment details are in
+Everything you need to verify the stable self-hosted server yourself, plus what
+a "pass" looks like and where the sharp edges are. Deployment details are in
 [DEPLOYMENT.md](./DEPLOYMENT.md); everyday commands are in
 [RUNNING.md](./RUNNING.md).
 
@@ -33,32 +33,36 @@ docker compose up -d
 
 ## 2. Automated acceptance run
 
-One command exercises the whole MVP against a running server — vault lifecycle,
-tagging rules, search, dashboard, concurrency, exports, lock/unlock and
-rate limiting:
+One command exercises the whole released server against a running server — vault
+lifecycle, tagging rules, expense details, search, dashboard, concurrency,
+exports, lock/unlock and rate limiting:
 
 ```bash
 node tooling/scripts/acceptance.mjs http://127.0.0.1:8787
-# or: pnpm acceptance http://127.0.0.1:8787
+# on an empty scratch vault, add --create
+# or: pnpm acceptance http://127.0.0.1:8787 --create
 ```
 
 It prints one line per check and exits non-zero on the first failure. Expected
 tail:
 
 ```text
-16/16 checks passed against http://127.0.0.1:8787
+17/17 checks passed against http://127.0.0.1:8787
 ```
 
 Two things to know: it writes records named `Acceptance …` into the vault (delete
 them afterwards from the UI), and it deliberately triggers rate limiting, so for
 about a minute afterwards unlock attempts may answer `429`.
 
-**It also creates the vault if none exists**, using the acceptance passphrase
-(`FLOWLY_ACCEPTANCE_PASSPHRASE`, default `flowly acceptance passphrase 2026`).
-That matters when you point it at the vault you are testing by hand: afterwards
-the app shows the locked vault (**Welcome back.**) and your own passphrase will
-not open it, because the vault belongs to the acceptance run. Either unlock with the acceptance
-passphrase and change it from the workspace, or start over:
+**On an empty scratch deployment, add `--create`** to let the run create the
+vault with the acceptance passphrase (`FLOWLY_ACCEPTANCE_PASSPHRASE`, default
+`flowly acceptance passphrase 2026`). Without `--create` the run refuses to
+create a vault. Against an existing vault it must already be unlocked with the
+acceptance passphrase; otherwise it aborts rather than guessing. That matters
+when you point it at the vault you are testing by hand: afterwards the app shows
+the locked vault (**Welcome back.**) and your own passphrase will not open it,
+because the vault belongs to the acceptance run. Either unlock with the
+acceptance passphrase and change it from the workspace, or start over:
 
 ```bash
 # Docker Compose: remove the vault folder and come back empty
@@ -80,6 +84,8 @@ pnpm verify          # format, lint, secret/dead-code guards, types and tests
 pnpm build           # compile the server, bundle the UI
 pnpm release:check   # license policy for runtime dependencies
 ```
+
+The current gate runs 349 tests: 15 contract, 233 server and 101 web.
 
 GitHub CI additionally runs pinned Gitleaks 8.30.1 over the complete Git
 history. The public container workflow runs the same gate before either
@@ -243,7 +249,7 @@ credentials Enable Banking returns.
 | `curl http://127.0.0.1:8787/api/system/info` | Version, schema version, engine, uptime — no paths, keys or financial data |
 | Log in from a second device on the same private network | Works over the private address; nothing is exposed to the Internet |
 
-## 4. What is intentionally not there yet
+## 4. Current product boundaries
 
 - **No passphrase recovery.** Lose it and the vault stays closed; see
   `docs/security/data-loss.md`.
